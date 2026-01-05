@@ -11393,9 +11393,732 @@ body.light-mode .teamwork-waiting-state h4,
 body.light-mode .teamwork-respond-state h4 {
   color: #1a202c;
 }
+
+/* ========================================================
+   MOBILE RESPONSIVE STYLES - PHONE VERSION
+   ======================================================== */
+
+/* Device Detection Classes - Applied via JavaScript */
+body.device-phone .sidebar {
+  display: none !important;
+}
+
+body.device-phone .dashboard-header {
+  display: none !important;
+}
+
+body.device-phone .dashboard-with-sidebar {
+  flex-direction: column;
+}
+
+body.device-phone .main-content-area {
+  padding: 15px 15px 100px 15px;
+  width: 100%;
+}
+
+body.device-phone .floating-profile-btn {
+  display: none !important;
+}
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+  border-top: 3px solid #41c0ff;
+  z-index: 99999;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  justify-content: space-around;
+  align-items: center;
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  background: transparent;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-nav-item.active {
+  background: rgba(65, 192, 255, 0.15);
+}
+
+.mobile-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: #41c0ff;
+  border-radius: 0 0 3px 3px;
+}
+
+.mobile-nav-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 0 8px rgba(65, 192, 255, 0.3));
+  transition: all 0.3s ease;
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 12px rgba(65, 192, 255, 0.6));
+}
+
+.mobile-nav-label {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+.mobile-nav-item.active .mobile-nav-label {
+  color: #41c0ff;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    0 0 10px rgba(65, 192, 255, 0.5);
+}
+
+/* Mobile Nav Badge */
+.mobile-nav-badge {
+  position: absolute;
+  top: 5px;
+  right: calc(50% - 20px);
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+  color: white;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.5);
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Mobile Games Menu Popup */
+.mobile-games-menu {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #2a2a4a 0%, #1a1a2e 100%);
+  border: 3px solid #41c0ff;
+  border-radius: 20px;
+  padding: 15px;
+  z-index: 99998;
+  min-width: 250px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(65, 192, 255, 0.2);
+  animation: slideUpMenu 0.3s ease-out;
+}
+
+@keyframes slideUpMenu {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.mobile-games-menu.active {
+  display: block;
+}
+
+.mobile-games-menu-title {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
+  color: #41c0ff;
+  text-align: center;
+  margin-bottom: 15px;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    0 0 10px rgba(65, 192, 255, 0.5);
+}
+
+.mobile-games-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(65, 192, 255, 0.2);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-games-menu-item:last-child {
+  margin-bottom: 0;
+}
+
+.mobile-games-menu-item:hover,
+.mobile-games-menu-item:active {
+  background: rgba(65, 192, 255, 0.15);
+  border-color: #41c0ff;
+  transform: translateX(5px);
+}
+
+.mobile-games-menu-item .menu-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 0 5px rgba(65, 192, 255, 0.3));
+}
+
+.mobile-games-menu-item .menu-text {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+
+.mobile-games-menu-item .menu-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  color: #744210;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* Mobile Games Menu Overlay */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99997;
+}
+
+.mobile-menu-overlay.active {
+  display: block;
+}
+
+/* Mobile Profile Page Overlay */
+.mobile-profile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #1a202c 0%, #2d3748 100%);
+  z-index: 99996;
+  overflow-y: auto;
+  padding-bottom: 90px;
+}
+
+.mobile-profile-overlay.active {
+  display: block;
+  animation: fadeInProfile 0.3s ease-out;
+}
+
+@keyframes fadeInProfile {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-profile-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 30px 20px;
+  text-align: center;
+  position: relative;
+}
+
+.mobile-profile-back {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.mobile-profile-back:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.mobile-profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.mobile-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-profile-avatar .no-photo {
+  font-size: 40px;
+  color: #a0aec0;
+}
+
+.mobile-profile-name {
+  color: white;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-shadow: 
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000;
+}
+
+.mobile-profile-coins {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  color: #744210;
+  padding: 10px 25px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.mobile-profile-content {
+  padding: 20px;
+}
+
+.mobile-profile-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-profile-section-title {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mobile-stat-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-stat-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.mobile-stat-value {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 22px;
+  font-weight: bold;
+  color: #41c0ff;
+  margin-bottom: 4px;
+}
+
+.mobile-stat-label {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+/* Mobile Header for Logged In State */
+.mobile-app-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #2a2a4a 0%, #1a1a2e 100%);
+  border-bottom: 3px solid #41c0ff;
+  padding: 12px 15px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-app-header-logo {
+  height: 50px;
+  width: auto;
+}
+
+.mobile-app-header-title {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 14px;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #41c0ff,
+    2px -2px 0 #41c0ff,
+    -2px 2px 0 #41c0ff,
+    2px 2px 0 #41c0ff;
+  margin-left: 10px;
+}
+
+/* ============================================
+   PURE CSS MEDIA QUERIES - NO JS DEPENDENCY
+   ============================================ */
+
+/* PHONE: 0 - 768px */
+@media screen and (max-width: 768px) {
+  /* Hide desktop elements */
+  .sidebar {
+    display: none !important;
+  }
+  
+  .dashboard-header {
+    display: none !important;
+  }
+  
+  .floating-profile-btn {
+    display: none !important;
+  }
+  
+  .dashboard-with-sidebar {
+    flex-direction: column !important;
+  }
+  
+  .main-content-area {
+    padding: 15px 15px 100px 15px !important;
+    width: 100% !important;
+  }
+  
+  /* Mobile header (top) - ALWAYS visible on phone */
+  .mobile-app-header {
+    display: flex !important;
+  }
+  
+  /* Mobile bottom nav - ONLY when logged in */
+  body.mobile-logged-in .mobile-bottom-nav {
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+  }
+  
+  /* Move theme toggle for mobile */
+  .theme-toggle-container {
+    top: auto !important;
+    bottom: 85px !important;
+    right: 15px !important;
+  }
+  
+  /* Adjust tab content for mobile */
+  .tab-content h2 {
+    font-size: 18px !important;
+    margin-bottom: 15px !important;
+  }
+  
+  .tab-content {
+    font-size: 14px !important;
+  }
+  
+  /* Hide login container's default styling on mobile */
+  .container {
+    padding: 10px !important;
+  }
+}
+
+/* TABLET: 769px - 1024px - Same as desktop */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .mobile-bottom-nav,
+  .mobile-games-menu,
+  .mobile-menu-overlay,
+  .mobile-profile-overlay,
+  .mobile-app-header {
+    display: none !important;
+  }
+}
+
+/* DESKTOP: 1025px+ */
+@media screen and (min-width: 1025px) {
+  .mobile-bottom-nav,
+  .mobile-games-menu,
+  .mobile-menu-overlay,
+  .mobile-profile-overlay,
+  .mobile-app-header {
+    display: none !important;
+  }
+}
+
+/* Logout button for mobile profile */
+.mobile-logout-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  cursor: pointer;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  box-shadow: 0 4px 15px rgba(245, 101, 101, 0.4);
+  transition: all 0.3s;
+  margin-top: 10px;
+}
+
+.mobile-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 101, 101, 0.5);
+}
+
+/* Streak display for mobile */
+.mobile-streak-display {
+  background: linear-gradient(135deg, #f56565 0%, #ed8936 100%);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.mobile-streak-number {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 32px;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.mobile-streak-label {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 5px;
+}
 </style>
 </head>
 <body>
+
+<!-- Mobile App Header (shown when logged in on phone) -->
+<div class="mobile-app-header" id="mobileAppHeader">
+  <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/logo555.png?v=1757969221" alt="KoreaLand" class="mobile-app-header-logo">
+  <span class="mobile-app-header-title">KoreaLand</span>
+</div>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <button class="mobile-nav-item active" data-tab="allInOne" onclick="mobileNavTo('allInOne')">
+    <span class="mobile-nav-icon">🚀</span>
+    <span class="mobile-nav-label">한번에빵</span>
+    <span class="mobile-nav-badge" id="mobileNavBadgeAllInOne" style="display: none;">0</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="dailyActivity" onclick="mobileNavTo('dailyActivity')">
+    <span class="mobile-nav-icon">📅</span>
+    <span class="mobile-nav-label">Daily</span>
+    <span class="mobile-nav-badge" id="mobileNavBadgeDaily" style="display: none;">0</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="games" onclick="toggleMobileGamesMenu()">
+    <span class="mobile-nav-icon">🎮</span>
+    <span class="mobile-nav-label">Games</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="leaderboard" onclick="mobileNavTo('studentLeaderboard')">
+    <span class="mobile-nav-icon">🏆</span>
+    <span class="mobile-nav-label">Rank</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="profile" onclick="openMobileProfile()">
+    <span class="mobile-nav-icon">👤</span>
+    <span class="mobile-nav-label">Profile</span>
+  </button>
+</nav>
+
+<!-- Mobile Games Menu Popup -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileGamesMenu()"></div>
+<div class="mobile-games-menu" id="mobileGamesMenu">
+  <div class="mobile-games-menu-title">🎮 GAMES MENU</div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('flashcardGames'); closeMobileGamesMenu();">
+    <span class="menu-icon">🎮</span>
+    <span class="menu-text">Flashcard Games</span>
+  </div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('myFlashcards'); closeMobileGamesMenu();">
+    <span class="menu-icon">📚</span>
+    <span class="menu-text">My Flashcards</span>
+  </div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('marketplacePopular'); closeMobileGamesMenu();">
+    <span class="menu-icon">🏪</span>
+    <span class="menu-text">Marketplace</span>
+  </div>
+</div>
+
+<!-- Mobile Profile Overlay -->
+<div class="mobile-profile-overlay" id="mobileProfileOverlay">
+  <div class="mobile-profile-header">
+    <button class="mobile-profile-back" onclick="closeMobileProfile()">←</button>
+    <div class="mobile-profile-avatar" id="mobileProfileAvatar" onclick="openAvatarUpload()">
+      <span class="no-photo">👤</span>
+    </div>
+    <div class="mobile-profile-name" id="mobileProfileName">Student</div>
+    <div class="mobile-profile-coins">
+      <span>💰</span>
+      <span id="mobileProfileCoins">0</span>
+    </div>
+  </div>
+  
+  <div class="mobile-profile-content">
+    <!-- Streak Section -->
+    <div class="mobile-streak-display">
+      <div class="mobile-streak-number">
+        🔥 <span id="mobileStreakCount">0</span>
+      </div>
+      <div class="mobile-streak-label">Day Streak</div>
+    </div>
+    
+    <!-- Stats Section -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">📊 Your Stats (This Week)</div>
+      <div class="mobile-stats-grid">
+        <div class="mobile-stat-card">
+          <div class="mobile-stat-icon">🎤</div>
+          <div class="mobile-stat-value" id="mobilePronDrills">0</div>
+          <div class="mobile-stat-label">Pron Drills</div>
+        </div>
+        <div class="mobile-stat-card">
+          <div class="mobile-stat-icon">📚</div>
+          <div class="mobile-stat-value" id="mobileLeitnerReps">0</div>
+          <div class="mobile-stat-label">Leitner Reps</div>
+        </div>
+        <div class="mobile-stat-card">
+          <div class="mobile-stat-icon">⏱️</div>
+          <div class="mobile-stat-value" id="mobileRecordingTime">0:00</div>
+          <div class="mobile-stat-label">Recording Time</div>
+        </div>
+        <div class="mobile-stat-card">
+          <div class="mobile-stat-icon">🎯</div>
+          <div class="mobile-stat-value" id="mobileGoalProgress">0%</div>
+          <div class="mobile-stat-label">Goal Progress</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Class Schedule Section -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">📅 Class Schedule</div>
+      <div id="mobileClassSchedule" style="color: #a0aec0; font-size: 13px;">
+        Loading schedule...
+      </div>
+    </div>
+    
+    <!-- Settings Section -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">⚙️ Settings</div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
+        <span style="color: white; font-size: 14px;">🌙 Dark Mode</span>
+        <label class="switch" style="font-size: 12px;">
+          <input type="checkbox" id="mobileThemeToggle" checked onchange="toggleLightMode(event)">
+          <span class="slider">
+            <span class="sun">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f9d71c" style="width: 16px; height: 16px;">
+                <circle cx="12" cy="12" r="5"></circle>
+              </svg>
+            </span>
+            <span class="moon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#73C0FC" style="width: 16px; height: 16px;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </span>
+          </span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Logout -->
+    <button class="mobile-logout-btn" onclick="logout()">🚪 LOGOUT</button>
+  </div>
+</div>
 
 <!-- Theme Toggle Switch - Fixed position top right -->
 <div class="theme-toggle-container" id="themeToggleContainer" style="display: none;">
@@ -16565,61 +17288,65 @@ window.addEventListener('DOMContentLoaded', function() {
     console.error('Auth form not found!');
   }
   
-  // Check auth state and auto-login
-  auth.onAuthStateChanged(async user => {
-    console.log('Auth state changed:', user ? user.uid : 'No user');
-    
-    if (user) {
-      currentUser = user;
+  // Check auth state and auto-login (only if Firebase loaded successfully)
+  if (auth && typeof auth.onAuthStateChanged === 'function') {
+    auth.onAuthStateChanged(async user => {
+      console.log('Auth state changed:', user ? user.uid : 'No user');
       
-      // Try to get user role from Firestore
-      try {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          currentUserRole = userDoc.data().role;
-          console.log('User role:', currentUserRole);
-        } else {
-          // If no user document, default to student for safety
+      if (user) {
+        currentUser = user;
+        
+        // Try to get user role from Firestore
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            currentUserRole = userDoc.data().role;
+            console.log('User role:', currentUserRole);
+          } else {
+            // If no user document, default to student for safety
+            currentUserRole = 'student';
+            console.log('No user doc found, defaulting to student role');
+          }
+        } catch (error) {
+          console.error('Error getting user role:', error);
           currentUserRole = 'student';
-          console.log('No user doc found, defaulting to student role');
         }
-      } catch (error) {
-        console.error('Error getting user role:', error);
-        currentUserRole = 'student';
+        
+        // User is logged in, show dashboard
+        showDashboard();
+        
+        // Load Junbi configuration for flashcard games
+        loadJunbiConfig();
+        
+        // Check for daily activity notifications (students only) - delay to ensure DOM is ready
+        if (currentUserRole === 'student') {
+          setTimeout(() => {
+            checkDailyActivityNotifications();
+          }, 1500); // Wait 1.5 seconds for dashboard to fully render
+        }
+        
+        // Initialize audio context on first interaction
+        document.addEventListener('click', function initAudio() {
+          initAudioContext();
+          document.removeEventListener('click', initAudio);
+        }, { once: true });
+        
+      } else {
+        // No user logged in, attempt anonymous login
+        console.log('No user, attempting anonymous login...');
+        try {
+          await auth.signInAnonymously();
+          console.log('Signed in anonymously');
+        } catch (error) {
+          console.error('Anonymous login failed:', error);
+          // Show login form if anonymous login fails
+          document.getElementById('authContainer').classList.remove('hidden');
+        }
       }
-      
-      // User is logged in, show dashboard
-      showDashboard();
-      
-      // Load Junbi configuration for flashcard games
-      loadJunbiConfig();
-      
-      // Check for daily activity notifications (students only) - delay to ensure DOM is ready
-      if (currentUserRole === 'student') {
-        setTimeout(() => {
-          checkDailyActivityNotifications();
-        }, 1500); // Wait 1.5 seconds for dashboard to fully render
-      }
-      
-      // Initialize audio context on first interaction
-      document.addEventListener('click', function initAudio() {
-        initAudioContext();
-        document.removeEventListener('click', initAudio);
-      }, { once: true });
-      
-    } else {
-      // No user logged in, attempt anonymous login
-      console.log('No user, attempting anonymous login...');
-      try {
-        await auth.signInAnonymously();
-        console.log('Signed in anonymously');
-      } catch (error) {
-        console.error('Anonymous login failed:', error);
-        // Show login form if anonymous login fails
-        document.getElementById('authContainer').classList.remove('hidden');
-      }
-    }
-  });
+    });
+  } else {
+    console.error('Firebase auth not available');
+  }
   
   // Auto-attempt anonymous login on page load
   window.addEventListener('load', async () => {
@@ -58062,6 +58789,318 @@ function handleGrammarWalkAwayContinue() {
     }, 1000);
   }
 }
+
+// ========== DEVICE DETECTION AND MOBILE NAVIGATION ==========
+
+// Device type stored globally
+let currentDeviceType = 'computer';
+
+// Device detection - SIMPLE WIDTH-BASED ONLY
+function detectDevice() {
+  const width = window.innerWidth;
+  
+  // Simple breakpoints:
+  // Phone: 0 - 768px
+  // Tablet: 769px - 1024px  
+  // Computer: 1025px+
+  
+  if (width <= 768) {
+    currentDeviceType = 'phone';
+  } else if (width <= 1024) {
+    currentDeviceType = 'tablet';
+  } else {
+    currentDeviceType = 'computer';
+  }
+  
+  // Remove all device classes
+  document.body.classList.remove('device-phone', 'device-tablet', 'device-computer');
+  document.body.classList.add(`device-${currentDeviceType}`);
+  
+  // Update mobile UI visibility
+  updateMobileUIVisibility();
+}
+
+// Debounce helper
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Show/hide mobile bottom nav based on login state
+function updateMobileUIVisibility() {
+  const dashboard = document.getElementById('dashboard');
+  const studentDashboard = document.getElementById('studentDashboard');
+  
+  const isLoggedIn = dashboard && !dashboard.classList.contains('hidden');
+  const isStudent = studentDashboard && !studentDashboard.classList.contains('hidden');
+  const isPhone = currentDeviceType === 'phone';
+  
+  // Add or remove the mobile-logged-in class (controls bottom nav visibility)
+  if (isLoggedIn && isStudent && isPhone) {
+    document.body.classList.add('mobile-logged-in');
+  } else {
+    document.body.classList.remove('mobile-logged-in');
+  }
+}
+
+// Run on resize
+window.addEventListener('resize', debounce(detectDevice, 150));
+
+// Run when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  detectDevice();
+});
+
+// Run on window load
+window.addEventListener('load', () => {
+  detectDevice();
+  // Check again after Firebase might have logged in
+  setTimeout(updateMobileUIVisibility, 1500);
+  setTimeout(updateMobileUIVisibility, 3000);
+});
+
+// Mobile navigation functions
+function mobileNavTo(tabId) {
+  // Close any open menus
+  closeMobileGamesMenu();
+  closeMobileProfile();
+  
+  // Switch to the tab
+  switchTab(tabId);
+  
+  // Update active state on nav items
+  updateMobileNavActive(tabId);
+}
+
+function updateMobileNavActive(tabId) {
+  const navItems = document.querySelectorAll('.mobile-nav-item');
+  navItems.forEach(item => {
+    item.classList.remove('active');
+    
+    const itemTab = item.getAttribute('data-tab');
+    
+    // Map tab IDs to nav items
+    if (itemTab === 'allInOne' && tabId === 'allInOne') {
+      item.classList.add('active');
+    } else if (itemTab === 'dailyActivity' && tabId === 'dailyActivity') {
+      item.classList.add('active');
+    } else if (itemTab === 'leaderboard' && tabId === 'studentLeaderboard') {
+      item.classList.add('active');
+    } else if (itemTab === 'games' && ['flashcardGames', 'myFlashcards', 'marketplacePopular', 'marketplaceCategories', 'myPurchases', 'masteryDeck', 'leitnerBoxes', 'leitnerStats'].includes(tabId)) {
+      item.classList.add('active');
+    }
+  });
+}
+
+// Games menu toggle
+function toggleMobileGamesMenu() {
+  const menu = document.getElementById('mobileGamesMenu');
+  const overlay = document.getElementById('mobileMenuOverlay');
+  
+  if (menu.classList.contains('active')) {
+    closeMobileGamesMenu();
+  } else {
+    menu.classList.add('active');
+    overlay.classList.add('active');
+    
+    // Update nav item to active
+    const gamesNavItem = document.querySelector('.mobile-nav-item[data-tab="games"]');
+    if (gamesNavItem) {
+      document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+      gamesNavItem.classList.add('active');
+    }
+  }
+}
+
+function closeMobileGamesMenu() {
+  const menu = document.getElementById('mobileGamesMenu');
+  const overlay = document.getElementById('mobileMenuOverlay');
+  
+  if (menu) menu.classList.remove('active');
+  if (overlay) overlay.classList.remove('active');
+}
+
+// Mobile profile functions
+function openMobileProfile() {
+  const overlay = document.getElementById('mobileProfileOverlay');
+  if (overlay) {
+    overlay.classList.add('active');
+    updateMobileProfileData();
+  }
+  
+  // Update nav active state
+  const profileNavItem = document.querySelector('.mobile-nav-item[data-tab="profile"]');
+  if (profileNavItem) {
+    document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+    profileNavItem.classList.add('active');
+  }
+}
+
+function closeMobileProfile() {
+  const overlay = document.getElementById('mobileProfileOverlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+}
+
+function updateMobileProfileData() {
+  // Sync with existing profile panel data
+  const panelName = document.getElementById('panelDisplayName');
+  const panelCoins = document.getElementById('panelCoinsCount');
+  const panelStreak = document.getElementById('panelStreakCount');
+  const panelPronDrills = document.getElementById('panelPronDrills');
+  const panelLeitnerReps = document.getElementById('panelLeitnerReps');
+  const panelRecordingTime = document.getElementById('panelRecordingTime');
+  const goalsProgressText = document.getElementById('goalsProgressText');
+  
+  // Update mobile profile
+  const mobileProfileName = document.getElementById('mobileProfileName');
+  const mobileProfileCoins = document.getElementById('mobileProfileCoins');
+  const mobileStreakCount = document.getElementById('mobileStreakCount');
+  const mobilePronDrills = document.getElementById('mobilePronDrills');
+  const mobileLeitnerReps = document.getElementById('mobileLeitnerReps');
+  const mobileRecordingTime = document.getElementById('mobileRecordingTime');
+  const mobileGoalProgress = document.getElementById('mobileGoalProgress');
+  
+  if (panelName && mobileProfileName) {
+    mobileProfileName.textContent = panelName.textContent;
+  }
+  if (panelCoins && mobileProfileCoins) {
+    mobileProfileCoins.textContent = panelCoins.textContent;
+  }
+  if (panelStreak && mobileStreakCount) {
+    mobileStreakCount.textContent = panelStreak.textContent;
+  }
+  if (panelPronDrills && mobilePronDrills) {
+    mobilePronDrills.textContent = panelPronDrills.textContent;
+  }
+  if (panelLeitnerReps && mobileLeitnerReps) {
+    mobileLeitnerReps.textContent = panelLeitnerReps.textContent;
+  }
+  if (panelRecordingTime && mobileRecordingTime) {
+    mobileRecordingTime.textContent = panelRecordingTime.textContent;
+  }
+  if (goalsProgressText && mobileGoalProgress) {
+    // Extract percentage from "0 / 50" format
+    const text = goalsProgressText.textContent;
+    const percentEl = document.getElementById('goalsPercentText');
+    if (percentEl) {
+      mobileGoalProgress.textContent = percentEl.textContent;
+    }
+  }
+  
+  // Copy avatar if available
+  const floatingProfileImg = document.getElementById('floatingProfileImg');
+  const mobileProfileAvatar = document.getElementById('mobileProfileAvatar');
+  
+  if (floatingProfileImg && mobileProfileAvatar) {
+    const img = floatingProfileImg.querySelector('img');
+    if (img) {
+      mobileProfileAvatar.innerHTML = `<img src="${img.src}" alt="Profile">`;
+    }
+  }
+  
+  // Load class schedule
+  loadMobileClassSchedule();
+}
+
+function loadMobileClassSchedule() {
+  const scheduleContainer = document.getElementById('mobileClassSchedule');
+  if (!scheduleContainer) return;
+  
+  // Copy schedule info from the profile panel if available
+  const classScheduleSection = document.querySelector('.profile-panel-section .activity-calendar');
+  if (classScheduleSection) {
+    const weeklySchedule = classScheduleSection.querySelector('[style*="Weekly Class Schedule"]');
+    if (weeklySchedule) {
+      const scheduleParent = weeklySchedule.parentElement;
+      const scheduleItems = scheduleParent.querySelectorAll('[style*="display: flex; justify-content: space-between"]');
+      
+      let scheduleHTML = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+      scheduleItems.forEach(item => {
+        const daySpan = item.querySelector('span:first-child');
+        const timeSpan = item.querySelector('span:last-child');
+        if (daySpan && timeSpan) {
+          scheduleHTML += `
+            <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+              <span style="color: #a0aec0;">${daySpan.textContent}</span>
+              <span style="color: #41c0ff; font-weight: 600;">${timeSpan.textContent}</span>
+            </div>
+          `;
+        }
+      });
+      scheduleHTML += '</div>';
+      scheduleContainer.innerHTML = scheduleHTML;
+    }
+  } else {
+    scheduleContainer.innerHTML = '<div style="text-align: center; color: #718096;">No classes scheduled</div>';
+  }
+}
+
+// Update mobile nav badges when data changes
+function updateMobileNavBadges() {
+  // All in One badge
+  const allInOneBadgeSource = document.getElementById('allInOneBadge');
+  const mobileAllInOneBadge = document.getElementById('mobileNavBadgeAllInOne');
+  if (allInOneBadgeSource && mobileAllInOneBadge) {
+    if (allInOneBadgeSource.style.display !== 'none') {
+      mobileAllInOneBadge.textContent = allInOneBadgeSource.textContent;
+      mobileAllInOneBadge.style.display = 'flex';
+    } else {
+      mobileAllInOneBadge.style.display = 'none';
+    }
+  }
+  
+  // Daily Activity badge
+  const dailyBadgeSource = document.getElementById('dailyActivityBadge');
+  const mobileDailyBadge = document.getElementById('mobileNavBadgeDaily');
+  if (dailyBadgeSource && mobileDailyBadge) {
+    if (dailyBadgeSource.style.display !== 'none') {
+      mobileDailyBadge.textContent = dailyBadgeSource.textContent;
+      mobileDailyBadge.style.display = 'flex';
+    } else {
+      mobileDailyBadge.style.display = 'none';
+    }
+  }
+}
+
+// Monitor for switchTab calls to update mobile nav
+const switchTabObserver = new MutationObserver(() => {
+  const activeTab = document.querySelector('.tab-content.active');
+  if (activeTab) {
+    updateMobileNavActive(activeTab.id);
+  }
+});
+
+// Start observing when document is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const mainContent = document.querySelector('.main-content-area');
+  if (mainContent) {
+    switchTabObserver.observe(mainContent, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  }
+  
+  // Observe dashboard for login state changes
+  const dashboard = document.getElementById('dashboard');
+  if (dashboard) {
+    new MutationObserver(updateMobileUIVisibility).observe(dashboard, { attributes: true, attributeFilter: ['class'] });
+  }
+  
+  // Observe student dashboard
+  const studentDashboard = document.getElementById('studentDashboard');
+  if (studentDashboard) {
+    new MutationObserver(updateMobileUIVisibility).observe(studentDashboard, { attributes: true, attributeFilter: ['class'] });
+  }
+  
+  // Badge updates every 3 seconds
+  setInterval(updateMobileNavBadges, 3000);
+});
 
 </script>
 
