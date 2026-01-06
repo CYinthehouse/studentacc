@@ -11917,6 +11917,22 @@ body.device-phone .floating-profile-btn {
     font-size: 20px !important;
   }
   
+  /* ===== FIX 1 CONTINUED: Teamwork grid layout - single column on mobile ===== */
+  #teamworkWaiting > div,
+  #teamworkRespond > div {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  /* Hide the empty "waiting" placeholder on mobile - just show the video */
+  #teamworkWaiting .da-empty-state {
+    display: none !important;
+  }
+  
+  #teamworkRespond .da-empty-state {
+    padding: 15px !important;
+  }
+  
   /* ===== FIX 2: My Flashcards - responsive layout ===== */
   #myFlashcards > div:nth-child(3) {
     grid-template-columns: 1fr !important;
@@ -11930,6 +11946,27 @@ body.device-phone .floating-profile-btn {
   
   #myCardsGrid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+  }
+  
+  /* ===== FIX 4: My Flashcards scrollbar visibility ===== */
+  #myCardsGrid {
+    overflow-y: scroll !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #667eea #e2e8f0 !important;
+  }
+  
+  #myCardsGrid::-webkit-scrollbar {
+    width: 8px !important;
+  }
+  
+  #myCardsGrid::-webkit-scrollbar-track {
+    background: #e2e8f0 !important;
+    border-radius: 4px !important;
+  }
+  
+  #myCardsGrid::-webkit-scrollbar-thumb {
+    background: #667eea !important;
+    border-radius: 4px !important;
   }
   
   /* ===== FIX 3: Flashcard Games grid ===== */
@@ -11952,6 +11989,75 @@ body.device-phone .floating-profile-btn {
   .switch .slider .moon svg {
     width: 18px !important;
     height: 18px !important;
+  }
+  
+  /* ===== FIX 7: Junbi/Flashcard game scaling for mobile ===== */
+  .junbi-overlay {
+    padding: 10px !important;
+    overflow-y: auto !important;
+  }
+  
+  .junbi-container {
+    padding: 15px !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  .junbi-title {
+    font-size: 36px !important;
+  }
+  
+  .junbi-subtitle {
+    font-size: 12px !important;
+    margin-bottom: 15px !important;
+  }
+  
+  .wrinkled-paper {
+    max-height: 40vh !important;
+    overflow-y: auto !important;
+    margin-bottom: 10px !important;
+  }
+  
+  .word-list-table th,
+  .word-list-table td {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  #flashcardWalkAwayToggle {
+    margin: 5px 0 !important;
+    padding: 6px 10px !important;
+  }
+  
+  .junbi-start-btn {
+    padding: 12px 30px !important;
+    font-size: 14px !important;
+    margin-top: 10px !important;
+  }
+  
+  /* Flashcard game play screen mobile fixes */
+  .flashcard-game-overlay {
+    padding: 10px !important;
+  }
+  
+  .flashcard-main-card {
+    width: 95% !important;
+    max-width: 350px !important;
+    min-height: 200px !important;
+  }
+  
+  .flashcard-word-display {
+    font-size: 28px !important;
+  }
+  
+  .flashcard-game-controls {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  
+  .flashcard-game-controls button {
+    padding: 10px 15px !important;
+    font-size: 12px !important;
   }
 }
 
@@ -12045,14 +12151,14 @@ body.device-phone .floating-profile-btn {
 
 <!-- Mobile Bottom Navigation Bar -->
 <nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <button class="mobile-nav-item" data-tab="drills" onclick="toggleMobileDrillsMenu()">
+    <span class="mobile-nav-icon">📝</span>
+    <span class="mobile-nav-label">Drills</span>
+  </button>
   <button class="mobile-nav-item active" data-tab="allInOne" onclick="mobileNavTo('allInOne')">
     <span class="mobile-nav-icon">🚀</span>
     <span class="mobile-nav-label">한번에빵</span>
     <span class="mobile-nav-badge" id="mobileNavBadgeAllInOne" style="display: none;">0</span>
-  </button>
-  <button class="mobile-nav-item" data-tab="drills" onclick="toggleMobileDrillsMenu()">
-    <span class="mobile-nav-icon">📝</span>
-    <span class="mobile-nav-label">Drills</span>
   </button>
   <button class="mobile-nav-item" data-tab="dailyActivity" onclick="mobileNavTo('dailyActivity')">
     <span class="mobile-nav-icon">📅</span>
@@ -12191,9 +12297,29 @@ body.device-phone .floating-profile-btn {
       </div>
     </div>
     
+    <!-- Activity Calendar -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">📅 Activity Calendar</div>
+      <div id="mobileActivityCalendar" style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px;">
+        <div id="mobileCalendarMonthLabel" style="text-align: center; color: #a0aec0; font-size: 13px; margin-bottom: 10px;">Loading...</div>
+        <div id="mobileCalendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;">
+          <!-- Calendar will be populated here -->
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 10px; font-size: 10px; color: #718096;">
+          <span>Less</span>
+          <div style="width: 12px; height: 12px; background: #1e293b; border-radius: 2px;"></div>
+          <div style="width: 12px; height: 12px; background: #065f46; border-radius: 2px;"></div>
+          <div style="width: 12px; height: 12px; background: #059669; border-radius: 2px;"></div>
+          <div style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></div>
+          <div style="width: 12px; height: 12px; background: #34d399; border-radius: 2px;"></div>
+          <span>More</span>
+        </div>
+      </div>
+    </div>
+    
     <!-- Class Schedule -->
     <div class="mobile-profile-section">
-      <div class="mobile-profile-section-title">📅 Class Schedule</div>
+      <div class="mobile-profile-section-title">📚 Weekly Class Schedule</div>
       <div id="mobileClassSchedule" style="display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
           <span style="color: #e2e8f0; font-weight: 500;">Monday</span>
@@ -12223,7 +12349,21 @@ body.device-phone .floating-profile-btn {
       <div class="mobile-profile-section-title">🏆 Achievements</div>
       <div id="mobileBadgesGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
         <!-- Will be populated dynamically -->
-        <div style="text-align: center; color: #718096; font-size: 12px; grid-column: 1/-1; padding: 20px;">Loading achievements...</div>
+      </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">📣 Recent Activity</div>
+      <div id="mobileActivityFeed" style="max-height: 200px; overflow-y: auto;">
+        <!-- Will be populated dynamically -->
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <span style="color: #a0aec0; font-size: 13px;">Show my activity to others</span>
+        <label class="toggle-switch" style="position: relative; width: 50px; height: 26px;">
+          <input type="checkbox" id="mobileActivityOptIn" checked onchange="toggleActivityOptIn()" style="opacity: 0; width: 0; height: 0;">
+          <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #4a5568; border-radius: 26px; transition: 0.3s;"></span>
+        </label>
       </div>
     </div>
     
@@ -15865,6 +16005,23 @@ body.device-phone .floating-profile-btn {
           <h3>📚 Unfiled Flashcard Sets</h3>
           <div id="availableFlashcards" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
             <div class="loading"></div>
+          </div>
+        </div>
+        
+        <!-- My Cards Section (for quick access, especially on mobile) -->
+        <div id="myCardsSectionInGames" class="fc-unfiled-section" style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0;">📁 My Cards</h3>
+            <button onclick="switchTab('myFlashcards')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;">
+              Open Full View →
+            </button>
+          </div>
+          <p style="color: #718096; font-size: 13px; margin-bottom: 15px;">Quick access to your personal flashcard folders synced to games.</p>
+          <div id="myCardsFoldersPreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+            <div style="text-align: center; padding: 30px; color: #a0aec0; grid-column: 1/-1;">
+              <div style="font-size: 32px; margin-bottom: 10px;">📚</div>
+              <p>Sync your cards from "My Flashcards" to see them here!</p>
+            </div>
           </div>
         </div>
         
@@ -59116,17 +59273,17 @@ function syncMobileProfileData() {
   const mobileName = document.getElementById('mobileProfileName');
   if (panelName && mobileName) mobileName.textContent = panelName.textContent;
   
-  // Coins
-  const panelCoins = document.getElementById('panelCoinsCount');
+  // Coins - sync from floating button which is always updated
+  const floatingCoins = document.getElementById('floatingCoinsCount');
   const mobileCoins = document.getElementById('mobileProfileCoins');
-  if (panelCoins && mobileCoins) mobileCoins.textContent = panelCoins.textContent;
+  if (floatingCoins && mobileCoins) mobileCoins.textContent = floatingCoins.textContent;
   
-  // Streak
+  // Streak - main display
   const panelStreak = document.getElementById('panelStreakCount');
   const mobileStreak = document.getElementById('mobileStreakCount');
   if (panelStreak && mobileStreak) mobileStreak.textContent = panelStreak.textContent;
   
-  // Streak Days stat
+  // Streak Days stat card
   const panelStreakDays = document.getElementById('panelStreakDays');
   const mobileStreakDays = document.getElementById('mobileStreakDays');
   if (panelStreakDays && mobileStreakDays) mobileStreakDays.textContent = panelStreakDays.textContent;
@@ -59146,17 +59303,19 @@ function syncMobileProfileData() {
   const mobileRecordingTime = document.getElementById('mobileRecordingTime');
   if (panelRecordingTime && mobileRecordingTime) mobileRecordingTime.textContent = panelRecordingTime.textContent;
   
-  // Goals
+  // Goals Progress Bar
   const goalsProgressFill = document.getElementById('goalsProgressFill');
   const mobileGoalsProgressFill = document.getElementById('mobileGoalsProgressFill');
   if (goalsProgressFill && mobileGoalsProgressFill) {
     mobileGoalsProgressFill.style.width = goalsProgressFill.style.width;
   }
   
+  // Goals Text
   const goalsProgressText = document.getElementById('goalsProgressText');
   const mobileGoalsProgressText = document.getElementById('mobileGoalsProgressText');
   if (goalsProgressText && mobileGoalsProgressText) mobileGoalsProgressText.textContent = goalsProgressText.textContent;
   
+  // Goals Percent
   const goalsPercentText = document.getElementById('goalsPercentText');
   const mobileGoalsPercentText = document.getElementById('mobileGoalsPercentText');
   if (goalsPercentText && mobileGoalsPercentText) mobileGoalsPercentText.textContent = goalsPercentText.textContent;
@@ -59171,8 +59330,47 @@ function syncMobileProfileData() {
     }
   }
   
+  // Sync calendar
+  syncMobileCalendar();
+  
   // Sync badges
   syncMobileBadges();
+  
+  // Sync activity feed
+  syncMobileActivityFeed();
+}
+
+function syncMobileCalendar() {
+  // Copy month label
+  const desktopMonthLabel = document.getElementById('calendarMonthLabel');
+  const mobileMonthLabel = document.getElementById('mobileCalendarMonthLabel');
+  if (desktopMonthLabel && mobileMonthLabel) {
+    mobileMonthLabel.textContent = desktopMonthLabel.textContent;
+  }
+  
+  // Copy calendar grid
+  const desktopGrid = document.getElementById('activityCalendarGrid');
+  const mobileGrid = document.getElementById('mobileCalendarGrid');
+  if (desktopGrid && mobileGrid) {
+    // Clone the calendar days
+    const days = desktopGrid.querySelectorAll('.calendar-day');
+    mobileGrid.innerHTML = '';
+    
+    // Add day headers
+    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(day => {
+      const header = document.createElement('div');
+      header.style.cssText = 'text-align: center; font-size: 10px; color: #718096; padding: 3px;';
+      header.textContent = day;
+      mobileGrid.appendChild(header);
+    });
+    
+    days.forEach(day => {
+      const clone = document.createElement('div');
+      clone.style.cssText = 'width: 100%; aspect-ratio: 1; border-radius: 3px; background: ' + (day.style.background || '#1e293b') + ';';
+      clone.title = day.title || '';
+      mobileGrid.appendChild(clone);
+    });
+  }
 }
 
 function syncMobileBadges() {
@@ -59180,25 +59378,54 @@ function syncMobileBadges() {
   const mobileBadges = document.getElementById('mobileBadgesGrid');
   
   if (desktopBadges && mobileBadges) {
-    // Copy a simplified version of badges
     const badges = desktopBadges.querySelectorAll('.badge-panel-item');
-    if (badges.length > 0) {
-      mobileBadges.innerHTML = '';
-      badges.forEach((badge, index) => {
-        if (index < 6) { // Show first 6 badges
-          const icon = badge.querySelector('.badge-panel-icon');
-          const name = badge.querySelector('.badge-panel-name');
-          if (icon && name) {
-            mobileBadges.innerHTML += `
-              <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; text-align: center;">
-                <div style="font-size: 24px;">${icon.textContent}</div>
-                <div style="font-size: 10px; color: #a0aec0; margin-top: 5px;">${name.textContent}</div>
-              </div>
-            `;
-          }
-        }
-      });
+    mobileBadges.innerHTML = '';
+    
+    if (badges.length === 0) {
+      mobileBadges.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; grid-column: 1/-1; padding: 20px;">No achievements yet. Keep learning!</div>';
+      return;
     }
+    
+    badges.forEach((badge, index) => {
+      if (index < 9) { // Show first 9 badges
+        const icon = badge.querySelector('.badge-panel-icon');
+        const name = badge.querySelector('.badge-panel-name');
+        const isLocked = badge.classList.contains('locked');
+        
+        if (icon) {
+          const div = document.createElement('div');
+          div.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; text-align: center;' + (isLocked ? ' opacity: 0.4;' : '');
+          div.innerHTML = `
+            <div style="font-size: 24px;">${icon.textContent}</div>
+            <div style="font-size: 9px; color: #a0aec0; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name ? name.textContent : ''}</div>
+          `;
+          mobileBadges.appendChild(div);
+        }
+      }
+    });
+  }
+}
+
+function syncMobileActivityFeed() {
+  const desktopFeed = document.getElementById('activityFeed');
+  const mobileFeed = document.getElementById('mobileActivityFeed');
+  
+  if (desktopFeed && mobileFeed) {
+    const activities = desktopFeed.querySelectorAll('.activity-item');
+    mobileFeed.innerHTML = '';
+    
+    if (activities.length === 0) {
+      mobileFeed.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; padding: 20px;">No recent activity</div>';
+      return;
+    }
+    
+    activities.forEach((activity, index) => {
+      if (index < 5) { // Show first 5 activities
+        const clone = activity.cloneNode(true);
+        clone.style.cssText = 'padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; font-size: 12px;';
+        mobileFeed.appendChild(clone);
+      }
+    });
   }
 }
 
@@ -59207,32 +59434,69 @@ function filterFlashcardGames() {
   const searchInput = document.getElementById('flashcardGamesSearch');
   if (!searchInput) return;
   
-  const searchTerm = searchInput.value.toLowerCase();
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  
+  // If empty, show all
+  if (!searchTerm) {
+    document.querySelectorAll('.fc-folder-card, .fc-set-card, [class*="flashcard"]').forEach(el => {
+      el.style.display = '';
+    });
+    // Also show section headers
+    document.querySelectorAll('#flashcardFoldersSection, #unfiledFlashcardsSection, #myCardsSectionInGames').forEach(el => {
+      el.style.display = '';
+    });
+    return;
+  }
   
   // Filter folder cards
-  const folderCards = document.querySelectorAll('.fc-folder-card');
+  const folderCards = document.querySelectorAll('#flashcardFoldersGrid > div');
   folderCards.forEach(card => {
-    const name = card.querySelector('.fc-folder-name');
-    if (name) {
-      const match = name.textContent.toLowerCase().includes(searchTerm);
-      card.style.display = match ? '' : 'none';
-    }
+    const name = card.querySelector('.fc-folder-name, h4, span');
+    const text = card.textContent || '';
+    const match = text.toLowerCase().includes(searchTerm);
+    card.style.display = match ? '' : 'none';
   });
   
-  // Filter flashcard set cards
-  const setCards = document.querySelectorAll('.fc-set-card');
+  // Filter flashcard set cards in available flashcards
+  const setCards = document.querySelectorAll('#availableFlashcards > div');
   setCards.forEach(card => {
-    const name = card.querySelector('.fc-set-name, h4');
-    if (name) {
-      const match = name.textContent.toLowerCase().includes(searchTerm);
-      card.style.display = match ? '' : 'none';
-    }
+    const text = card.textContent || '';
+    const match = text.toLowerCase().includes(searchTerm);
+    card.style.display = match ? '' : 'none';
+  });
+  
+  // Filter My Cards preview
+  const myCardsPreview = document.querySelectorAll('#myCardsFoldersPreview > div');
+  myCardsPreview.forEach(card => {
+    const text = card.textContent || '';
+    const match = text.toLowerCase().includes(searchTerm);
+    card.style.display = match ? '' : 'none';
   });
 }
 
-// Scroll to My Cards section
+// Scroll to My Cards section in flashcard games
 function scrollToMyCards() {
-  mobileNavTo('myFlashcards');
+  const myCardsSection = document.getElementById('myCardsSectionInGames');
+  if (myCardsSection) {
+    myCardsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// Load My Cards preview in flashcard games
+function loadMyCardsFoldersPreview() {
+  const container = document.getElementById('myCardsFoldersPreview');
+  if (!container || !currentUser) return;
+  
+  // Get synced folders from the existing flashcard folders
+  const syncedFolders = document.querySelectorAll('#flashcardFoldersGrid .fc-folder-card');
+  
+  if (syncedFolders.length > 0) {
+    container.innerHTML = '';
+    syncedFolders.forEach(folder => {
+      const clone = folder.cloneNode(true);
+      container.appendChild(clone);
+    });
+  }
 }
 
 // Update mobile nav badges when data changes
