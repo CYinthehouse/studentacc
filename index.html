@@ -11900,6 +11900,59 @@ body.device-phone .floating-profile-btn {
   .container {
     padding: 10px !important;
   }
+  
+  /* ===== FIX 1: Daily Activity - hide empty sparkles container ===== */
+  .daily-activity-container::before,
+  .daily-carousel-section .sparkles {
+    display: none !important;
+  }
+  
+  .daily-activity-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  
+  .daily-activity-title {
+    font-size: 20px !important;
+  }
+  
+  /* ===== FIX 2: My Flashcards - responsive layout ===== */
+  #myFlashcards > div:nth-child(3) {
+    grid-template-columns: 1fr !important;
+    gap: 15px !important;
+  }
+  
+  #myFlashcards .btn {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+  
+  #myCardsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+  }
+  
+  /* ===== FIX 3: Flashcard Games grid ===== */
+  #availableFlashcards,
+  #folderContentsGrid,
+  .fc-folder-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  
+  /* ===== FIX 5: Theme toggle slider fix ===== */
+  .switch .slider .sun,
+  .switch .slider .moon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .switch .slider .sun svg,
+  .switch .slider .moon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
 }
 
 /* TABLET: 769px - 1024px - Same as desktop */
@@ -11997,6 +12050,10 @@ body.device-phone .floating-profile-btn {
     <span class="mobile-nav-label">한번에빵</span>
     <span class="mobile-nav-badge" id="mobileNavBadgeAllInOne" style="display: none;">0</span>
   </button>
+  <button class="mobile-nav-item" data-tab="drills" onclick="toggleMobileDrillsMenu()">
+    <span class="mobile-nav-icon">📝</span>
+    <span class="mobile-nav-label">Drills</span>
+  </button>
   <button class="mobile-nav-item" data-tab="dailyActivity" onclick="mobileNavTo('dailyActivity')">
     <span class="mobile-nav-icon">📅</span>
     <span class="mobile-nav-label">Daily</span>
@@ -12016,6 +12073,24 @@ body.device-phone .floating-profile-btn {
   </button>
 </nav>
 
+<!-- Mobile Drills Menu Popup -->
+<div class="mobile-menu-overlay" id="mobileDrillsOverlay" onclick="closeMobileDrillsMenu()"></div>
+<div class="mobile-games-menu" id="mobileDrillsMenu">
+  <div class="mobile-games-menu-title">📝 DRILLS MENU</div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('grammarDrill'); closeMobileDrillsMenu();">
+    <span class="menu-icon">📖</span>
+    <span class="menu-text">Grammar Drill (Home)</span>
+  </div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('pronunciationDrills'); closeMobileDrillsMenu();">
+    <span class="menu-icon">🎤</span>
+    <span class="menu-text">Pronunciation Drills</span>
+  </div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('grammarDrills'); closeMobileDrillsMenu();">
+    <span class="menu-icon">📝</span>
+    <span class="menu-text">Grammar Evaluation</span>
+  </div>
+</div>
+
 <!-- Mobile Games Menu Popup -->
 <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileGamesMenu()"></div>
 <div class="mobile-games-menu" id="mobileGamesMenu">
@@ -12034,10 +12109,9 @@ body.device-phone .floating-profile-btn {
   </div>
 </div>
 
-<!-- Mobile Profile Overlay -->
+<!-- Mobile Profile Overlay - Full mirror of desktop profile -->
 <div class="mobile-profile-overlay" id="mobileProfileOverlay">
   <div class="mobile-profile-header">
-    <button class="mobile-profile-back" onclick="closeMobileProfile()">←</button>
     <div class="mobile-profile-avatar" id="mobileProfileAvatar" onclick="openAvatarUpload()">
       <span class="no-photo">👤</span>
     </div>
@@ -12062,6 +12136,11 @@ body.device-phone .floating-profile-btn {
       <div class="mobile-profile-section-title">📊 Your Stats (This Week)</div>
       <div class="mobile-stats-grid">
         <div class="mobile-stat-card">
+          <div class="mobile-stat-icon">🔥</div>
+          <div class="mobile-stat-value" id="mobileStreakDays">0</div>
+          <div class="mobile-stat-label">Day Streak</div>
+        </div>
+        <div class="mobile-stat-card">
           <div class="mobile-stat-icon">🎤</div>
           <div class="mobile-stat-value" id="mobilePronDrills">0</div>
           <div class="mobile-stat-label">Pron Drills</div>
@@ -12076,40 +12155,91 @@ body.device-phone .floating-profile-btn {
           <div class="mobile-stat-value" id="mobileRecordingTime">0:00</div>
           <div class="mobile-stat-label">Recording Time</div>
         </div>
-        <div class="mobile-stat-card">
-          <div class="mobile-stat-icon">🎯</div>
-          <div class="mobile-stat-value" id="mobileGoalProgress">0%</div>
-          <div class="mobile-stat-label">Goal Progress</div>
+      </div>
+    </div>
+    
+    <!-- Goals Tracker -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">🎯 Monthly Goal</div>
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="color: #e2e8f0; font-size: 14px;">Words & Phrases to Master</span>
+          <button onclick="openGoalsModal()" style="background: rgba(102, 126, 234, 0.2); border: 1px solid rgba(102, 126, 234, 0.4); color: #667eea; padding: 5px 12px; border-radius: 15px; font-size: 11px; cursor: pointer;">Edit</button>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); border-radius: 8px; height: 10px; overflow: hidden; margin-bottom: 8px;">
+          <div id="mobileGoalsProgressFill" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+          <span style="color: #a0aec0;" id="mobileGoalsProgressText">0 / 50</span>
+          <span style="color: #667eea; font-weight: 600;" id="mobileGoalsPercentText">0%</span>
         </div>
       </div>
     </div>
     
-    <!-- Class Schedule Section -->
+    <!-- Daily Corrections Button -->
     <div class="mobile-profile-section">
-      <div class="mobile-profile-section-title">📅 Class Schedule</div>
-      <div id="mobileClassSchedule" style="color: #a0aec0; font-size: 13px;">
-        Loading schedule...
+      <div style="background: linear-gradient(135deg, rgba(246, 135, 179, 0.2), rgba(167, 139, 250, 0.2)); border: 2px solid rgba(246, 135, 179, 0.3); border-radius: 12px; padding: 15px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 14px; font-weight: 600; color: #f687b3;">🎬 Daily Corrections</div>
+            <div style="font-size: 12px; color: #a0aec0; margin-top: 3px;">View feedback & practice drills</div>
+          </div>
+          <button onclick="openDailyCorrectionsPage(); closeMobileProfile();" style="padding: 10px 20px; background: linear-gradient(135deg, #f687b3, #a78bfa); color: white; border: none; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px;">
+            View →
+          </button>
+        </div>
       </div>
     </div>
     
-    <!-- Settings Section -->
+    <!-- Class Schedule -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">📅 Class Schedule</div>
+      <div id="mobileClassSchedule" style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+          <span style="color: #e2e8f0; font-weight: 500;">Monday</span>
+          <span style="color: #a78bfa; font-size: 12px;">Sentence Building • 8:00 PM</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+          <span style="color: #e2e8f0; font-weight: 500;">Tuesday</span>
+          <span style="color: #f687b3; font-size: 12px;">Pronunciation • 8:00 PM</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+          <span style="color: #e2e8f0; font-weight: 500;">Wednesday</span>
+          <span style="color: #68d391; font-size: 12px;">Vocabulary • 8:00 PM</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+          <span style="color: #e2e8f0; font-weight: 500;">Thursday</span>
+          <span style="color: #fbd38d; font-size: 12px;">Modal Verb • 8:00 PM</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
+          <span style="color: #e2e8f0; font-weight: 500;">Friday</span>
+          <span style="color: #63b3ed; font-size: 12px;">Listening • 8:45 PM</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Achievements -->
+    <div class="mobile-profile-section">
+      <div class="mobile-profile-section-title">🏆 Achievements</div>
+      <div id="mobileBadgesGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <!-- Will be populated dynamically -->
+        <div style="text-align: center; color: #718096; font-size: 12px; grid-column: 1/-1; padding: 20px;">Loading achievements...</div>
+      </div>
+    </div>
+    
+    <!-- Settings -->
     <div class="mobile-profile-section">
       <div class="mobile-profile-section-title">⚙️ Settings</div>
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
-        <span style="color: white; font-size: 14px;">🌙 Dark Mode</span>
-        <label class="switch" style="font-size: 12px;">
+      <button onclick="openAvatarUpload()" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; cursor: pointer; font-size: 14px; margin-bottom: 10px;">
+        📷 Upload Profile Picture
+      </button>
+      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+        <span style="color: #e2e8f0; font-size: 14px;">🌙 Dark Mode</span>
+        <label class="switch" style="margin: 0;">
           <input type="checkbox" id="mobileThemeToggle" checked onchange="toggleLightMode(event)">
           <span class="slider">
-            <span class="sun">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f9d71c" style="width: 16px; height: 16px;">
-                <circle cx="12" cy="12" r="5"></circle>
-              </svg>
-            </span>
-            <span class="moon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#73C0FC" style="width: 16px; height: 16px;">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            </span>
+            <span class="sun"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f9d71c" style="width:18px;height:18px;"><circle cx="12" cy="12" r="5"></circle></svg></span>
+            <span class="moon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#73C0FC" style="width:18px;height:18px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
           </span>
         </label>
       </div>
@@ -12117,6 +12247,11 @@ body.device-phone .floating-profile-btn {
     
     <!-- Logout -->
     <button class="mobile-logout-btn" onclick="logout()">🚪 LOGOUT</button>
+    
+    <!-- Close button at bottom -->
+    <button onclick="closeMobileProfile()" style="width: 100%; padding: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; cursor: pointer; font-size: 14px; margin-top: 10px;">
+      ✕ Close Profile
+    </button>
   </div>
 </div>
 
@@ -15691,10 +15826,18 @@ body.device-phone .floating-profile-btn {
       
       <!-- Flashcard Games Tab (Student) -->
       <div id="flashcardGames" class="tab-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
           <h2 style="margin: 0;">🎮 Flashcard Games</h2>
           <button onclick="openCreateFolderModal()" class="btn" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
             📁 Create Folder
+          </button>
+        </div>
+        
+        <!-- Search Bar and Go to My Cards (for mobile convenience) -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+          <input type="text" id="flashcardGamesSearch" placeholder="🔍 Search flashcard sets..." style="flex: 1; min-width: 200px; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px;" onkeyup="filterFlashcardGames()">
+          <button onclick="scrollToMyCards()" class="btn" style="padding: 12px 20px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border: none; color: white; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            📚 Go to My Cards
           </button>
         </div>
         
@@ -58870,6 +59013,7 @@ window.addEventListener('load', () => {
 function mobileNavTo(tabId) {
   // Close any open menus
   closeMobileGamesMenu();
+  closeMobileDrillsMenu();
   closeMobileProfile();
   
   // Switch to the tab
@@ -58895,6 +59039,8 @@ function updateMobileNavActive(tabId) {
       item.classList.add('active');
     } else if (itemTab === 'games' && ['flashcardGames', 'myFlashcards', 'marketplacePopular', 'marketplaceCategories', 'myPurchases', 'masteryDeck', 'leitnerBoxes', 'leitnerStats'].includes(tabId)) {
       item.classList.add('active');
+    } else if (itemTab === 'drills' && ['grammarDrill', 'pronunciationDrills', 'grammarDrills', 'analytics', 'analytics2', 'grammarAnalytics'].includes(tabId)) {
+      item.classList.add('active');
     }
   });
 }
@@ -58904,18 +59050,14 @@ function toggleMobileGamesMenu() {
   const menu = document.getElementById('mobileGamesMenu');
   const overlay = document.getElementById('mobileMenuOverlay');
   
+  // Close drills menu if open
+  closeMobileDrillsMenu();
+  
   if (menu.classList.contains('active')) {
     closeMobileGamesMenu();
   } else {
     menu.classList.add('active');
     overlay.classList.add('active');
-    
-    // Update nav item to active
-    const gamesNavItem = document.querySelector('.mobile-nav-item[data-tab="games"]');
-    if (gamesNavItem) {
-      document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
-      gamesNavItem.classList.add('active');
-    }
   }
 }
 
@@ -58927,19 +59069,36 @@ function closeMobileGamesMenu() {
   if (overlay) overlay.classList.remove('active');
 }
 
+// Drills menu toggle
+function toggleMobileDrillsMenu() {
+  const menu = document.getElementById('mobileDrillsMenu');
+  const overlay = document.getElementById('mobileDrillsOverlay');
+  
+  // Close games menu if open
+  closeMobileGamesMenu();
+  
+  if (menu && menu.classList.contains('active')) {
+    closeMobileDrillsMenu();
+  } else {
+    if (menu) menu.classList.add('active');
+    if (overlay) overlay.classList.add('active');
+  }
+}
+
+function closeMobileDrillsMenu() {
+  const menu = document.getElementById('mobileDrillsMenu');
+  const overlay = document.getElementById('mobileDrillsOverlay');
+  
+  if (menu) menu.classList.remove('active');
+  if (overlay) overlay.classList.remove('active');
+}
+
 // Mobile profile functions
 function openMobileProfile() {
   const overlay = document.getElementById('mobileProfileOverlay');
   if (overlay) {
     overlay.classList.add('active');
-    updateMobileProfileData();
-  }
-  
-  // Update nav active state
-  const profileNavItem = document.querySelector('.mobile-nav-item[data-tab="profile"]');
-  if (profileNavItem) {
-    document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
-    profileNavItem.classList.add('active');
+    syncMobileProfileData();
   }
 }
 
@@ -58950,98 +59109,130 @@ function closeMobileProfile() {
   }
 }
 
-function updateMobileProfileData() {
-  // Sync with existing profile panel data
+// Sync all profile data between desktop and mobile
+function syncMobileProfileData() {
+  // Name
   const panelName = document.getElementById('panelDisplayName');
+  const mobileName = document.getElementById('mobileProfileName');
+  if (panelName && mobileName) mobileName.textContent = panelName.textContent;
+  
+  // Coins
   const panelCoins = document.getElementById('panelCoinsCount');
+  const mobileCoins = document.getElementById('mobileProfileCoins');
+  if (panelCoins && mobileCoins) mobileCoins.textContent = panelCoins.textContent;
+  
+  // Streak
   const panelStreak = document.getElementById('panelStreakCount');
+  const mobileStreak = document.getElementById('mobileStreakCount');
+  if (panelStreak && mobileStreak) mobileStreak.textContent = panelStreak.textContent;
+  
+  // Streak Days stat
+  const panelStreakDays = document.getElementById('panelStreakDays');
+  const mobileStreakDays = document.getElementById('mobileStreakDays');
+  if (panelStreakDays && mobileStreakDays) mobileStreakDays.textContent = panelStreakDays.textContent;
+  
+  // Pron Drills
   const panelPronDrills = document.getElementById('panelPronDrills');
-  const panelLeitnerReps = document.getElementById('panelLeitnerReps');
-  const panelRecordingTime = document.getElementById('panelRecordingTime');
-  const goalsProgressText = document.getElementById('goalsProgressText');
-  
-  // Update mobile profile
-  const mobileProfileName = document.getElementById('mobileProfileName');
-  const mobileProfileCoins = document.getElementById('mobileProfileCoins');
-  const mobileStreakCount = document.getElementById('mobileStreakCount');
   const mobilePronDrills = document.getElementById('mobilePronDrills');
+  if (panelPronDrills && mobilePronDrills) mobilePronDrills.textContent = panelPronDrills.textContent;
+  
+  // Leitner Reps
+  const panelLeitnerReps = document.getElementById('panelLeitnerReps');
   const mobileLeitnerReps = document.getElementById('mobileLeitnerReps');
+  if (panelLeitnerReps && mobileLeitnerReps) mobileLeitnerReps.textContent = panelLeitnerReps.textContent;
+  
+  // Recording Time
+  const panelRecordingTime = document.getElementById('panelRecordingTime');
   const mobileRecordingTime = document.getElementById('mobileRecordingTime');
-  const mobileGoalProgress = document.getElementById('mobileGoalProgress');
+  if (panelRecordingTime && mobileRecordingTime) mobileRecordingTime.textContent = panelRecordingTime.textContent;
   
-  if (panelName && mobileProfileName) {
-    mobileProfileName.textContent = panelName.textContent;
-  }
-  if (panelCoins && mobileProfileCoins) {
-    mobileProfileCoins.textContent = panelCoins.textContent;
-  }
-  if (panelStreak && mobileStreakCount) {
-    mobileStreakCount.textContent = panelStreak.textContent;
-  }
-  if (panelPronDrills && mobilePronDrills) {
-    mobilePronDrills.textContent = panelPronDrills.textContent;
-  }
-  if (panelLeitnerReps && mobileLeitnerReps) {
-    mobileLeitnerReps.textContent = panelLeitnerReps.textContent;
-  }
-  if (panelRecordingTime && mobileRecordingTime) {
-    mobileRecordingTime.textContent = panelRecordingTime.textContent;
-  }
-  if (goalsProgressText && mobileGoalProgress) {
-    // Extract percentage from "0 / 50" format
-    const text = goalsProgressText.textContent;
-    const percentEl = document.getElementById('goalsPercentText');
-    if (percentEl) {
-      mobileGoalProgress.textContent = percentEl.textContent;
-    }
+  // Goals
+  const goalsProgressFill = document.getElementById('goalsProgressFill');
+  const mobileGoalsProgressFill = document.getElementById('mobileGoalsProgressFill');
+  if (goalsProgressFill && mobileGoalsProgressFill) {
+    mobileGoalsProgressFill.style.width = goalsProgressFill.style.width;
   }
   
-  // Copy avatar if available
+  const goalsProgressText = document.getElementById('goalsProgressText');
+  const mobileGoalsProgressText = document.getElementById('mobileGoalsProgressText');
+  if (goalsProgressText && mobileGoalsProgressText) mobileGoalsProgressText.textContent = goalsProgressText.textContent;
+  
+  const goalsPercentText = document.getElementById('goalsPercentText');
+  const mobileGoalsPercentText = document.getElementById('mobileGoalsPercentText');
+  if (goalsPercentText && mobileGoalsPercentText) mobileGoalsPercentText.textContent = goalsPercentText.textContent;
+  
+  // Avatar
   const floatingProfileImg = document.getElementById('floatingProfileImg');
   const mobileProfileAvatar = document.getElementById('mobileProfileAvatar');
-  
   if (floatingProfileImg && mobileProfileAvatar) {
     const img = floatingProfileImg.querySelector('img');
     if (img) {
-      mobileProfileAvatar.innerHTML = `<img src="${img.src}" alt="Profile">`;
+      mobileProfileAvatar.innerHTML = `<img src="${img.src}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     }
   }
   
-  // Load class schedule
-  loadMobileClassSchedule();
+  // Sync badges
+  syncMobileBadges();
 }
 
-function loadMobileClassSchedule() {
-  const scheduleContainer = document.getElementById('mobileClassSchedule');
-  if (!scheduleContainer) return;
+function syncMobileBadges() {
+  const desktopBadges = document.getElementById('badgesPanelGrid');
+  const mobileBadges = document.getElementById('mobileBadgesGrid');
   
-  // Copy schedule info from the profile panel if available
-  const classScheduleSection = document.querySelector('.profile-panel-section .activity-calendar');
-  if (classScheduleSection) {
-    const weeklySchedule = classScheduleSection.querySelector('[style*="Weekly Class Schedule"]');
-    if (weeklySchedule) {
-      const scheduleParent = weeklySchedule.parentElement;
-      const scheduleItems = scheduleParent.querySelectorAll('[style*="display: flex; justify-content: space-between"]');
-      
-      let scheduleHTML = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-      scheduleItems.forEach(item => {
-        const daySpan = item.querySelector('span:first-child');
-        const timeSpan = item.querySelector('span:last-child');
-        if (daySpan && timeSpan) {
-          scheduleHTML += `
-            <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px;">
-              <span style="color: #a0aec0;">${daySpan.textContent}</span>
-              <span style="color: #41c0ff; font-weight: 600;">${timeSpan.textContent}</span>
-            </div>
-          `;
+  if (desktopBadges && mobileBadges) {
+    // Copy a simplified version of badges
+    const badges = desktopBadges.querySelectorAll('.badge-panel-item');
+    if (badges.length > 0) {
+      mobileBadges.innerHTML = '';
+      badges.forEach((badge, index) => {
+        if (index < 6) { // Show first 6 badges
+          const icon = badge.querySelector('.badge-panel-icon');
+          const name = badge.querySelector('.badge-panel-name');
+          if (icon && name) {
+            mobileBadges.innerHTML += `
+              <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 24px;">${icon.textContent}</div>
+                <div style="font-size: 10px; color: #a0aec0; margin-top: 5px;">${name.textContent}</div>
+              </div>
+            `;
+          }
         }
       });
-      scheduleHTML += '</div>';
-      scheduleContainer.innerHTML = scheduleHTML;
     }
-  } else {
-    scheduleContainer.innerHTML = '<div style="text-align: center; color: #718096;">No classes scheduled</div>';
   }
+}
+
+// Flashcard games search function
+function filterFlashcardGames() {
+  const searchInput = document.getElementById('flashcardGamesSearch');
+  if (!searchInput) return;
+  
+  const searchTerm = searchInput.value.toLowerCase();
+  
+  // Filter folder cards
+  const folderCards = document.querySelectorAll('.fc-folder-card');
+  folderCards.forEach(card => {
+    const name = card.querySelector('.fc-folder-name');
+    if (name) {
+      const match = name.textContent.toLowerCase().includes(searchTerm);
+      card.style.display = match ? '' : 'none';
+    }
+  });
+  
+  // Filter flashcard set cards
+  const setCards = document.querySelectorAll('.fc-set-card');
+  setCards.forEach(card => {
+    const name = card.querySelector('.fc-set-name, h4');
+    if (name) {
+      const match = name.textContent.toLowerCase().includes(searchTerm);
+      card.style.display = match ? '' : 'none';
+    }
+  });
+}
+
+// Scroll to My Cards section
+function scrollToMyCards() {
+  mobileNavTo('myFlashcards');
 }
 
 // Update mobile nav badges when data changes
