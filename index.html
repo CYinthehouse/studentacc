@@ -11969,6 +11969,11 @@ body.device-phone .floating-profile-btn {
     border-radius: 4px !important;
   }
   
+  /* Show scroll hint on mobile */
+  .mobile-scroll-hint {
+    display: inline !important;
+  }
+  
   /* ===== FIX 3: Flashcard Games grid ===== */
   #availableFlashcards,
   #folderContentsGrid,
@@ -11977,18 +11982,50 @@ body.device-phone .floating-profile-btn {
     gap: 10px !important;
   }
   
-  /* ===== FIX 5: Theme toggle slider fix ===== */
+  /* ===== FIX 7: Theme toggle slider fix - PROPER CENTERING ===== */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+  
+  .switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #4a5568;
+    transition: 0.4s;
+    border-radius: 34px;
+  }
+  
   .switch .slider .sun,
   .switch .slider .moon {
+    position: absolute;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  .switch .slider .sun {
+    left: 6px !important;
+  }
+  
+  .switch .slider .moon {
+    right: 6px !important;
   }
   
   .switch .slider .sun svg,
   .switch .slider .moon svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   
   /* ===== FIX 7: Junbi/Flashcard game scaling for mobile ===== */
@@ -12360,9 +12397,9 @@ body.device-phone .floating-profile-btn {
       </div>
       <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <span style="color: #a0aec0; font-size: 13px;">Show my activity to others</span>
-        <label class="toggle-switch" style="position: relative; width: 50px; height: 26px;">
-          <input type="checkbox" id="mobileActivityOptIn" checked onchange="toggleActivityOptIn()" style="opacity: 0; width: 0; height: 0;">
-          <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #4a5568; border-radius: 26px; transition: 0.3s;"></span>
+        <label class="toggle-switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
+          <input type="checkbox" id="mobileActivityOptIn" checked onchange="toggleActivityOptInMobile()" style="opacity: 0; width: 0; height: 0;">
+          <span class="toggle-slider-mobile" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #48bb78; border-radius: 26px; transition: 0.3s;"></span>
         </label>
       </div>
     </div>
@@ -15977,7 +16014,7 @@ body.device-phone .floating-profile-btn {
         <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
           <input type="text" id="flashcardGamesSearch" placeholder="🔍 Search flashcard sets..." style="flex: 1; min-width: 200px; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px;" onkeyup="filterFlashcardGames()">
           <button onclick="scrollToMyCards()" class="btn" style="padding: 12px 20px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border: none; color: white; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap;">
-            📚 Go to My Cards
+            ✏️ Go to My Cards
           </button>
         </div>
         
@@ -16005,23 +16042,6 @@ body.device-phone .floating-profile-btn {
           <h3>📚 Unfiled Flashcard Sets</h3>
           <div id="availableFlashcards" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
             <div class="loading"></div>
-          </div>
-        </div>
-        
-        <!-- My Cards Section (for quick access, especially on mobile) -->
-        <div id="myCardsSectionInGames" class="fc-unfiled-section" style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0;">📁 My Cards</h3>
-            <button onclick="switchTab('myFlashcards')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;">
-              Open Full View →
-            </button>
-          </div>
-          <p style="color: #718096; font-size: 13px; margin-bottom: 15px;">Quick access to your personal flashcard folders synced to games.</p>
-          <div id="myCardsFoldersPreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
-            <div style="text-align: center; padding: 30px; color: #a0aec0; grid-column: 1/-1;">
-              <div style="font-size: 32px; margin-bottom: 10px;">📚</div>
-              <p>Sync your cards from "My Flashcards" to see them here!</p>
-            </div>
           </div>
         </div>
         
@@ -16588,6 +16608,7 @@ body.device-phone .floating-profile-btn {
               <div>
                 <h3 style="margin: 0;" id="selectedFolderName">All Cards</h3>
                 <span style="font-size: 12px; color: #a0aec0;" id="selectedFolderCount">0 cards</span>
+                <span class="mobile-scroll-hint" style="display: none; font-size: 11px; color: #667eea; margin-left: 8px;">↓ scroll to see all</span>
               </div>
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <button onclick="openAddCardModal()" class="btn" style="padding: 8px 16px; font-size: 13px;">➕ Add Card</button>
@@ -17870,6 +17891,11 @@ function showDashboard() {
     renderGrammarActiveDrills(); // Load Grammar Drill as default view
     initFloatingProfile(); // Initialize floating profile button
     checkMyCardsSyncState(); // Check if My Cards has been synced to games
+    
+    // Set mobile nav to Drills as active on login
+    setTimeout(() => {
+      setMobileDrillsActive();
+    }, 500);
     
     // Update all-in-one badge after a short delay to allow data to load
     setTimeout(() => {
@@ -23328,11 +23354,17 @@ let audioContext = null;
 // Initialize audio context on first user interaction
 function initAudioContext() {
   if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      console.log('AudioContext initialized:', audioContext.state);
+    } catch (e) {
+      console.error('Failed to create AudioContext:', e);
     }
   }
+  return audioContext;
 }
 
 // Show sound enable prompt if needed
@@ -23346,58 +23378,121 @@ function showSoundEnablePrompt() {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: #f39c12;
+    background: linear-gradient(135deg, #f39c12, #e67e22);
     color: white;
-    padding: 15px 20px;
-    border-radius: 10px;
-    z-index: 10001;
-    font-size: 14px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    padding: 15px 25px;
+    border-radius: 12px;
+    z-index: 100001;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     cursor: pointer;
-    animation: slideDown 0.5s ease;
+    animation: pulse 1.5s ease-in-out infinite;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   `;
-  prompt.innerHTML = '🔊 Click here to enable sound effects';
-  prompt.onclick = function() {
+  prompt.innerHTML = '🔊 TAP HERE to enable sound effects';
+  
+  // Add pulse animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Handle click/tap
+  const enableSound = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Sound enable clicked');
     initAudioContext();
+    
+    // Play a silent audio to unlock audio on mobile
     const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
+    silentAudio.volume = 0.01;
+    
     silentAudio.play().then(() => {
       soundEnabled = true;
       prompt.remove();
-      console.log('Sound enabled by user interaction');
+      console.log('Sound enabled successfully via click');
+      
+      // Show confirmation
+      const confirm = document.createElement('div');
+      confirm.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #48bb78;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        z-index: 100001;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      `;
+      confirm.innerHTML = '✓ Sound enabled!';
+      document.body.appendChild(confirm);
+      setTimeout(() => confirm.remove(), 2000);
     }).catch(e => {
-      console.log('Silent audio failed:', e);
+      console.log('Silent audio play attempt:', e);
+      // Still mark as enabled - we tried
       soundEnabled = true;
       prompt.remove();
     });
   };
+  
+  prompt.addEventListener('click', enableSound);
+  prompt.addEventListener('touchend', enableSound);
+  
   document.body.appendChild(prompt);
   
-  setTimeout(() => {
-    if (prompt.parentNode) prompt.remove();
-  }, 10000);
+  // Don't auto-remove - keep visible until clicked
 }
 
-// Enhanced play sound function
+// Enhanced play sound function - more robust
 function playSound(soundData) {
-  if (!soundData) return;
+  if (!soundData) {
+    console.log('No sound data provided');
+    return;
+  }
   
-  console.log('Playing sound (base64 data)');
+  console.log('Attempting to play sound...');
+  
+  // Ensure audio context is ready
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
   
   try {
-    // Create audio directly with base64 data
     const audio = new Audio(soundData);
     audio.volume = 0.7;
     
-    // Simple play with error handling
-    audio.play().then(() => {
-      console.log('Sound playing successfully');
-      soundEnabled = true;
-    }).catch(error => {
-      console.warn('Sound play failed:', error);
-      // Don't block the game if sound fails
-    });
+    // Add event listeners for debugging
+    audio.onplay = () => console.log('Sound started playing');
+    audio.onended = () => console.log('Sound finished playing');
+    audio.onerror = (e) => console.error('Sound error:', e);
+    
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        console.log('Sound playing successfully');
+        soundEnabled = true;
+      }).catch(error => {
+        console.warn('Sound play failed, showing enable prompt:', error);
+        // Show prompt if sound fails
+        if (!soundEnabled) {
+          showSoundEnablePrompt();
+        }
+      });
+    }
   } catch (error) {
-    console.error('Error creating audio:', error);
+    console.error('Error creating/playing audio:', error);
   }
 }
 
@@ -42063,6 +42158,33 @@ async function toggleActivityOptIn() {
   studentProfileData.activityOptIn = document.getElementById('activityOptIn').checked;
   await saveStudentProfile();
   
+  // Sync to mobile toggle
+  const mobileOptIn = document.getElementById('mobileActivityOptIn');
+  if (mobileOptIn) mobileOptIn.checked = studentProfileData.activityOptIn;
+  
+  showToast(studentProfileData.activityOptIn ? '✅ Your activity will be visible to others' : '🔒 Your activity is now private');
+}
+
+// Mobile version of activity toggle
+async function toggleActivityOptInMobile() {
+  if (!currentUser) return;
+  
+  const mobileOptIn = document.getElementById('mobileActivityOptIn');
+  if (!mobileOptIn) return;
+  
+  studentProfileData.activityOptIn = mobileOptIn.checked;
+  await saveStudentProfile();
+  
+  // Sync to desktop toggle
+  const desktopOptIn = document.getElementById('activityOptIn');
+  if (desktopOptIn) desktopOptIn.checked = studentProfileData.activityOptIn;
+  
+  // Update toggle appearance
+  const slider = mobileOptIn.nextElementSibling;
+  if (slider) {
+    slider.style.backgroundColor = studentProfileData.activityOptIn ? '#48bb78' : '#4a5568';
+  }
+  
   showToast(studentProfileData.activityOptIn ? '✅ Your activity will be visible to others' : '🔒 Your activity is now private');
 }
 
@@ -59202,6 +59324,17 @@ function updateMobileNavActive(tabId) {
   });
 }
 
+// Set drills as active on mobile after login
+function setMobileDrillsActive() {
+  if (currentDeviceType === 'phone') {
+    const drillsNavItem = document.querySelector('.mobile-nav-item[data-tab="drills"]');
+    if (drillsNavItem) {
+      document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+      drillsNavItem.classList.add('active');
+    }
+  }
+}
+
 // Games menu toggle
 function toggleMobileGamesMenu() {
   const menu = document.getElementById('mobileGamesMenu');
@@ -59255,7 +59388,8 @@ function openMobileProfile() {
   const overlay = document.getElementById('mobileProfileOverlay');
   if (overlay) {
     overlay.classList.add('active');
-    syncMobileProfileData();
+    // Sync data when opening
+    setTimeout(syncMobileProfileData, 100);
   }
 }
 
@@ -59268,15 +59402,34 @@ function closeMobileProfile() {
 
 // Sync all profile data between desktop and mobile
 function syncMobileProfileData() {
-  // Name
-  const panelName = document.getElementById('panelDisplayName');
-  const mobileName = document.getElementById('mobileProfileName');
-  if (panelName && mobileName) mobileName.textContent = panelName.textContent;
+  console.log('Syncing mobile profile data...');
   
-  // Coins - sync from floating button which is always updated
+  // Name - try multiple sources
+  const panelName = document.getElementById('panelDisplayName');
+  const sidebarName = document.querySelector('.profile-name');
+  const mobileName = document.getElementById('mobileProfileName');
+  if (mobileName) {
+    if (panelName && panelName.textContent !== 'Student') {
+      mobileName.textContent = panelName.textContent;
+    } else if (sidebarName) {
+      mobileName.textContent = sidebarName.textContent;
+    }
+  }
+  
+  // Coins - sync from multiple sources
   const floatingCoins = document.getElementById('floatingCoinsCount');
+  const panelCoins = document.getElementById('panelCoinsCount');
+  const sidebarCoins = document.getElementById('coinsCount');
   const mobileCoins = document.getElementById('mobileProfileCoins');
-  if (floatingCoins && mobileCoins) mobileCoins.textContent = floatingCoins.textContent;
+  if (mobileCoins) {
+    if (floatingCoins && floatingCoins.textContent !== '0') {
+      mobileCoins.textContent = floatingCoins.textContent;
+    } else if (panelCoins && panelCoins.textContent !== '0') {
+      mobileCoins.textContent = panelCoins.textContent;
+    } else if (sidebarCoins) {
+      mobileCoins.textContent = sidebarCoins.textContent;
+    }
+  }
   
   // Streak - main display
   const panelStreak = document.getElementById('panelStreakCount');
@@ -59322,9 +59475,12 @@ function syncMobileProfileData() {
   
   // Avatar
   const floatingProfileImg = document.getElementById('floatingProfileImg');
+  const panelAvatar = document.getElementById('panelAvatarDisplay');
   const mobileProfileAvatar = document.getElementById('mobileProfileAvatar');
-  if (floatingProfileImg && mobileProfileAvatar) {
-    const img = floatingProfileImg.querySelector('img');
+  if (mobileProfileAvatar) {
+    let img = null;
+    if (floatingProfileImg) img = floatingProfileImg.querySelector('img');
+    if (!img && panelAvatar) img = panelAvatar.querySelector('img');
     if (img) {
       mobileProfileAvatar.innerHTML = `<img src="${img.src}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     }
@@ -59338,6 +59494,15 @@ function syncMobileProfileData() {
   
   // Sync activity feed
   syncMobileActivityFeed();
+  
+  // Sync activity opt-in toggle
+  const desktopOptIn = document.getElementById('activityOptIn');
+  const mobileOptIn = document.getElementById('mobileActivityOptIn');
+  if (desktopOptIn && mobileOptIn) {
+    mobileOptIn.checked = desktopOptIn.checked;
+  }
+  
+  console.log('Mobile profile sync complete');
 }
 
 function syncMobileCalendar() {
@@ -59352,23 +59517,15 @@ function syncMobileCalendar() {
   const desktopGrid = document.getElementById('activityCalendarGrid');
   const mobileGrid = document.getElementById('mobileCalendarGrid');
   if (desktopGrid && mobileGrid) {
-    // Clone the calendar days
-    const days = desktopGrid.querySelectorAll('.calendar-day');
-    mobileGrid.innerHTML = '';
+    // Clone the entire calendar content
+    mobileGrid.innerHTML = desktopGrid.innerHTML;
     
-    // Add day headers
-    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(day => {
-      const header = document.createElement('div');
-      header.style.cssText = 'text-align: center; font-size: 10px; color: #718096; padding: 3px;';
-      header.textContent = day;
-      mobileGrid.appendChild(header);
-    });
-    
-    days.forEach(day => {
-      const clone = document.createElement('div');
-      clone.style.cssText = 'width: 100%; aspect-ratio: 1; border-radius: 3px; background: ' + (day.style.background || '#1e293b') + ';';
-      clone.title = day.title || '';
-      mobileGrid.appendChild(clone);
+    // Adjust sizing for mobile
+    mobileGrid.querySelectorAll('.calendar-day').forEach(day => {
+      day.style.width = '100%';
+      day.style.height = 'auto';
+      day.style.aspectRatio = '1';
+      day.style.fontSize = '9px';
     });
   }
 }
@@ -59377,32 +59534,24 @@ function syncMobileBadges() {
   const desktopBadges = document.getElementById('badgesPanelGrid');
   const mobileBadges = document.getElementById('mobileBadgesGrid');
   
-  if (desktopBadges && mobileBadges) {
-    const badges = desktopBadges.querySelectorAll('.badge-panel-item');
-    mobileBadges.innerHTML = '';
+  if (!mobileBadges) return;
+  
+  if (desktopBadges) {
+    // Clone the entire badges grid content
+    mobileBadges.innerHTML = desktopBadges.innerHTML;
     
-    if (badges.length === 0) {
-      mobileBadges.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; grid-column: 1/-1; padding: 20px;">No achievements yet. Keep learning!</div>';
-      return;
-    }
-    
-    badges.forEach((badge, index) => {
-      if (index < 9) { // Show first 9 badges
-        const icon = badge.querySelector('.badge-panel-icon');
-        const name = badge.querySelector('.badge-panel-name');
-        const isLocked = badge.classList.contains('locked');
-        
-        if (icon) {
-          const div = document.createElement('div');
-          div.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; text-align: center;' + (isLocked ? ' opacity: 0.4;' : '');
-          div.innerHTML = `
-            <div style="font-size: 24px;">${icon.textContent}</div>
-            <div style="font-size: 9px; color: #a0aec0; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name ? name.textContent : ''}</div>
-          `;
-          mobileBadges.appendChild(div);
-        }
-      }
+    // Adjust sizing for mobile
+    mobileBadges.querySelectorAll('.badge-panel-item').forEach(badge => {
+      badge.style.padding = '8px';
     });
+    mobileBadges.querySelectorAll('.badge-panel-icon').forEach(icon => {
+      icon.style.fontSize = '24px';
+    });
+    mobileBadges.querySelectorAll('.badge-panel-name').forEach(name => {
+      name.style.fontSize = '9px';
+    });
+  } else {
+    mobileBadges.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; grid-column: 1/-1; padding: 20px;">Loading achievements...</div>';
   }
 }
 
@@ -59410,22 +59559,19 @@ function syncMobileActivityFeed() {
   const desktopFeed = document.getElementById('activityFeed');
   const mobileFeed = document.getElementById('mobileActivityFeed');
   
-  if (desktopFeed && mobileFeed) {
-    const activities = desktopFeed.querySelectorAll('.activity-item');
-    mobileFeed.innerHTML = '';
+  if (!mobileFeed) return;
+  
+  if (desktopFeed && desktopFeed.innerHTML.trim()) {
+    // Clone the entire activity feed content
+    mobileFeed.innerHTML = desktopFeed.innerHTML;
     
-    if (activities.length === 0) {
-      mobileFeed.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; padding: 20px;">No recent activity</div>';
-      return;
-    }
-    
-    activities.forEach((activity, index) => {
-      if (index < 5) { // Show first 5 activities
-        const clone = activity.cloneNode(true);
-        clone.style.cssText = 'padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; font-size: 12px;';
-        mobileFeed.appendChild(clone);
-      }
+    // Adjust styling for mobile
+    mobileFeed.querySelectorAll('.activity-item').forEach(item => {
+      item.style.fontSize = '12px';
+      item.style.padding = '8px';
     });
+  } else {
+    mobileFeed.innerHTML = '<div style="text-align: center; color: #718096; font-size: 12px; padding: 20px;">No recent activity</div>';
   }
 }
 
@@ -59438,11 +59584,7 @@ function filterFlashcardGames() {
   
   // If empty, show all
   if (!searchTerm) {
-    document.querySelectorAll('.fc-folder-card, .fc-set-card, [class*="flashcard"]').forEach(el => {
-      el.style.display = '';
-    });
-    // Also show section headers
-    document.querySelectorAll('#flashcardFoldersSection, #unfiledFlashcardsSection, #myCardsSectionInGames').forEach(el => {
+    document.querySelectorAll('#flashcardFoldersGrid > div, #availableFlashcards > div').forEach(el => {
       el.style.display = '';
     });
     return;
@@ -59451,7 +59593,6 @@ function filterFlashcardGames() {
   // Filter folder cards
   const folderCards = document.querySelectorAll('#flashcardFoldersGrid > div');
   folderCards.forEach(card => {
-    const name = card.querySelector('.fc-folder-name, h4, span');
     const text = card.textContent || '';
     const match = text.toLowerCase().includes(searchTerm);
     card.style.display = match ? '' : 'none';
@@ -59464,39 +59605,39 @@ function filterFlashcardGames() {
     const match = text.toLowerCase().includes(searchTerm);
     card.style.display = match ? '' : 'none';
   });
-  
-  // Filter My Cards preview
-  const myCardsPreview = document.querySelectorAll('#myCardsFoldersPreview > div');
-  myCardsPreview.forEach(card => {
-    const text = card.textContent || '';
-    const match = text.toLowerCase().includes(searchTerm);
-    card.style.display = match ? '' : 'none';
-  });
 }
 
-// Scroll to My Cards section in flashcard games
+// Scroll to My Cards section (the ✏️ My Cards synced folders) in flashcard games
 function scrollToMyCards() {
-  const myCardsSection = document.getElementById('myCardsSectionInGames');
-  if (myCardsSection) {
-    myCardsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Find the first My Cards synced folder (has ✏️ My Cards badge)
+  const myCardsFolder = document.querySelector('.my-cards-synced-folder');
+  if (myCardsFolder) {
+    myCardsFolder.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Flash highlight effect
+    myCardsFolder.style.transition = 'box-shadow 0.3s';
+    myCardsFolder.style.boxShadow = '0 0 20px 5px rgba(251, 191, 36, 0.6)';
+    setTimeout(() => {
+      myCardsFolder.style.boxShadow = '';
+    }, 1500);
+    return;
   }
-}
-
-// Load My Cards preview in flashcard games
-function loadMyCardsFoldersPreview() {
-  const container = document.getElementById('myCardsFoldersPreview');
-  if (!container || !currentUser) return;
   
-  // Get synced folders from the existing flashcard folders
-  const syncedFolders = document.querySelectorAll('#flashcardFoldersGrid .fc-folder-card');
-  
-  if (syncedFolders.length > 0) {
-    container.innerHTML = '';
-    syncedFolders.forEach(folder => {
-      const clone = folder.cloneNode(true);
-      container.appendChild(clone);
-    });
+  // Fallback: find any folder with "✏️ My Cards" badge
+  const allFolders = document.querySelectorAll('#flashcardFoldersGrid > div');
+  for (const folder of allFolders) {
+    if (folder.textContent.includes('✏️ My Cards')) {
+      folder.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      folder.style.transition = 'box-shadow 0.3s';
+      folder.style.boxShadow = '0 0 20px 5px rgba(251, 191, 36, 0.6)';
+      setTimeout(() => {
+        folder.style.boxShadow = '';
+      }, 1500);
+      return;
+    }
   }
+  
+  // If no My Cards found, show message
+  alert('No "My Cards" folders found. Sync your cards from "My Flashcards" first!');
 }
 
 // Update mobile nav badges when data changes
