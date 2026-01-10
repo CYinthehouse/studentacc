@@ -21213,16 +21213,13 @@ let flashcardIsProcessingMatch = false;
 let isGamePaused = false;
 
 function initializeSpeechRecognition() {
-  console.log('initializeSpeechRecognition called, recognition exists:', !!recognition);
   // Only create once - reuse the same instance
   if (recognition) return;
   
   if ('webkitSpeechRecognition' in window) {
     recognition = new webkitSpeechRecognition();
-    console.log('Created webkitSpeechRecognition');
   } else if ('SpeechRecognition' in window) {
     recognition = new SpeechRecognition();
-    console.log('Created SpeechRecognition');
   } else {
     alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
     return;
@@ -21231,10 +21228,6 @@ function initializeSpeechRecognition() {
   recognition.lang = 'ko-KR';
   recognition.continuous = true;
   recognition.interimResults = true;
-  
-  recognition.onstart = () => {
-    console.log('Recognition started successfully');
-  };
   
   recognition.onresult = (event) => {
     if (flashcardIsProcessingMatch) return;
@@ -25107,7 +25100,6 @@ function highlightCurrentWord() {
 }
 
 function startFlashcardRound() {
-  console.log('startFlashcardRound called, recognition exists:', !!recognition);
   if (currentWordIndex >= currentGameWords.length) {
     showRoundResults();
     return;
@@ -25115,13 +25107,7 @@ function startFlashcardRound() {
   
   // Start listening
   if (recognition) {
-    console.log('Starting recognition...');
-    try {
-      recognition.start();
-      console.log('recognition.start() called successfully');
-    } catch (e) {
-      console.log('recognition.start() error:', e.message);
-    }
+    recognition.start();
     isListening = true;
     document.getElementById('listeningIndicator').style.display = 'block';
     document.getElementById('startGameBtn').textContent = '⏸ Pause';
@@ -25129,8 +25115,6 @@ function startFlashcardRound() {
     
     // Start timer
     startWordTimer();
-  } else {
-    console.log('ERROR: recognition is null/undefined!');
   }
 }
 
