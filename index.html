@@ -21208,21 +21208,16 @@ let missedWords = []; // Words that were incorrect - carry over to next set
 let flashcardIsProcessingMatch = false;
 let isGamePaused = false;
 
-/**
- * Initialize speech recognition object
- */
-function initializeFlashcardRecognition() {
-  if (recognition) {
-    return;
-  }
+function initializeSpeechRecognition() {
+  // Only create once - reuse the same instance
+  if (recognition) return;
   
   if ('webkitSpeechRecognition' in window) {
     recognition = new webkitSpeechRecognition();
   } else if ('SpeechRecognition' in window) {
     recognition = new SpeechRecognition();
   } else {
-    console.log('Speech recognition not supported');
-    alert('Speech recognition is not supported in your browser. Please use Chrome.');
+    alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
     return;
   }
   
@@ -21230,31 +21225,28 @@ function initializeFlashcardRecognition() {
   recognition.continuous = true;
   recognition.interimResults = true;
   
-  recognition.onstart = () => {
-    console.log('Recognition started');
-  };
-  
   recognition.onresult = (event) => {
-    if (!isFlashcardGameActive || !isListening || isGamePaused || flashcardIsProcessingMatch) {
-      return;
-    }
+    if (flashcardIsProcessingMatch) return;
     
     const latestResultIndex = event.results.length - 1;
     const latestResult = event.results[latestResultIndex];
     const transcript = latestResult[0].transcript.trim();
     
-    const recognizedTextEl = document.getElementById('recognizedText');
-    if (recognizedTextEl) recognizedTextEl.textContent = transcript;
+    // Show what's being heard
+    document.getElementById('recognizedText').textContent = transcript;
     
+    // ONLY check for matches on FINAL results
     if (!latestResult.isFinal) {
       return;
     }
     
-    console.log('Final result:', transcript);
+    console.log('Flashcard FINAL result:', transcript);
     
+    // Check if the transcript matches current word
     if (currentWordIndex < currentGameWords.length) {
       const currentWord = currentGameWords[currentWordIndex];
       
+      // Normalize for comparison
       const normalizeKorean = (str) => {
         return str.replace(/\s+/g, '').replace(/[.,!?~～·。'"'""]/g, '');
       };
@@ -21262,85 +21254,59 @@ function initializeFlashcardRecognition() {
       const normalizedTranscript = normalizeKorean(transcript);
       const koreanWord = normalizeKorean(currentWord.korean);
       
-      const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
-      console.log('Comparing:', normalizedTranscript, 'vs', koreanWord, '- Similarity:', similarity);
+      console.log('Flashcard comparing:', { said: normalizedTranscript, expected: koreanWord });
       
+      // Calculate similarity (allows 10% error tolerance = 90% match required)
+      const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
+      console.log('Similarity:', similarity);
+      
+      // Accept if 90% or more similar (10% error tolerance)
       if (similarity >= 0.90) {
         flashcardIsProcessingMatch = true;
+        console.log('Flashcard match! Similarity:', similarity);
         wordCorrect(currentWordIndex);
-        setTimeout(() => { flashcardIsProcessingMatch = false; }, 500);
+        
+        setTimeout(() => {
+          flashcardIsProcessingMatch = false;
+        }, 500);
       }
     }
   };
   
   recognition.onerror = (event) => {
-    console.log('Recognition error:', event.error);
-    // On network error, try to restart after a delay
-    if (event.error === 'network' && isFlashcardGameActive && isListening) {
-      console.log('Network error - will retry...');
-      setTimeout(() => {
-        if (isFlashcardGameActive && isListening && recognition) {
-          try {
-            recognition.start();
-            console.log('Recognition restarted after network error');
-          } catch (e) {
-            console.log('Restart error:', e.message);
-          }
-        }
-      }, 1000);
+    console.log('Speech recognition error:', event.error);
+    // Handle interruptions gracefully
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      // Permission denied - show pause screen
+      if (isFlashcardGameActive) {
+        showGameInterruptedScreen();
+      }
     }
   };
   
   recognition.onend = () => {
-    console.log('Recognition ended, game active:', isFlashcardGameActive, 'listening:', isListening);
-    // Auto-restart if game is still active
-    if (isFlashcardGameActive && isListening && !isGamePaused) {
+    console.log('Flashcard recognition ended, isGameActive:', isFlashcardGameActive, 'isListening:', isListening);
+    // Keep recognition alive as long as game is active
+    if (isFlashcardGameActive && isListening) {
       setTimeout(() => {
-        if (isFlashcardGameActive && isListening && recognition) {
+        if (isFlashcardGameActive && isListening) {
           try {
             recognition.start();
-            console.log('Recognition restarted');
+            console.log('Recognition restarted (continuous mode)');
           } catch (e) {
-            console.log('Restart error:', e.message);
+            console.log('Flashcard recognition restart failed:', e.message);
+            // If restart fails, show interrupted screen
+            if (isFlashcardGameActive) {
+              showGameInterruptedScreen();
+            }
           }
         }
       }, 100);
     }
   };
-  
-  console.log('Speech recognition initialized');
 }
 
-/**
- * Start speech recognition for flashcard game
- */
-function startFlashcardRecognition() {
-  if (!recognition) {
-    initializeFlashcardRecognition();
-  }
-  
-  if (recognition) {
-    try {
-      recognition.start();
-      console.log('Recognition started for game');
-    } catch (e) {
-      if (!e.message.includes('already started')) {
-        console.log('Start error:', e.message);
-      }
-    }
-  }
-}
-
-/**
- * Stop speech recognition
- */
-function stopFlashcardRecognition() {
-  if (recognition) {
-    try {
-      recognition.stop();
-    } catch (e) {}
-  }
-}
+// Enhanced Flashcard Variables
 
 // Enhanced Flashcard Variables
 let uploadedFiles = {};
@@ -24890,11 +24856,6 @@ function startGameFromJunbi() {
   }, 800);
 }
 
-function initializeSpeechRecognition() {
-  // Just initialize, don't start - recognition starts when game starts
-  initializeFlashcardRecognition();
-}
-
 /**
  * Request wake lock to keep screen awake during game
  */
@@ -25140,35 +25101,32 @@ function startFlashcardRound() {
     return;
   }
   
-  // Enable listening and start recognition
-  isGamePaused = false;
-  isListening = true;
-  
-  // Start recognition when game round starts
-  startFlashcardRecognition();
-  
-  document.getElementById('listeningIndicator').style.display = 'block';
-  document.getElementById('startGameBtn').textContent = '⏸ Pause';
-  document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
-  
-  // Start timer
-  startWordTimer();
+  // Start listening
+  if (recognition) {
+    recognition.start();
+    isListening = true;
+    document.getElementById('listeningIndicator').style.display = 'block';
+    document.getElementById('startGameBtn').textContent = '⏸ Pause';
+    document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
+    
+    // Start timer
+    startWordTimer();
+  }
 }
 
 function pauseFlashcardRound() {
-  // Don't stop recognition - just pause the game logic
-  isGamePaused = true;
-  clearInterval(flashcardTimer);
-  
-  document.getElementById('listeningIndicator').style.display = 'none';
-  document.getElementById('startGameBtn').textContent = '🎤 Resume';
-  document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
+  if (isListening) {
+    // Don't stop recognition, just pause the timer and hide indicator
+    clearInterval(flashcardTimer);
+    document.getElementById('listeningIndicator').style.display = 'none';
+    document.getElementById('startGameBtn').textContent = '🎤 Resume';
+    document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
+    // Keep isListening true so recognition keeps running in background
+  }
 }
 
 function resumeFlashcardRound() {
   if (isFlashcardGameActive) {
-    isGamePaused = false;
-    
     document.getElementById('listeningIndicator').style.display = 'block';
     document.getElementById('startGameBtn').textContent = '⏸ Pause';
     document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
@@ -25691,10 +25649,6 @@ function exitFlashcardGame() {
   // Mark game as inactive
   isFlashcardGameActive = false;
   isListening = false;
-  isGamePaused = false;
-  
-  // Stop recognition and reset flag for next game
-  stopFlashcardRecognition();
   
   // Release wake lock
   releaseWakeLock();
@@ -25720,7 +25674,14 @@ function exitFlashcardGame() {
     streakIndicator.classList.add('hidden');
   }
   
-  // Don't stop recognition - it runs globally for the entire session
+  // NOW stop recognition (game is ending)
+  if (recognition) {
+    try {
+      recognition.stop();
+    } catch (e) {
+      console.log('Recognition stop error:', e.message);
+    }
+  }
   clearInterval(flashcardTimer);
   
   // Hide junbi page if visible
