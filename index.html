@@ -58332,9 +58332,9 @@ function handleGrammarWalkAwayContinue() {
 
           document.querySelectorAll('.mobile-nav-item').forEach(function(i) { i.classList.remove('active'); });
 
-          var homeNav = document.querySelector('.mobile-nav-item[data-tab="home"]');
-          if (homeNav) {
-            homeNav.classList.add('active');
+          var dailyNav = document.querySelector('.mobile-nav-item[data-tab="dailyActivity"]');
+          if (dailyNav) {
+            dailyNav.classList.add('active');
           }
 
           var allTabs = document.querySelectorAll('#studentDashboard .tab-content');
@@ -58342,12 +58342,10 @@ function handleGrammarWalkAwayContinue() {
             tab.classList.remove('active');
           });
 
-          var mobileHomeTab = document.getElementById('mobileHome');
-          if (mobileHomeTab) {
-            mobileHomeTab.classList.add('active');
+          var dailyActivityTab = document.getElementById('dailyActivity');
+          if (dailyActivityTab) {
+            dailyActivityTab.classList.add('active');
           }
-
-          setTimeout(updateMobileHomeStats, 1000);
         }
       }, 300);
     };
