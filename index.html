@@ -7526,6 +7526,28 @@ input:checked + .toggle-slider:before {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Mobile styles for daily pronunciation challenge video */
+@media (max-width: 768px) {
+  .da-teacher-card .da-video-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .da-teacher-card > div[style*="display:flex"][style*="gap:15px"] {
+    flex-direction: column !important;
+  }
+  
+  .da-teacher-card > div[style*="display:flex"][style*="gap:15px"] > div[style*="width:280px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  #pronTeacherCard video {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
 /* Kpop post card styling for dark theme */
 .kpop-post-card {
   background: rgba(255, 255, 255, 0.04);
