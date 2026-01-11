@@ -35195,6 +35195,7 @@ function executeAllInOnePhase(phase) {
 
 /**
  * Start pronunciation drill for all-in-one session
+ * Renders directly in allInOneContainer instead of switching tabs
  */
 function startPronDrillSessionForAllInOne() {
   if (pronDrillDueCards.length === 0) {
@@ -35203,7 +35204,252 @@ function startPronDrillSessionForAllInOne() {
   }
 
   window.allInOnePronCallback = true;
-  startSinglePronDrill(pronDrillDueCards[0].id);
+
+  const card = pronunciationDrillCards.find(c => c.id === pronDrillDueCards[0].id);
+  if (!card || !card.drillWords || card.drillWords.length === 0) {
+    completeAllInOnePhase('pronunciation');
+    return;
+  }
+
+  startPronDrillInAllInOne(card);
+}
+
+/**
+ * Run pronunciation drill inside allInOneContainer
+ */
+function startPronDrillInAllInOne(card) {
+  const currentDay = card.currentDay || 1;
+  const totalDays = card.totalDays || 7;
+  const savedReps = card.completedRepetitionsToday || 0;
+  const startingRep = savedReps + 1;
+
+  allInOnePronState = {
+    cardId: card.id,
+    card: card,
+    currentWordIndex: 0,
+    currentRepetition: startingRep,
+    totalRepetitions: card.requiredRepetitions || 1,
+    words: shuffleArray([...card.drillWords]),
+    correctInRep: 0,
+    totalCorrect: 0,
+    totalAttempts: 0,
+    recognition: null,
+    isListening: false
+  };
+
+  const container = document.getElementById('allInOneContainer');
+  container.innerHTML = `
+    <div style="max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 20px;">
+          🎤 ${card.topic}
+        </span>
+        <div style="margin-top: 15px;">
+          <span style="background: #fef3c7; color: #92400e; padding: 8px 16px; border-radius: 12px; font-weight: 600;">
+            📅 Day ${currentDay} of ${totalDays}
+          </span>
+        </div>
+        <p style="color: #718096; margin-top: 10px;">
+          ${allInOnePronState.totalRepetitions}× through all words today
+        </p>
+      </div>
+
+      <div id="allInOnePronInterface" style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <span style="color: #718096; font-size: 14px;">
+            Rep <span id="aioCurrentRep">${startingRep}</span> of ${allInOnePronState.totalRepetitions} |
+            Word <span id="aioCurrentWord">1</span> of ${card.drillWords.length}
+          </span>
+        </div>
+
+        <div id="aioWordDisplay" style="text-align: center; padding: 30px; background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%); border-radius: 12px; margin-bottom: 20px;">
+          <div style="font-size: 14px; color: #718096; margin-bottom: 10px;">Say this word:</div>
+          <div id="aioTargetWord" style="font-size: 36px; font-weight: bold; color: #2d3748;">${allInOnePronState.words[0]}</div>
+        </div>
+
+        <div id="aioListeningStatus" style="text-align: center; margin-bottom: 20px;">
+          <div id="aioListeningIndicator" style="display: none;">
+            <div style="width: 60px; height: 60px; background: #48bb78; border-radius: 50%; margin: 0 auto 10px; animation: pulse 1.5s infinite;"></div>
+            <span style="color: #48bb78; font-weight: 600;">🎤 Listening...</span>
+          </div>
+          <div id="aioRecognizedText" style="font-size: 20px; color: #667eea; font-weight: 600; min-height: 30px;"></div>
+        </div>
+
+        <div id="aioFeedback" style="display: none; text-align: center; padding: 15px; border-radius: 10px; margin-bottom: 20px;"></div>
+
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="aioStartBtn" onclick="startAllInOnePronListening()" style="padding: 12px 30px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            🎤 Start Speaking
+          </button>
+          <button onclick="skipAllInOnePronWord()" style="padding: 12px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+let allInOnePronState = null;
+
+function startAllInOnePronListening() {
+  if (!allInOnePronState) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Speech recognition not supported in this browser');
+    return;
+  }
+
+  allInOnePronState.recognition = new SpeechRecognition();
+  allInOnePronState.recognition.lang = 'ko-KR';
+  allInOnePronState.recognition.continuous = false;
+  allInOnePronState.recognition.interimResults = true;
+
+  allInOnePronState.recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    document.getElementById('aioRecognizedText').textContent = transcript;
+
+    if (event.results[0].isFinal) {
+      checkAllInOnePronAnswer(transcript);
+    }
+  };
+
+  allInOnePronState.recognition.onerror = (e) => {
+    if (e.error !== 'no-speech') {
+      document.getElementById('aioListeningIndicator').style.display = 'none';
+    }
+  };
+
+  allInOnePronState.recognition.onend = () => {
+    allInOnePronState.isListening = false;
+    document.getElementById('aioListeningIndicator').style.display = 'none';
+    document.getElementById('aioStartBtn').textContent = '🎤 Start Speaking';
+  };
+
+  allInOnePronState.recognition.start();
+  allInOnePronState.isListening = true;
+  document.getElementById('aioListeningIndicator').style.display = 'block';
+  document.getElementById('aioStartBtn').textContent = '⏹ Stop';
+  document.getElementById('aioRecognizedText').textContent = '';
+}
+
+function checkAllInOnePronAnswer(transcript) {
+  const target = allInOnePronState.words[allInOnePronState.currentWordIndex];
+  const normalized = transcript.replace(/\s+/g, '').toLowerCase();
+  const targetNorm = target.replace(/\s+/g, '').toLowerCase();
+
+  const isCorrect = normalized.includes(targetNorm) || targetNorm.includes(normalized) ||
+                    levenshteinDistance(normalized, targetNorm) <= Math.max(1, Math.floor(targetNorm.length * 0.3));
+
+  allInOnePronState.totalAttempts++;
+
+  const feedback = document.getElementById('aioFeedback');
+  feedback.style.display = 'block';
+
+  if (isCorrect) {
+    allInOnePronState.correctInRep++;
+    allInOnePronState.totalCorrect++;
+    feedback.style.background = 'linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%)';
+    feedback.innerHTML = `<span style="color: #276749; font-weight: 600;">✅ Correct!</span>`;
+    awardCoinsWithPopup(swipeMode.enabled ? 1 : 3);
+  } else {
+    feedback.style.background = 'linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%)';
+    feedback.innerHTML = `<span style="color: #c53030; font-weight: 600;">❌ Try again - Target: ${target}</span>`;
+  }
+
+  setTimeout(() => {
+    feedback.style.display = 'none';
+    if (isCorrect) {
+      advanceAllInOnePronWord();
+    }
+  }, 1500);
+}
+
+function skipAllInOnePronWord() {
+  if (allInOnePronState.recognition) {
+    try { allInOnePronState.recognition.stop(); } catch(e) {}
+  }
+  advanceAllInOnePronWord();
+}
+
+function advanceAllInOnePronWord() {
+  allInOnePronState.currentWordIndex++;
+
+  if (allInOnePronState.currentWordIndex >= allInOnePronState.words.length) {
+    allInOnePronState.currentWordIndex = 0;
+    allInOnePronState.currentRepetition++;
+    allInOnePronState.words = shuffleArray([...allInOnePronState.card.drillWords]);
+
+    if (allInOnePronState.currentRepetition > allInOnePronState.totalRepetitions) {
+      completeAllInOnePronDrill();
+      return;
+    }
+
+    document.getElementById('aioCurrentRep').textContent = allInOnePronState.currentRepetition;
+  }
+
+  document.getElementById('aioCurrentWord').textContent = allInOnePronState.currentWordIndex + 1;
+  document.getElementById('aioTargetWord').textContent = allInOnePronState.words[allInOnePronState.currentWordIndex];
+  document.getElementById('aioRecognizedText').textContent = '';
+}
+
+async function completeAllInOnePronDrill() {
+  const card = allInOnePronState.card;
+
+  card.completedRepetitionsToday = allInOnePronState.totalRepetitions;
+  card.completedToday = true;
+  card.lastPracticeDate = new Date().toISOString().split('T')[0];
+
+  const currentDay = card.currentDay || 1;
+  const totalDays = card.totalDays || 7;
+  const completedDay = currentDay < totalDays;
+
+  if (completedDay) {
+    card.currentDay = currentDay + 1;
+  }
+
+  if (card.currentDay > totalDays) {
+    card.isComplete = true;
+  }
+
+  try {
+    await db.collection('pronunciationLeitner').doc(card.id).update({
+      completedToday: true,
+      completedRepetitionsToday: allInOnePronState.totalRepetitions,
+      lastPracticeDate: card.lastPracticeDate,
+      currentDay: card.currentDay,
+      isComplete: card.isComplete || false
+    });
+  } catch(e) {}
+
+  awardCoins(20, 'Pronunciation Drill');
+
+  const idx = pronDrillDueCards.findIndex(c => c.id === card.id);
+  if (idx > -1) pronDrillDueCards.splice(idx, 1);
+
+  if (pronDrillDueCards.length > 0) {
+    const nextCard = pronunciationDrillCards.find(c => c.id === pronDrillDueCards[0].id);
+    if (nextCard) {
+      const container = document.getElementById('allInOneContainer');
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+          <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+          <h3 style="color: #276749; margin-bottom: 10px;">Drill Complete!</h3>
+          <p style="color: #718096; margin-bottom: 20px;">${pronDrillDueCards.length} more pronunciation drill${pronDrillDueCards.length !== 1 ? 's' : ''} to go</p>
+          <button onclick="startPronDrillInAllInOne(pronunciationDrillCards.find(c => c.id === '${nextCard.id}'))" style="padding: 15px 30px; background: linear-gradient(135deg, #f56565 0%, #ed8936 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            Continue to Next Drill
+          </button>
+        </div>
+      `;
+      return;
+    }
+  }
+
+  completeAllInOnePhase('pronunciation');
 }
 
 /**
@@ -35217,7 +35463,193 @@ function startGrammarReviewForAllInOne() {
 
   window.allInOneGrammarCallback = true;
 
-  switchTab('grammarLeitner');
+  const card = grammarDueCards[0];
+  startGrammarDrillInAllInOne(card);
+}
+
+/**
+ * Run grammar drill inside allInOneContainer
+ */
+function startGrammarDrillInAllInOne(card) {
+  allInOneGrammarState = {
+    card: card,
+    currentSentenceIndex: 0,
+    sentences: shuffleArray([...(card.sentences || [])]),
+    correctCount: 0,
+    totalAttempts: 0,
+    recognition: null
+  };
+
+  if (allInOneGrammarState.sentences.length === 0) {
+    completeAllInOnePhase('grammar');
+    return;
+  }
+
+  renderAllInOneGrammarCard();
+}
+
+let allInOneGrammarState = null;
+
+function renderAllInOneGrammarCard() {
+  const state = allInOneGrammarState;
+  const sentence = state.sentences[state.currentSentenceIndex];
+
+  const container = document.getElementById('allInOneContainer');
+  container.innerHTML = `
+    <div style="max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 20px;">
+          📝 ${state.card.topic}
+        </span>
+        <p style="color: #718096; margin-top: 10px;">
+          Sentence ${state.currentSentenceIndex + 1} of ${state.sentences.length}
+        </p>
+      </div>
+
+      <div style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%); border-radius: 12px; margin-bottom: 20px;">
+          <div style="font-size: 14px; color: #718096; margin-bottom: 10px;">Say this sentence:</div>
+          <div style="font-size: 24px; font-weight: bold; color: #2d3748;">${sentence}</div>
+        </div>
+
+        <div id="aioGrammarListening" style="text-align: center; margin-bottom: 20px;">
+          <div id="aioGrammarIndicator" style="display: none;">
+            <div style="width: 60px; height: 60px; background: #48bb78; border-radius: 50%; margin: 0 auto 10px; animation: pulse 1.5s infinite;"></div>
+            <span style="color: #48bb78; font-weight: 600;">🎤 Listening...</span>
+          </div>
+          <div id="aioGrammarRecognized" style="font-size: 18px; color: #667eea; font-weight: 600; min-height: 30px;"></div>
+        </div>
+
+        <div id="aioGrammarFeedback" style="display: none; text-align: center; padding: 15px; border-radius: 10px; margin-bottom: 20px;"></div>
+
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="aioGrammarStartBtn" onclick="startAllInOneGrammarListening()" style="padding: 12px 30px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            🎤 Start Speaking
+          </button>
+          <button onclick="skipAllInOneGrammarSentence()" style="padding: 12px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function startAllInOneGrammarListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+
+  allInOneGrammarState.recognition = new SpeechRecognition();
+  allInOneGrammarState.recognition.lang = 'ko-KR';
+  allInOneGrammarState.recognition.continuous = false;
+  allInOneGrammarState.recognition.interimResults = true;
+
+  allInOneGrammarState.recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    document.getElementById('aioGrammarRecognized').textContent = transcript;
+
+    if (event.results[0].isFinal) {
+      checkAllInOneGrammarAnswer(transcript);
+    }
+  };
+
+  allInOneGrammarState.recognition.onend = () => {
+    document.getElementById('aioGrammarIndicator').style.display = 'none';
+    document.getElementById('aioGrammarStartBtn').textContent = '🎤 Start Speaking';
+  };
+
+  allInOneGrammarState.recognition.start();
+  document.getElementById('aioGrammarIndicator').style.display = 'block';
+  document.getElementById('aioGrammarStartBtn').textContent = '⏹ Stop';
+}
+
+function checkAllInOneGrammarAnswer(transcript) {
+  const target = allInOneGrammarState.sentences[allInOneGrammarState.currentSentenceIndex];
+  const normalized = transcript.replace(/\s+/g, '').toLowerCase();
+  const targetNorm = target.replace(/\s+/g, '').toLowerCase();
+
+  const similarity = 1 - (levenshteinDistance(normalized, targetNorm) / Math.max(normalized.length, targetNorm.length));
+  const isCorrect = similarity >= 0.7;
+
+  allInOneGrammarState.totalAttempts++;
+
+  const feedback = document.getElementById('aioGrammarFeedback');
+  feedback.style.display = 'block';
+
+  if (isCorrect) {
+    allInOneGrammarState.correctCount++;
+    feedback.style.background = 'linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%)';
+    feedback.innerHTML = `<span style="color: #276749; font-weight: 600;">✅ Correct!</span>`;
+    awardCoinsWithPopup(swipeMode.enabled ? 1 : 3);
+  } else {
+    feedback.style.background = 'linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%)';
+    feedback.innerHTML = `<span style="color: #c53030; font-weight: 600;">❌ Try again</span>`;
+  }
+
+  setTimeout(() => {
+    feedback.style.display = 'none';
+    if (isCorrect) {
+      advanceAllInOneGrammarSentence();
+    }
+  }, 1500);
+}
+
+function skipAllInOneGrammarSentence() {
+  if (allInOneGrammarState.recognition) {
+    try { allInOneGrammarState.recognition.stop(); } catch(e) {}
+  }
+  advanceAllInOneGrammarSentence();
+}
+
+function advanceAllInOneGrammarSentence() {
+  allInOneGrammarState.currentSentenceIndex++;
+
+  if (allInOneGrammarState.currentSentenceIndex >= allInOneGrammarState.sentences.length) {
+    completeAllInOneGrammarDrill();
+    return;
+  }
+
+  renderAllInOneGrammarCard();
+}
+
+async function completeAllInOneGrammarDrill() {
+  const card = allInOneGrammarState.card;
+
+  card.completedToday = true;
+  card.lastReviewDate = new Date().toISOString().split('T')[0];
+
+  try {
+    await db.collection('grammarLeitner').doc(card.id).update({
+      completedToday: true,
+      lastReviewDate: card.lastReviewDate
+    });
+  } catch(e) {}
+
+  awardCoins(20, 'Grammar Drill');
+
+  const idx = grammarDueCards.findIndex(c => c.id === card.id);
+  if (idx > -1) grammarDueCards.splice(idx, 1);
+
+  if (grammarDueCards.length > 0) {
+    const nextCard = grammarDueCards[0];
+    const container = document.getElementById('allInOneContainer');
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+        <h3 style="color: #276749; margin-bottom: 10px;">Grammar Drill Complete!</h3>
+        <p style="color: #718096; margin-bottom: 20px;">${grammarDueCards.length} more grammar drill${grammarDueCards.length !== 1 ? 's' : ''} to go</p>
+        <button onclick="startGrammarDrillInAllInOne(grammarDueCards[0])" style="padding: 15px 30px; background: linear-gradient(135deg, #f56565 0%, #ed8936 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+          Continue to Next Drill
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  completeAllInOnePhase('grammar');
 }
 
 /**
@@ -35231,7 +35663,175 @@ function startFlashcardReviewForAllInOne() {
 
   window.allInOneFlashcardCallback = true;
 
-  switchTab('leitnerReview');
+  allInOneFlashcardState = {
+    queue: shuffleArray([...leitnerDueCards]),
+    currentIndex: 0,
+    correct: 0,
+    incorrect: 0,
+    recognition: null
+  };
+
+  renderAllInOneFlashcard();
+}
+
+let allInOneFlashcardState = null;
+
+function renderAllInOneFlashcard() {
+  const state = allInOneFlashcardState;
+
+  if (state.currentIndex >= state.queue.length) {
+    completeAllInOneFlashcardSession();
+    return;
+  }
+
+  const card = state.queue[state.currentIndex];
+
+  const container = document.getElementById('allInOneContainer');
+  container.innerHTML = `
+    <div style="max-width: 550px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <span style="color: #718096; font-size: 16px;">${state.currentIndex + 1} / ${state.queue.length}</span>
+        <span style="margin-left: 15px; background: #f7fafc; padding: 6px 14px; border-radius: 20px; font-size: 14px; color: #4a5568;">
+          📦 ${LEITNER_BOX_NAMES[card.box] || 'Day ' + card.box}
+        </span>
+      </div>
+
+      <div id="aioFlashcard" style="background: white; border-radius: 16px; padding: 40px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.12); cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center;" onclick="flipAllInOneFlashcard()">
+        <div id="aioFlashcardFront">
+          <div style="font-size: 14px; color: #718096; margin-bottom: 15px;">🎤 Say this in Korean:</div>
+          <div style="font-size: 32px; font-weight: bold; color: #2d3748;">${card.english}</div>
+        </div>
+        <div id="aioFlashcardBack" style="display: none;">
+          <div style="font-size: 14px; color: #718096; margin-bottom: 15px;">Answer:</div>
+          <div style="font-size: 36px; font-weight: bold; color: #667eea;">${card.korean}</div>
+        </div>
+      </div>
+
+      <div id="aioFlashcardListening" style="text-align: center; margin: 20px 0;">
+        <div id="aioFlashcardIndicator" style="display: none;">
+          <div style="width: 50px; height: 50px; background: #48bb78; border-radius: 50%; margin: 0 auto 10px; animation: pulse 1.5s infinite;"></div>
+          <span style="color: #48bb78; font-size: 14px;">🎤 Listening...</span>
+        </div>
+        <div id="aioFlashcardRecognized" style="font-size: 18px; color: #2d3748; font-weight: 600; min-height: 25px;"></div>
+      </div>
+
+      <div id="aioFlashcardButtons" style="display: none; text-align: center; margin-top: 20px;">
+        <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">Did you get it right?</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button onclick="submitAllInOneFlashcard(true)" style="flex: 1; max-width: 140px; padding: 15px 20px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            ✓ Correct
+          </button>
+          <button onclick="submitAllInOneFlashcard(false)" style="flex: 1; max-width: 140px; padding: 15px 20px; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            ✗ Wrong
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        <button id="aioFlashcardStartBtn" onclick="startAllInOneFlashcardListening()" style="padding: 12px 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          🎤 Start
+        </button>
+        <button onclick="flipAllInOneFlashcard()" style="padding: 12px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">
+          👆 Reveal
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function flipAllInOneFlashcard() {
+  document.getElementById('aioFlashcardFront').style.display = 'none';
+  document.getElementById('aioFlashcardBack').style.display = 'block';
+  document.getElementById('aioFlashcardButtons').style.display = 'block';
+
+  if (allInOneFlashcardState.recognition) {
+    try { allInOneFlashcardState.recognition.stop(); } catch(e) {}
+  }
+  document.getElementById('aioFlashcardIndicator').style.display = 'none';
+}
+
+function startAllInOneFlashcardListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+
+  allInOneFlashcardState.recognition = new SpeechRecognition();
+  allInOneFlashcardState.recognition.lang = 'ko-KR';
+  allInOneFlashcardState.recognition.continuous = false;
+  allInOneFlashcardState.recognition.interimResults = true;
+
+  const card = allInOneFlashcardState.queue[allInOneFlashcardState.currentIndex];
+
+  allInOneFlashcardState.recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    document.getElementById('aioFlashcardRecognized').textContent = transcript;
+
+    if (event.results[0].isFinal) {
+      const normalized = transcript.replace(/\s+/g, '');
+      const targetNorm = card.korean.replace(/\s+/g, '');
+      const isCorrect = normalized.includes(targetNorm) || targetNorm.includes(normalized);
+
+      if (isCorrect) {
+        awardCoinsWithPopup(swipeMode.enabled ? 1 : 5);
+        submitAllInOneFlashcard(true);
+      } else {
+        flipAllInOneFlashcard();
+      }
+    }
+  };
+
+  allInOneFlashcardState.recognition.onend = () => {
+    document.getElementById('aioFlashcardIndicator').style.display = 'none';
+    document.getElementById('aioFlashcardStartBtn').textContent = '🎤 Start';
+  };
+
+  allInOneFlashcardState.recognition.start();
+  document.getElementById('aioFlashcardIndicator').style.display = 'block';
+  document.getElementById('aioFlashcardStartBtn').textContent = '⏹ Stop';
+}
+
+async function submitAllInOneFlashcard(isCorrect) {
+  const state = allInOneFlashcardState;
+  const card = state.queue[state.currentIndex];
+
+  if (isCorrect) {
+    state.correct++;
+    if (!swipeMode.enabled) awardCoinsWithPopup(5);
+    else awardCoinsWithPopup(1);
+  } else {
+    state.incorrect++;
+  }
+
+  await handleLeitnerReview(card.id, isCorrect);
+
+  state.currentIndex++;
+  renderAllInOneFlashcard();
+}
+
+async function completeAllInOneFlashcardSession() {
+  const state = allInOneFlashcardState;
+
+  awardCoins(20, 'Flashcard Drill');
+  if (state.correct > 0 && state.incorrect === 0) {
+    awardCoins(20, 'Perfect Flashcard Session');
+  }
+
+  const container = document.getElementById('allInOneContainer');
+  container.innerHTML = `
+    <div style="text-align: center; padding: 40px;">
+      <div style="font-size: 60px; margin-bottom: 20px;">🎉</div>
+      <h3 style="color: #276749; margin-bottom: 10px;">Flashcard Review Complete!</h3>
+      <div style="margin-bottom: 20px;">
+        <span style="color: #48bb78; font-weight: 600;">${state.correct} Correct</span> |
+        <span style="color: #f56565; font-weight: 600;">${state.incorrect} Incorrect</span>
+      </div>
+      <button onclick="completeAllInOnePhase('flashcard')" style="padding: 15px 30px; background: linear-gradient(135deg, #f56565 0%, #ed8936 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;">
+        Continue
+      </button>
+    </div>
+  `;
 }
 
 /**
