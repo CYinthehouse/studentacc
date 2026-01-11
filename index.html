@@ -18156,6 +18156,8 @@ let analyticsData = {
 
 window.addEventListener('DOMContentLoaded', function() {
 
+  loadSwipeModePreference();
+
   document.addEventListener('visibilitychange', function() {
     if (document.hidden && isFlashcardGameActive) {
     } else if (!document.hidden && isFlashcardGameActive && !isListening) {
@@ -27274,21 +27276,44 @@ function startDay1Practice() {
 
     <!-- Ready Screen - Show before starting mic -->
     <div id="leitnerReadyScreen" style="max-width: 500px; margin: 0 auto; text-align: center; padding: 40px 20px;">
-      <div style="font-size: 80px; margin-bottom: 20px;">🎤</div>
+      <div style="font-size: 80px; margin-bottom: 20px;">${swipeMode.enabled ? '👆' : '🎤'}</div>
       <h3 style="color: #2d3748; margin-bottom: 15px;">Ready to Practice?</h3>
       <p style="color: #718096; margin-bottom: 10px;">
-        You'll have <strong>10 seconds</strong> per card to say the Korean word.
+        ${swipeMode.enabled ? 'Tap cards to reveal answers, then mark correct or incorrect.' : 'You\'ll have <strong>10 seconds</strong> per card to say the Korean word.'}
       </p>
 
-      <!-- Walk Away Mode Toggle -->
-      <div style="margin: 20px 0; padding: 15px; background: ${walkAwayMode.enabled ? 'linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%)' : '#f7fafc'}; border: 2px solid ${walkAwayMode.enabled ? '#48bb78' : '#e2e8f0'}; border-radius: 12px;">
-        <button id="walkAwayModeBtn" onclick="toggleWalkAwayMode(); startDay1Practice();" style="background: linear-gradient(135deg, ${walkAwayMode.enabled ? '#48bb78 0%, #38b2ac' : '#667eea 0%, #764ba2'} 100%); color: white; border: none; padding: 12px 24px; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 16px;">
-          🎧 Walk Away Mode: ${walkAwayMode.enabled ? 'ON' : 'OFF'}
+      <!-- Mode Selection -->
+      <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
+        <!-- Voice Mode Button -->
+        <button onclick="swipeMode.enabled = false; walkAwayMode.enabled = false; startDay1Practice();" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${!swipeMode.enabled && !walkAwayMode.enabled ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f7fafc'}; 
+                color: ${!swipeMode.enabled && !walkAwayMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${!swipeMode.enabled && !walkAwayMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          🎤 Voice
         </button>
-        <p style="color: ${walkAwayMode.enabled ? '#276749' : '#718096'}; font-size: 13px; margin: 10px 0 0 0;">
-          ${walkAwayMode.enabled ? '✅ English words will be spoken aloud. Listen and respond!' : 'Enable to hear words spoken aloud (hands-free practice)'}
+        <!-- Walk Away Mode Button -->
+        <button onclick="swipeMode.enabled = false; walkAwayMode.enabled = true; startDay1Practice();" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${walkAwayMode.enabled ? 'linear-gradient(135deg, #48bb78 0%, #38b2ac 100%)' : '#f7fafc'}; 
+                color: ${walkAwayMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${walkAwayMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          🎧 Walk Away
+        </button>
+        <!-- Swipe Mode Button -->
+        <button onclick="swipeMode.enabled = true; walkAwayMode.enabled = false; startDay1Practice();" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${swipeMode.enabled ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#f7fafc'}; 
+                color: ${swipeMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${swipeMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          👆 Swipe
+        </button>
+      </div>
+
+      ${swipeMode.enabled ? `
+      <div style="background: #fef3c7; border-radius: 10px; padding: 12px; margin-bottom: 15px; text-align: center;">
+        <p style="color: #92400e; font-size: 13px; margin: 0;">
+          <strong>⚠️ Swipe Mode:</strong> Only 1 coin per correct answer (no voice required)
         </p>
       </div>
+      ` : ''}
 
       <div style="background: #e0e7ff; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: left;">
         <p style="color: #3730a3; font-size: 13px; margin: 0;">
@@ -27423,6 +27448,11 @@ function showNextLeitnerCard() {
           <span style="color: #276749; font-size: 13px; font-weight: 600;">🎧 Walk Away Mode Active</span>
         </div>
       ` : ''}
+      ${swipeMode.enabled ? `
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 8px 15px; margin-bottom: 15px; text-align: center;">
+          <span style="color: #92400e; font-size: 13px; font-weight: 600;">👆 Swipe Mode Active (1 coin per correct)</span>
+        </div>
+      ` : ''}
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <span style="color: #718096; font-size: 16px;">${currentLeitnerIndex + 1} / ${currentLeitnerQueue.length}</span>
@@ -27432,8 +27462,8 @@ function showNextLeitnerCard() {
         </span>
       </div>
 
-      <!-- Timer Bar -->
-      <div style="margin-bottom: 20px;">
+      <!-- Timer Bar (hidden in swipe mode) -->
+      <div style="margin-bottom: 20px; ${swipeMode.enabled ? 'display: none;' : ''}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
           <span style="font-size: 13px; color: #718096;">⏱️ Time remaining</span>
           <span id="leitnerTimerText" style="font-size: 16px; font-weight: bold; color: #667eea;">10</span>
@@ -27444,15 +27474,21 @@ function showNextLeitnerCard() {
       </div>
 
       <!-- Flashcard -->
-      <div class="leitner-flashcard" id="leitnerCard">
+      <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''}>
         <div class="leitner-flashcard-inner">
           <div class="leitner-flashcard-face leitner-flashcard-front">
-            <div style="font-size: 14px; opacity: 0.8; margin-bottom: 15px;">🎤 Say this in Korean:</div>
+            <div style="font-size: 14px; opacity: 0.8; margin-bottom: 15px;">${swipeMode.enabled ? '👆 Tap to reveal answer:' : '🎤 Say this in Korean:'}</div>
             <div style="font-size: 38px; font-weight: bold;">${card.english}</div>
+            ${!swipeMode.enabled ? `
             <div id="leitnerListeningIndicator" style="margin-top: 30px;">
               <div class="listening-pulse" style="width: 60px; height: 60px; background: #48bb78; border-radius: 50%; margin: 0 auto; animation: leitnerPulse 1.5s infinite;"></div>
               <div style="font-size: 14px; color: #48bb78; margin-top: 10px;">🎤 Listening...</div>
             </div>
+            ` : `
+            <div style="margin-top: 30px; color: #718096; font-size: 14px;">
+              Tap card to see answer, then mark correct or incorrect
+            </div>
+            `}
           </div>
           <div class="leitner-flashcard-face leitner-flashcard-back">
             <div style="font-size: 14px; color: #718096; margin-bottom: 15px;">Correct answer:</div>
@@ -27462,13 +27498,26 @@ function showNextLeitnerCard() {
         </div>
       </div>
 
-      <!-- Recognition Status -->
-      <div id="leitnerRecognitionStatus" style="text-align: center; margin: 20px 0; min-height: 60px;">
+      <!-- Recognition Status (hidden in swipe mode) -->
+      <div id="leitnerRecognitionStatus" style="text-align: center; margin: 20px 0; min-height: 60px; ${swipeMode.enabled ? 'display: none;' : ''}">
         <p style="color: #718096; font-size: 14px;">Speak the Korean word...</p>
         <p id="leitnerRecognizedText" style="font-size: 20px; color: #2d3748; font-weight: 600; margin-top: 10px;"></p>
       </div>
 
-      <!-- Answer Buttons (shown after flip - only for wrong answers) -->
+      <!-- Swipe Mode Buttons (shown in swipe mode after flip) -->
+      <div id="leitnerSwipeButtons" style="display: none; text-align: center; margin: 20px 0;">
+        <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">Did you know the answer?</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button onclick="submitLeitnerAnswer(true)" style="flex: 1; max-width: 150px; padding: 15px 20px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            ✓ Correct
+          </button>
+          <button onclick="submitLeitnerAnswer(false)" style="flex: 1; max-width: 150px; padding: 15px 20px; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+            ✗ Wrong
+          </button>
+        </div>
+      </div>
+
+      <!-- Answer Buttons (shown after flip - only for wrong answers in voice mode) -->
       <div id="leitnerAnswerBtns" style="display: none; text-align: center;">
         <div class="leitner-answer-btns">
           <button class="incorrect-btn" onclick="submitLeitnerAnswer(false)">✗ Try Again (Move to next card)</button>
@@ -27477,9 +27526,11 @@ function showNextLeitnerCard() {
 
       <!-- Manual Controls -->
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        ${!swipeMode.enabled ? `
         <button class="btn" onclick="skipLeitnerCard()" style="background: #fed7d7; color: #c53030; padding: 10px 20px;">
           Skip (Wrong)
         </button>
+        ` : ''}
         <button class="btn" onclick="exitLeitnerReview()" style="background: transparent; color: #a0aec0; border: 2px solid #e2e8f0; padding: 10px 20px;">
           Exit
         </button>
@@ -27487,16 +27538,27 @@ function showNextLeitnerCard() {
     </div>
   `;
 
-  startLeitnerTimer();
+  if (!swipeMode.enabled) {
+    startLeitnerTimer();
 
-  if (!leitnerIsListening) {
-    startLeitnerRecognition(card.korean);
+    if (!leitnerIsListening) {
+      startLeitnerRecognition(card.korean);
+    }
+
+    if (walkAwayMode.enabled) {
+      setTimeout(() => {
+        speakEnglish(card.english);
+      }, 300);
+    }
   }
+}
 
-  if (walkAwayMode.enabled) {
-    setTimeout(() => {
-      speakEnglish(card.english);
-    }, 300);
+function flipLeitnerCardManual() {
+  if (!swipeMode.enabled) return;
+  const card = document.getElementById('leitnerCard');
+  if (card && !card.classList.contains('flipped')) {
+    card.classList.add('flipped');
+    document.getElementById('leitnerSwipeButtons').style.display = 'block';
   }
 }
 
@@ -28702,21 +28764,44 @@ function startBoxSpecificReview(boxNum, dueCards) {
 
     <!-- Ready Screen -->
     <div id="leitnerReadyScreen" style="max-width: 500px; margin: 0 auto; text-align: center; padding: 40px 20px;">
-      <div style="font-size: 80px; margin-bottom: 20px;">🎤</div>
+      <div style="font-size: 80px; margin-bottom: 20px;">${swipeMode.enabled ? '👆' : '🎤'}</div>
       <h3 style="color: #2d3748; margin-bottom: 15px;">Ready to Review?</h3>
       <p style="color: #718096; margin-bottom: 10px;">
-        You'll have <strong>10 seconds</strong> per card to say the Korean word.
+        ${swipeMode.enabled ? 'Tap cards to reveal answers, then mark correct or incorrect.' : 'You\'ll have <strong>10 seconds</strong> per card to say the Korean word.'}
       </p>
 
-      <!-- Walk Away Mode Toggle -->
-      <div style="margin: 20px 0; padding: 15px; background: ${walkAwayMode.enabled ? 'linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%)' : '#f7fafc'}; border: 2px solid ${walkAwayMode.enabled ? '#48bb78' : '#e2e8f0'}; border-radius: 12px;">
-        <button id="walkAwayModeBtn" onclick="toggleWalkAwayMode(); startBoxSpecificReview(${boxNum}, currentLeitnerQueue);" style="background: linear-gradient(135deg, ${walkAwayMode.enabled ? '#48bb78 0%, #38b2ac' : '#667eea 0%, #764ba2'} 100%); color: white; border: none; padding: 12px 24px; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 16px;">
-          🎧 Walk Away Mode: ${walkAwayMode.enabled ? 'ON' : 'OFF'}
+      <!-- Mode Selection -->
+      <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
+        <!-- Voice Mode Button -->
+        <button onclick="swipeMode.enabled = false; walkAwayMode.enabled = false; startBoxSpecificReview(${boxNum}, currentLeitnerQueue);" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${!swipeMode.enabled && !walkAwayMode.enabled ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f7fafc'}; 
+                color: ${!swipeMode.enabled && !walkAwayMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${!swipeMode.enabled && !walkAwayMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          🎤 Voice
         </button>
-        <p style="color: ${walkAwayMode.enabled ? '#276749' : '#718096'}; font-size: 13px; margin: 10px 0 0 0;">
-          ${walkAwayMode.enabled ? '✅ English words will be spoken aloud. Listen and respond!' : 'Enable to hear words spoken aloud (hands-free practice)'}
+        <!-- Walk Away Mode Button -->
+        <button onclick="swipeMode.enabled = false; walkAwayMode.enabled = true; startBoxSpecificReview(${boxNum}, currentLeitnerQueue);" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${walkAwayMode.enabled ? 'linear-gradient(135deg, #48bb78 0%, #38b2ac 100%)' : '#f7fafc'}; 
+                color: ${walkAwayMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${walkAwayMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          🎧 Walk Away
+        </button>
+        <!-- Swipe Mode Button -->
+        <button onclick="swipeMode.enabled = true; walkAwayMode.enabled = false; startBoxSpecificReview(${boxNum}, currentLeitnerQueue);" 
+                style="flex: 1; max-width: 150px; padding: 15px; background: ${swipeMode.enabled ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#f7fafc'}; 
+                color: ${swipeMode.enabled ? 'white' : '#4a5568'}; border: 2px solid ${swipeMode.enabled ? 'transparent' : '#e2e8f0'}; 
+                border-radius: 12px; font-weight: 600; cursor: pointer;">
+          👆 Swipe
+        </button>
+      </div>
+
+      ${swipeMode.enabled ? `
+      <div style="background: #fef3c7; border-radius: 10px; padding: 12px; margin-bottom: 15px; text-align: center;">
+        <p style="color: #92400e; font-size: 13px; margin: 0;">
+          <strong>⚠️ Swipe Mode:</strong> Only 1 coin per correct answer (no voice required)
         </p>
       </div>
+      ` : ''}
 
       <div style="background: #fed7d7; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: left;">
         <p style="color: #c53030; font-size: 13px; margin: 0;">
@@ -41448,7 +41533,8 @@ async function saveStudentProfile() {
 async function awardCoins(amount, activity) {
   if (!currentUser) return;
 
-  studentProfileData.coins = (studentProfileData.coins || 0) + amount;
+  const finalAmount = swipeMode.enabled ? 1 : amount;
+  studentProfileData.coins = (studentProfileData.coins || 0) + finalAmount;
   await saveStudentProfile();
 
   if (document.getElementById('panelCoinsCount')) {
@@ -41458,9 +41544,9 @@ async function awardCoins(amount, activity) {
     document.getElementById('floatingCoinsCount').textContent = studentProfileData.coins;
   }
 
-  await recordActivity(`earned ${amount} coins from ${activity}! 💰`);
+  await recordActivity(`earned ${finalAmount} coins from ${activity}! 💰`);
 
-  showToast(`💰 +${amount} coins!`);
+  showToast(`💰 +${finalAmount} coin${finalAmount > 1 ? 's' : ''}!`);
 }
 
 /**
@@ -41470,7 +41556,8 @@ async function awardCoins(amount, activity) {
 function awardCoinsWithPopup(amount, showToastMsg = false) {
   if (!currentUser) return;
 
-  studentProfileData.coins = (studentProfileData.coins || 0) + amount;
+  const finalAmount = swipeMode.enabled ? 1 : amount;
+  studentProfileData.coins = (studentProfileData.coins || 0) + finalAmount;
 
   if (document.getElementById('panelCoinsCount')) {
     document.getElementById('panelCoinsCount').textContent = studentProfileData.coins;
@@ -41479,14 +41566,14 @@ function awardCoinsWithPopup(amount, showToastMsg = false) {
     document.getElementById('floatingCoinsCount').textContent = studentProfileData.coins;
   }
 
-  showCoinPopup(amount);
+  showCoinPopup(finalAmount);
 
   playCoinSound();
 
   saveStudentProfile().catch(() => {});
 
   if (showToastMsg) {
-    showToast(`💰 +${amount} coins!`);
+    showToast(`💰 +${finalAmount} coin${finalAmount > 1 ? 's' : ''}!`);
   }
 }
 
@@ -51408,6 +51495,31 @@ let walkAwayMode = {
     callback: null
   }
 };
+
+/**
+ * Global state for Swipe Mode (no voice, manual correct/incorrect buttons)
+ * When enabled: voice recognition is disabled, user swipes/taps to mark correct/incorrect
+ * Awards only 1 coin per correct answer instead of full coins
+ */
+let swipeMode = {
+  enabled: false
+};
+
+function toggleSwipeMode() {
+  swipeMode.enabled = !swipeMode.enabled;
+  if (swipeMode.enabled) {
+    walkAwayMode.enabled = false;
+  }
+  localStorage.setItem('swipeModeEnabled', swipeMode.enabled);
+  return swipeMode.enabled;
+}
+
+function loadSwipeModePreference() {
+  const saved = localStorage.getItem('swipeModeEnabled');
+  if (saved === 'true') {
+    swipeMode.enabled = true;
+  }
+}
 
 /**
  * Load Walk Away Mode sounds from Firestore
