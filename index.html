@@ -12000,16 +12000,19 @@ body.light-mode .mobile-badge-name {
     flex: none !important;
   }
 
+  #junbiPage #flashcardModeToggle,
   #junbiPage #flashcardWalkAwayToggle {
     margin: 8px 0 !important;
     padding: 8px 10px !important;
   }
 
+  #junbiPage #flashcardModeToggle button,
   #junbiPage #flashcardWalkAwayToggle button {
     font-size: 11px !important;
     padding: 5px 10px !important;
   }
 
+  #junbiPage #flashcardModeToggle p,
   #junbiPage #flashcardWalkAwayToggle p {
     font-size: 9px !important;
     margin: 2px 0 0 0 !important;
@@ -16821,15 +16824,23 @@ body.light-mode .mobile-badge-name {
               </table>
             </div>
 
-            <div id="flashcardWalkAwayToggle" style="margin: 8px 0; padding: 8px 15px; background: linear-gradient(135deg, rgba(240, 255, 244, 0.95) 0%, rgba(198, 246, 213, 0.95) 100%); border: 2px solid #48bb78; border-radius: 10px; text-align: center; z-index: 3; flex-shrink: 0;">
-              <button onclick="toggleWalkAwayMode(); updateFlashcardWalkAwayDisplay();" style="background: linear-gradient(135deg, #48bb78 0%, #38b2ac 100%); color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 12px;">
-                🎧 Walk Away Mode: <span id="flashcardWalkAwayStatus">OFF</span>
-              </button>
-              <p id="flashcardWalkAwayDescription" style="color: #276749; font-size: 10px; margin: 4px 0 0 0;">
-                Enable for hands-free practice with voice prompts
+            <div id="flashcardModeToggle" style="margin: 8px 0; padding: 12px 15px; background: linear-gradient(135deg, rgba(240, 255, 244, 0.95) 0%, rgba(198, 246, 213, 0.95) 100%); border: 2px solid #48bb78; border-radius: 10px; text-align: center; z-index: 3; flex-shrink: 0;">
+              <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; flex-wrap: wrap;">
+                <button id="flashcardVoiceModeBtn" onclick="setFlashcardMode('voice')" style="flex: 1; min-width: 80px; max-width: 120px; padding: 8px 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: 2px solid transparent; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 11px;">
+                  🎤 Voice
+                </button>
+                <button id="flashcardWalkAwayModeBtn" onclick="setFlashcardMode('walkaway')" style="flex: 1; min-width: 80px; max-width: 120px; padding: 8px 12px; background: #f7fafc; color: #4a5568; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 11px;">
+                  🎧 Walk Away
+                </button>
+                <button id="flashcardSwipeModeBtn" onclick="setFlashcardMode('swipe')" style="flex: 1; min-width: 80px; max-width: 120px; padding: 8px 12px; background: #f7fafc; color: #4a5568; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 11px;">
+                  👆 Swipe
+                </button>
+              </div>
+              <p id="flashcardModeDescription" style="color: #276749; font-size: 10px; margin: 4px 0 0 0;">
+                Speak Korean words to earn full coins
               </p>
 
-              <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #9ae6b4;">
+              <div id="englishVoiceSection" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #9ae6b4;">
                 <label style="color: #276749; font-size: 10px; display: inline; margin-right: 5px;">
                   🔊 English Voice:
                 </label>
@@ -16899,13 +16910,35 @@ body.light-mode .mobile-badge-name {
                   </div>
                 </div>
 
-                <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+                <!-- Voice mode controls -->
+                <div id="voiceControls" style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
                   <button id="startGameBtn" class="junbi-btn" onclick="startFlashcardRound()" style="padding: 10px 20px; font-size: 14px;">
                     🎤 Start
                   </button>
                   <button class="junbi-btn" onclick="skipWord()" style="padding: 10px 20px; font-size: 14px; background: linear-gradient(135deg, #718096 0%, #4a5568 100%);">
                     Skip
                   </button>
+                </div>
+
+                <!-- Swipe mode controls -->
+                <div id="swipeControls" style="display: none; margin-top: 10px;">
+                  <p style="color: #718096; font-size: 12px; text-align: center; margin-bottom: 10px;">Tap the word to reveal answer, then mark:</p>
+                  <div id="swipeAnswerSection" style="display: none;">
+                    <div id="swipeKoreanAnswer" style="font-size: 24px; font-weight: bold; color: #667eea; text-align: center; margin-bottom: 10px;"></div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                      <button onclick="swipeFlashcardAnswer(true)" style="flex: 1; max-width: 120px; padding: 12px 20px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        ✓ Correct
+                      </button>
+                      <button onclick="swipeFlashcardAnswer(false)" style="flex: 1; max-width: 120px; padding: 12px 20px; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        ✗ Wrong
+                      </button>
+                    </div>
+                  </div>
+                  <div id="swipeTapPrompt" style="text-align: center;">
+                    <button onclick="revealSwipeAnswer()" style="padding: 15px 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                      👆 Tap to Reveal Answer
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -18459,6 +18492,11 @@ function showDashboard() {
     setTimeout(() => {
       updateAllInOneBadge();
     }, 2000);
+
+    loadStudentDailyActivity();
+    initTeamworkActivity();
+    initKpopActivity();
+    initGrammarBlabber();
   } else if (currentUserRole === 'admin') {
     document.getElementById('dashboardTitle').textContent = 'Admin Dashboard';
     document.getElementById('adminDashboard').classList.remove('hidden');
@@ -24205,7 +24243,7 @@ function showJunbiPage() {
     characterImg.style.display = 'none';
   }
 
-  updateFlashcardWalkAwayDisplay();
+  updateFlashcardModeDisplay();
 
   document.getElementById('junbiPage').style.display = 'flex';
 }
@@ -24263,6 +24301,8 @@ function startGameFromJunbi() {
   document.getElementById('gameSetTitle').textContent = currentFlashcardSet.title;
 
   isFlashcardGameActive = true;
+
+  setupFlashcardGameControls();
 
   requestWakeLock();
 
@@ -24503,6 +24543,10 @@ function startFlashcardRound() {
     return;
   }
 
+  if (swipeMode.enabled) {
+    return;
+  }
+
   if (recognition) {
     recognition.start();
     isListening = true;
@@ -24658,6 +24702,55 @@ function wordIncorrect(index) {
 
     showRoundResults();
   }
+}
+
+function setupFlashcardGameControls() {
+  const voiceControls = document.getElementById('voiceControls');
+  const swipeControls = document.getElementById('swipeControls');
+  const voiceStatus = document.getElementById('voiceStatus');
+  const wordTimer = document.getElementById('wordTimer')?.parentElement;
+
+  if (swipeMode.enabled) {
+    if (voiceControls) voiceControls.style.display = 'none';
+    if (swipeControls) swipeControls.style.display = 'block';
+    if (voiceStatus) voiceStatus.style.display = 'none';
+    if (wordTimer) wordTimer.style.display = 'none';
+  } else {
+    if (voiceControls) voiceControls.style.display = 'flex';
+    if (swipeControls) swipeControls.style.display = 'none';
+    if (voiceStatus) voiceStatus.style.display = 'block';
+    if (wordTimer) wordTimer.style.display = 'block';
+  }
+}
+
+function revealSwipeAnswer() {
+  if (currentWordIndex >= currentGameWords.length) {
+    showRoundResults();
+    return;
+  }
+
+  const currentWord = currentGameWords[currentWordIndex];
+  const swipeAnswerSection = document.getElementById('swipeAnswerSection');
+  const swipeTapPrompt = document.getElementById('swipeTapPrompt');
+  const swipeKoreanAnswer = document.getElementById('swipeKoreanAnswer');
+
+  if (swipeKoreanAnswer) swipeKoreanAnswer.textContent = currentWord.korean;
+  if (swipeAnswerSection) swipeAnswerSection.style.display = 'block';
+  if (swipeTapPrompt) swipeTapPrompt.style.display = 'none';
+}
+
+function swipeFlashcardAnswer(isCorrect) {
+  const swipeAnswerSection = document.getElementById('swipeAnswerSection');
+  const swipeTapPrompt = document.getElementById('swipeTapPrompt');
+
+  if (isCorrect) {
+    wordCorrect(currentWordIndex);
+  } else {
+    wordIncorrect(currentWordIndex);
+  }
+
+  if (swipeAnswerSection) swipeAnswerSection.style.display = 'none';
+  if (swipeTapPrompt) swipeTapPrompt.style.display = 'block';
 }
 
 function skipWord() {
@@ -51539,6 +51632,54 @@ function loadSwipeModePreference() {
   }
 }
 
+function setFlashcardMode(mode) {
+  if (mode === 'voice') {
+    swipeMode.enabled = false;
+    walkAwayMode.enabled = false;
+  } else if (mode === 'walkaway') {
+    swipeMode.enabled = false;
+    walkAwayMode.enabled = true;
+  } else if (mode === 'swipe') {
+    swipeMode.enabled = true;
+    walkAwayMode.enabled = false;
+  }
+  localStorage.setItem('swipeModeEnabled', swipeMode.enabled);
+  updateFlashcardModeDisplay();
+}
+
+function updateFlashcardModeDisplay() {
+  const voiceBtn = document.getElementById('flashcardVoiceModeBtn');
+  const walkAwayBtn = document.getElementById('flashcardWalkAwayModeBtn');
+  const swipeBtn = document.getElementById('flashcardSwipeModeBtn');
+  const description = document.getElementById('flashcardModeDescription');
+  const voiceSection = document.getElementById('englishVoiceSection');
+
+  if (!voiceBtn || !walkAwayBtn || !swipeBtn) return;
+
+  const activeStyle = (color1, color2) => `flex: 1; min-width: 80px; max-width: 120px; padding: 8px 12px; background: linear-gradient(135deg, ${color1} 0%, ${color2} 100%); color: white; border: 2px solid transparent; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 11px;`;
+  const inactiveStyle = 'flex: 1; min-width: 80px; max-width: 120px; padding: 8px 12px; background: #f7fafc; color: #4a5568; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 11px;';
+
+  if (swipeMode.enabled) {
+    voiceBtn.style.cssText = inactiveStyle;
+    walkAwayBtn.style.cssText = inactiveStyle;
+    swipeBtn.style.cssText = activeStyle('#f59e0b', '#d97706');
+    if (description) description.textContent = '⚠️ Swipe mode: Only 1 coin per correct (no voice required)';
+    if (voiceSection) voiceSection.style.display = 'none';
+  } else if (walkAwayMode.enabled) {
+    voiceBtn.style.cssText = inactiveStyle;
+    walkAwayBtn.style.cssText = activeStyle('#48bb78', '#38b2ac');
+    swipeBtn.style.cssText = inactiveStyle;
+    if (description) description.textContent = '🎧 Hands-free mode with voice prompts';
+    if (voiceSection) voiceSection.style.display = 'block';
+  } else {
+    voiceBtn.style.cssText = activeStyle('#667eea', '#764ba2');
+    walkAwayBtn.style.cssText = inactiveStyle;
+    swipeBtn.style.cssText = inactiveStyle;
+    if (description) description.textContent = '🎤 Speak Korean words to earn full coins';
+    if (voiceSection) voiceSection.style.display = 'block';
+  }
+}
+
 /**
  * Load Walk Away Mode sounds from Firestore
  */
@@ -58475,6 +58616,19 @@ function handleGrammarWalkAwayContinue() {
           var dailyActivityTab = document.getElementById('dailyActivity');
           if (dailyActivityTab) {
             dailyActivityTab.classList.add('active');
+          }
+
+          if (typeof loadStudentDailyActivity === 'function') {
+            loadStudentDailyActivity();
+          }
+          if (typeof initTeamworkActivity === 'function') {
+            initTeamworkActivity();
+          }
+          if (typeof initKpopActivity === 'function') {
+            initKpopActivity();
+          }
+          if (typeof initGrammarBlabber === 'function') {
+            initGrammarBlabber();
           }
         }
       }, 300);
