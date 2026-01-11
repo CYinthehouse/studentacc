@@ -2658,6 +2658,8 @@ body.light-mode .main-content-area .form-group label {
   justify-content: center;
   z-index: 10000;
   animation: fadeIn 0.2s ease;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .brain-popup {
@@ -2665,10 +2667,19 @@ body.light-mode .main-content-area .form-group label {
   border-radius: 20px;
   padding: 30px;
   max-width: 450px;
-  width: 90%;
+  width: 100%;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   animation: slideUp 0.3s ease;
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .brain-popup {
+    max-height: calc(100vh - 160px);
+    margin-bottom: 80px;
+  }
 }
 
 .brain-popup-close {
@@ -12098,7 +12109,7 @@ body.light-mode .mobile-badge-name {
   #leitnerBoxGrid .leitner-box-card {
     padding: 12px 8px !important;
     min-width: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   #leitnerBoxes .leitner-box-card .box-label,
@@ -15411,7 +15422,7 @@ body.light-mode .mobile-badge-name {
           </div>
         </div>
 
-        <div class="daily-corrections-overlay" id="dailyCorrectionsOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); z-index: 5000; overflow-y: auto;">
+        <div class="daily-corrections-overlay" id="dailyCorrectionsOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); z-index: 5000; overflow-y: auto; padding-bottom: 100px;">
 
           <div style="position: sticky; top: 0; background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 10;">
             <div style="display: flex; align-items: center; gap: 15px;">
@@ -16407,16 +16418,12 @@ body.light-mode .mobile-badge-name {
             <div style="text-align: center; color: #a0aec0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px;">Today's Progress</div>
             <div style="display: flex; justify-content: space-around;">
               <div style="text-align: center;">
-                <div id="mobileHomeStreak" style="color: #f6ad55; font-size: 24px; font-weight: bold;">0</div>
-                <div style="color: #718096; font-size: 11px;">🔥 Streak</div>
+                <div id="mobileHomeDailyCoins" style="color: #ffd700; font-size: 28px; font-weight: bold;">0</div>
+                <div style="color: #718096; font-size: 11px;">🪙 Coins Earned</div>
               </div>
               <div style="text-align: center;">
-                <div id="mobileHomeCoins" style="color: #ffd700; font-size: 24px; font-weight: bold;">0</div>
-                <div style="color: #718096; font-size: 11px;">🪙 Coins</div>
-              </div>
-              <div style="text-align: center;">
-                <div id="mobileHomeXP" style="color: #68d391; font-size: 24px; font-weight: bold;">0</div>
-                <div style="color: #718096; font-size: 11px;">⭐ XP</div>
+                <div id="mobileHomeDailyActivities" style="color: #68d391; font-size: 28px; font-weight: bold;">0</div>
+                <div style="color: #718096; font-size: 11px;">✅ Activities</div>
               </div>
             </div>
           </div>
@@ -28033,6 +28040,10 @@ function showLeitnerSessionComplete() {
 
   awardCoins(20, 'Flashcard Drill');
   recordPracticeActivity('flashcard');
+  
+  if (typeof trackDailyProgress === 'function') {
+    trackDailyProgress('activity', 1);
+  }
 
   if (accuracy === 100 && total > 0) {
     awardCoins(20, 'Perfect Flashcard Session');
@@ -35841,6 +35852,10 @@ function completeAllInOnePhase(phase) {
   if (!allInOneState.isActive) return;
 
   allInOneState.completedPhases.push(phase);
+  
+  if (typeof trackDailyProgress === 'function') {
+    trackDailyProgress('activity', 1);
+  }
 
   allInOneState.currentPhaseIndex++;
   let nextPhase = null;
@@ -41342,46 +41357,76 @@ async function openStudentProfileModal(studentId) {
   const modal = document.getElementById('studentProfileModal');
   if (!modal) return;
 
+  document.getElementById('modalProfileName').textContent = 'Loading...';
+  document.getElementById('modalProfileAvatar').innerHTML = '<div class="loading" style="width: 40px; height: 40px;"></div>';
+  document.getElementById('modalProfileBio').textContent = 'Loading...';
+  document.getElementById('modalProfileKContent').textContent = 'Loading...';
+  document.getElementById('modalProfileCoins').textContent = '-';
+  document.getElementById('modalProfileVocab').textContent = '-';
+  document.getElementById('modalProfileWeekly').textContent = '-';
+  document.getElementById('modalProfileMastered').textContent = '-';
+  document.getElementById('modalProfileStreak').textContent = '-';
+
+  document.getElementById('modalProfileBioSection').style.display = 'block';
+  document.getElementById('modalProfileKContentSection').style.display = 'block';
+
   modal.style.display = 'flex';
 
   try {
-    const userDoc = await db.collection('users').doc(studentId).get();
-    const userData = userDoc.exists ? userDoc.data() : {};
+    // Get user data
+    let userData = {};
+    try {
+      const userDoc = await db.collection('users').doc(studentId).get();
+      userData = userDoc.exists ? userDoc.data() : {};
+    } catch(e) { console.log('Error fetching user:', e); }
 
-    const profileDoc = await db.collection('studentProfiles').doc(studentId).get();
-    const profileData = profileDoc.exists ? profileDoc.data() : {};
+    // Get profile data
+    let profileData = {};
+    try {
+      const profileDoc = await db.collection('studentProfiles').doc(studentId).get();
+      profileData = profileDoc.exists ? profileDoc.data() : {};
+    } catch(e) { console.log('Error fetching profile:', e); }
 
-    const vocabSnapshot = await db.collection('studentFlashcards')
-      .where('studentId', '==', studentId)
-      .get();
-    const totalVocabCards = vocabSnapshot.size;
+    // Get vocab count
+    let totalVocabCards = 0;
+    try {
+      const vocabSnapshot = await db.collection('studentFlashcards')
+        .where('studentId', '==', studentId)
+        .get();
+      totalVocabCards = vocabSnapshot.size;
+    } catch(e) { console.log('Error fetching vocab:', e); }
 
-    const leitnerSnapshot = await db.collection('leitnerProgress')
-      .where('studentId', '==', studentId)
-      .where('box', '>=', 4)
-      .get();
-    const weeklyBoxCards = leitnerSnapshot.size;
+    // Get leitner progress - fetch all and filter client-side to avoid index issues
+    let weeklyBoxCards = 0;
+    let masteredCount = 0;
+    try {
+      const leitnerSnapshot = await db.collection('leitnerProgress')
+        .where('studentId', '==', studentId)
+        .get();
+      leitnerSnapshot.forEach(doc => {
+        const box = doc.data().box || 0;
+        if (box >= 4) weeklyBoxCards++;
+        if (box >= 8) masteredCount++;
+      });
+    } catch(e) { console.log('Error fetching leitner:', e); }
 
-    const masteredSnapshot = await db.collection('leitnerProgress')
-      .where('studentId', '==', studentId)
-      .where('box', '>=', 8)
-      .get();
-    const masteredCount = masteredSnapshot.size;
-
+    // Get streak
     let currentStreak = 0;
     try {
       const statsDoc = await db.collection('leitnerStats').doc(studentId).get();
       if (statsDoc.exists) {
         currentStreak = statsDoc.data().currentStreak || 0;
       }
-    } catch(e) {}
+    } catch(e) { console.log('Error fetching stats:', e); }
 
+    // Update UI with fetched data
     const displayName = userData.displayName || profileData.displayName || userData.email?.split('@')[0] || 'Student';
     document.getElementById('modalProfileName').textContent = displayName;
 
     const avatarEl = document.getElementById('modalProfileAvatar');
-    if (userData.avatarUrl) {
-      avatarEl.innerHTML = `<img src="${userData.avatarUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    const avatarUrl = userData.avatarUrl || userData.photoUrl || userData.photoURL || profileData.avatarUrl;
+    if (avatarUrl) {
+      avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover;">`;
     } else {
       const initials = displayName.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
       avatarEl.innerHTML = `<span style="font-size: 36px;">${initials || '👤'}</span>`;
@@ -41400,23 +41445,8 @@ async function openStudentProfileModal(studentId) {
     levelEl.style.background = levelInfo.bg;
     levelEl.style.color = levelInfo.color;
 
-    const bioSection = document.getElementById('modalProfileBioSection');
-    const bioEl = document.getElementById('modalProfileBio');
-    if (profileData.bio) {
-      bioEl.textContent = profileData.bio;
-      bioSection.style.display = 'block';
-    } else {
-      bioSection.style.display = 'none';
-    }
-
-    const kContentSection = document.getElementById('modalProfileKContentSection');
-    const kContentEl = document.getElementById('modalProfileKContent');
-    if (profileData.favoriteKContent) {
-      kContentEl.textContent = profileData.favoriteKContent;
-      kContentSection.style.display = 'block';
-    } else {
-      kContentSection.style.display = 'none';
-    }
+    document.getElementById('modalProfileBio').textContent = profileData.bio || 'No bio yet';
+    document.getElementById('modalProfileKContent').textContent = profileData.favoriteKContent || 'Not specified';
 
     document.getElementById('modalProfileCoins').textContent = userData.coins || profileData.coins || 0;
     document.getElementById('modalProfileVocab').textContent = totalVocabCards;
@@ -41425,6 +41455,11 @@ async function openStudentProfileModal(studentId) {
     document.getElementById('modalProfileStreak').textContent = currentStreak;
 
   } catch (error) {
+    console.error('Error in openStudentProfileModal:', error);
+    document.getElementById('modalProfileName').textContent = 'Error loading profile';
+    document.getElementById('modalProfileAvatar').innerHTML = '❌';
+    document.getElementById('modalProfileBio').textContent = 'Could not load data';
+    document.getElementById('modalProfileKContent').textContent = 'Could not load data';
   }
 }
 
@@ -42237,6 +42272,8 @@ async function awardCoins(amount, activity) {
     document.getElementById('floatingCoinsCount').textContent = studentProfileData.coins;
   }
 
+  trackDailyProgress('coins', finalAmount);
+
   await recordActivity(`earned ${finalAmount} coins from ${activity}! 💰`);
 
   showToast(`💰 +${finalAmount} coin${finalAmount > 1 ? 's' : ''}!`);
@@ -42258,6 +42295,8 @@ function awardCoinsWithPopup(amount, showToastMsg = false) {
   if (document.getElementById('floatingCoinsCount')) {
     document.getElementById('floatingCoinsCount').textContent = studentProfileData.coins;
   }
+
+  trackDailyProgress('coins', finalAmount);
 
   showCoinPopup(finalAmount);
 
@@ -43287,15 +43326,18 @@ async function loadStudentDailyActivity() {
     let recordBtnClass = 'da-record-btn';
     let recordBtnContent = '🎤 Record My Entry';
     let recordBtnOnclick = `openStudentRecordingModal('${activity.id}')`;
+    let recordBtnStyle = 'background: linear-gradient(135deg, #f56565 0%, #c53030 100%); border-color: #f56565;';
 
     if (hasSubmitted) {
       recordBtnClass += ' submitted';
       recordBtnContent = '✅ You\'ve submitted!';
       recordBtnOnclick = '';
+      recordBtnStyle = '';
     } else if (isPast) {
       recordBtnClass += ' deadline-passed';
       recordBtnContent = '⏰ Deadline passed';
       recordBtnOnclick = '';
+      recordBtnStyle = '';
     }
 
     teacherCard.className = 'da-teacher-card has-content';
@@ -43335,7 +43377,7 @@ async function loadStudentDailyActivity() {
       </div>
 
       ${activity.teacherAudioUrl && !activity.teacherVideoUrl ? `<audio class="da-teacher-audio" src="${activity.teacherAudioUrl}" controls style="width:100%;margin-bottom:12px"></audio>` : ''}
-      <button class="${recordBtnClass}" ${recordBtnOnclick ? `onclick="${recordBtnOnclick}"` : ''}>${recordBtnContent}</button>
+      <button class="${recordBtnClass}" style="${recordBtnStyle}" ${recordBtnOnclick ? `onclick="${recordBtnOnclick}"` : ''}>${recordBtnContent}</button>
     `;
 
     if (activity.sentenceAnalysis) {
@@ -54929,11 +54971,14 @@ function showToast(message, options = {}) {
     if (t.textContent === message) t.remove();
   });
 
+  const isMobileView = window.innerWidth <= 768;
+  const bottomPosition = isMobileView ? '85px' : '30px';
+
   const toast = document.createElement('div');
   toast.className = 'korealand-toast';
   toast.style.cssText = `
     position: fixed;
-    bottom: 30px;
+    bottom: ${bottomPosition};
     left: 50%;
     transform: translateX(-50%);
     background: ${isLoading ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #48bb78 0%, #38b2ac 100%)'};
@@ -54942,7 +54987,7 @@ function showToast(message, options = {}) {
     border-radius: 10px;
     font-weight: 600;
     box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    z-index: 10002;
+    z-index: 999999;
     animation: slideUp 0.3s ease-out;
     display: flex;
     align-items: center;
@@ -58958,14 +59003,15 @@ function handleGrammarWalkAwayContinue() {
 </div>
 
 <div id="folderReviewPage" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f7fafc; z-index: 99997; overflow-y: auto;">
-  <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+  <div style="max-width: 900px; margin: 0 auto; padding: 20px; padding-bottom: 100px;">
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <button onclick="closeFolderReview()" class="btn btn-secondary" style="padding: 10px 20px;">
-        ← Back to My Flashcards
-      </button>
-      <h2 id="reviewFolderTitle" style="margin: 0; color: #2d3748;">📖 Review: Folder Name</h2>
-      <div style="width: 150px;"></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-bottom: 20px;">
+      <div style="width: 100%; display: flex; justify-content: flex-start;">
+        <button onclick="closeFolderReview()" class="btn btn-secondary" style="padding: 10px 12px;">
+          ← Back to My Flashcards
+        </button>
+      </div>
+      <h2 id="reviewFolderTitle" style="margin: 0; color: #2d3748; text-align: center;">📖 Review: Folder Name</h2>
     </div>
 
     <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -59029,7 +59075,7 @@ function handleGrammarWalkAwayContinue() {
       </div>
     </div>
 
-    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+    <div style="margin-top: 20px; margin-bottom: 30px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
       <div style="background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
         <div id="reviewTotalCards" style="font-size: 28px; font-weight: bold; color: #667eea;">0</div>
         <div style="font-size: 12px; color: #718096;">Total Cards</div>
@@ -59235,52 +59281,71 @@ function handleGrammarWalkAwayContinue() {
     };
   }
 
-  window.updateMobileHomeStats = function() {
+  window.dailyProgressData = {
+    date: new Date().toDateString(),
+    coins: 0,
+    activities: 0
+  };
+
+  window.trackDailyProgress = function(type, amount) {
+    var today = new Date().toDateString();
+    if (window.dailyProgressData.date !== today) {
+      window.dailyProgressData = { date: today, coins: 0, activities: 0 };
+    }
+    if (type === 'coins') {
+      window.dailyProgressData.coins += amount;
+    } else if (type === 'activity') {
+      window.dailyProgressData.activities += (amount || 1);
+    }
+    updateMobileHomeDailyStats();
+    
     try {
-      var streakEl = document.getElementById('mobileHomeStreak');
-      var coinsEl = document.getElementById('mobileHomeCoins');
-      var xpEl = document.getElementById('mobileHomeXP');
+      localStorage.setItem('dailyProgressData', JSON.stringify(window.dailyProgressData));
+    } catch(e) {}
+  };
 
-      var profileStreak = document.getElementById('profileCurrentStreak');
-      if (streakEl && profileStreak) {
-        streakEl.textContent = profileStreak.textContent || '0';
-      }
-
-      var floatingCoins = document.getElementById('floatingCoinsCount');
-      var panelCoins = document.getElementById('panelCoinsCount');
-      if (coinsEl) {
-        if (floatingCoins && floatingCoins.textContent) {
-          coinsEl.textContent = floatingCoins.textContent;
-        } else if (panelCoins && panelCoins.textContent) {
-          coinsEl.textContent = panelCoins.textContent;
-        } else if (typeof studentProfileData !== 'undefined' && studentProfileData.coins) {
-          coinsEl.textContent = studentProfileData.coins;
+  window.loadDailyProgressData = function() {
+    try {
+      var saved = localStorage.getItem('dailyProgressData');
+      if (saved) {
+        var data = JSON.parse(saved);
+        var today = new Date().toDateString();
+        if (data.date === today) {
+          window.dailyProgressData = data;
+        } else {
+          window.dailyProgressData = { date: today, coins: 0, activities: 0 };
+          localStorage.setItem('dailyProgressData', JSON.stringify(window.dailyProgressData));
         }
       }
+    } catch(e) {}
+    updateMobileHomeDailyStats();
+  };
 
-      var profileXP = document.getElementById('profileTotalXP');
-      if (xpEl && profileXP) {
-        xpEl.textContent = profileXP.textContent || '0';
-      }
-    } catch (e) {
+  window.updateMobileHomeDailyStats = function() {
+    var dailyCoinsEl = document.getElementById('mobileHomeDailyCoins');
+    var dailyActivitiesEl = document.getElementById('mobileHomeDailyActivities');
+    
+    if (dailyCoinsEl) {
+      dailyCoinsEl.textContent = window.dailyProgressData.coins || 0;
+    }
+    if (dailyActivitiesEl) {
+      dailyActivitiesEl.textContent = window.dailyProgressData.activities || 0;
     }
   };
 
+  window.updateMobileHomeStats = function() {
+    updateMobileHomeDailyStats();
+  };
+
   function setupMobileHomeStatsObserver() {
+    loadDailyProgressData();
+    
     setInterval(function() {
       var mobileHomeTab = document.getElementById('mobileHome');
       if (mobileHomeTab && mobileHomeTab.classList.contains('active')) {
-        updateMobileHomeStats();
+        updateMobileHomeDailyStats();
       }
     }, 2000);
-
-    var floatingCoins = document.getElementById('floatingCoinsCount');
-    if (floatingCoins && window.MutationObserver) {
-      var observer = new MutationObserver(function() {
-        updateMobileHomeStats();
-      });
-      observer.observe(floatingCoins, { childList: true, characterData: true, subtree: true });
-    }
   }
 
   if (document.readyState === 'loading') {
