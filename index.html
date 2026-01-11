@@ -42378,7 +42378,16 @@ async function loadDailyActivities(filter = 'all') {
 
     activities.forEach(a => {
       const publishDate = a.publishDate?.toDate() || new Date();
-      const deadline = a.deadline?.toDate() || new Date();
+      let deadline;
+      if (a.deadline?.toDate) {
+        deadline = a.deadline.toDate();
+      } else if (a.deadline) {
+        deadline = new Date(a.deadline);
+      } else {
+        deadline = new Date();
+        deadline.setDate(deadline.getDate() + 1);
+        deadline.setHours(4, 0, 0, 0);
+      }
       const isPast = now > deadline;
       const isPublished = a.status === 'published' && now >= publishDate;
       const isScheduled = a.status === 'scheduled' && now < publishDate;
@@ -42552,7 +42561,16 @@ async function loadStudentDailyActivity() {
     }
 
     pronCarouselState.activity = activity;
-    const deadline = activity.deadline?.toDate() || new Date();
+    let deadline;
+    if (activity.deadline?.toDate) {
+      deadline = activity.deadline.toDate();
+    } else if (activity.deadline) {
+      deadline = new Date(activity.deadline);
+    } else {
+      deadline = new Date();
+      deadline.setDate(deadline.getDate() + 1);
+      deadline.setHours(4, 0, 0, 0);
+    }
     const isPast = now > deadline;
 
     const subSnap = await db.collection('dailySubmissions')
