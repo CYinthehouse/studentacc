@@ -7228,7 +7228,7 @@ input:checked + .toggle-slider:before {
   position: fixed;
   z-index: 9999;
   width: min(760px, calc(100vw - 24px));
-  max-height: min(440px, calc(100vh - 24px));
+  max-height: min(440px, calc(100vh - 180px));
   opacity: 0;
   transform: translate3d(0, 10px, 0) scale(.92);
   pointer-events: none;
@@ -7239,6 +7239,68 @@ input:checked + .toggle-slider:before {
   border: 1px solid rgba(255,255,255,.14);
   backdrop-filter: blur(16px);
   background: rgba(8,10,25,.78);
+}
+
+.da-hall-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.da-hall-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .da-hall-overlay {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 200px);
+    left: 10px !important;
+    right: 10px !important;
+    top: 50% !important;
+    transform: translate3d(0, -50%, 0) scale(.92);
+  }
+  
+  .da-hall-overlay.open {
+    transform: translate3d(0, -50%, 0) scale(1);
+  }
+  
+  .da-hall-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-height: calc(100vh - 320px);
+  }
+  
+  .da-hall-student {
+    padding: 8px;
+  }
+  
+  .da-hall-name {
+    font-size: 11px;
+  }
+  
+  .da-hall-stats {
+    font-size: 10px;
+  }
+  
+  .da-hall-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
 }
 
 .da-hall-overlay.open {
@@ -10086,12 +10148,13 @@ input:checked + .toggle-slider:before {
 /* Audio Section */
 .kpop-post-audio {
   padding: 15px;
-  background: linear-gradient(135deg, #fdf2f8, #fae8ff);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .kpop-post-audio-label {
   font-size: 12px;
-  color: #9d174d;
+  color: #f472b6;
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -10192,7 +10255,7 @@ input:checked + .toggle-slider:before {
   align-items: center;
   justify-content: space-between;
   padding: 12px 15px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .kpop-reaction-buttons {
@@ -10202,9 +10265,10 @@ input:checked + .toggle-slider:before {
 
 .kpop-reaction-btn {
   padding: 6px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
@@ -10214,25 +10278,26 @@ input:checked + .toggle-slider:before {
 }
 
 .kpop-reaction-btn:hover {
-  background: #fdf2f8;
-  border-color: #ec4899;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .kpop-reaction-btn.active {
-  background: linear-gradient(135deg, #fce7f3, #fae8ff);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2));
   border-color: #ec4899;
 }
 
 .kpop-reaction-count {
   font-size: 12px;
-  color: #718096;
+  color: #a0aec0;
 }
 
 .kpop-comment-btn {
   padding: 6px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
   cursor: pointer;
   font-size: 14px;
   display: flex;
@@ -10242,7 +10307,8 @@ input:checked + .toggle-slider:before {
 }
 
 .kpop-comment-btn:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Modal */
@@ -16191,6 +16257,7 @@ body.light-mode .mobile-badge-name {
 
       <div class="da-hall-overlay" id="daHallPopup" aria-hidden="true">
         <div class="glitter" aria-hidden="true"></div>
+        <button class="da-hall-close-btn" onclick="closeHallOfFame()" aria-label="Close Hall of Fame">✕</button>
         <div class="da-hall-content">
           <div class="da-hall-top">
             <div class="da-hall-title">
@@ -43779,6 +43846,11 @@ function closePronHall() {
   }
   pronCarouselState.hallOpen = false;
   clearPronActiveDrop();
+}
+
+// Alias for the close button
+function closeHallOfFame() {
+  closePronHall();
 }
 
 function schedulePronHallClose() {
