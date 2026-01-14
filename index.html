@@ -43470,7 +43470,14 @@ async function loadStudentDailyActivity() {
 
         <!-- Script on the right -->
         <div style="flex:1;min-width:200px">
-          <div class="da-script-preview" style="max-height:160px;overflow-y:auto;font-size:14px;line-height:1.6">${renderScriptWithVocabKeywords(activity.script, activity.vocabulary)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:10px;color:#a0aec0;text-transform:uppercase;letter-spacing:0.5px;">📜 Script</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="adjustScriptFontSize(-2)" style="width:22px;height:22px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#e2e8f0;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;">A-</button>
+              <button onclick="adjustScriptFontSize(2)" style="width:22px;height:22px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#e2e8f0;cursor:pointer;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center;">A+</button>
+            </div>
+          </div>
+          <div class="da-script-preview" id="dailyActivityScriptText" style="max-height:160px;overflow-y:auto;font-size:14px;line-height:1.6">${renderScriptWithVocabKeywords(activity.script, activity.vocabulary)}</div>
         </div>
       </div>
 
@@ -45234,8 +45241,15 @@ async function openStudentRecordingModal(activityId) {
 
       <!-- Script Display - Full focus, no scroll -->
       <div style="background:white;border-radius:12px;padding:25px 30px;width:100%">
-        <div style="font-size:11px;color:#718096;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;text-align:center">📜 Read this script</div>
-        <div style="font-size:18px;line-height:2;color:#1a202c;text-align:center">${plainScript}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:1px">📜 Read this script</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:#718096;">Font:</span>
+            <button onclick="adjustScriptFontSize(-2)" style="width:24px;height:24px;border-radius:4px;border:1px solid #e2e8f0;background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">A-</button>
+            <button onclick="adjustScriptFontSize(2)" style="width:24px;height:24px;border-radius:4px;border:1px solid #e2e8f0;background:white;cursor:pointer;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;">A+</button>
+          </div>
+        </div>
+        <div id="modalScriptText" style="font-size:${parseInt(localStorage.getItem('scriptFontSize') || '18')}px;line-height:2;color:#1a202c;text-align:center">${plainScript}</div>
       </div>
 
       <!-- Controls Row -->
@@ -45296,6 +45310,33 @@ async function openStudentRecordingModal(activityId) {
   document.body.appendChild(modal);
 
   studentRecState = { mediaRecorder: null, audioChunks: [], audioBlob: null, transcript: '' };
+}
+
+/**
+ * Adjust script font size in recording modal and daily activity
+ */
+let scriptFontSize = parseInt(localStorage.getItem('scriptFontSize') || '18');
+
+function adjustScriptFontSize(delta) {
+  scriptFontSize = Math.max(12, Math.min(36, scriptFontSize + delta));
+  localStorage.setItem('scriptFontSize', scriptFontSize);
+  
+  // Update modal script
+  const modalScript = document.getElementById('modalScriptText');
+  if (modalScript) {
+    modalScript.style.fontSize = scriptFontSize + 'px';
+  }
+  
+  // Update main daily activity script
+  const mainScript = document.getElementById('dailyActivityScriptText');
+  if (mainScript) {
+    mainScript.style.fontSize = scriptFontSize + 'px';
+  }
+  
+  // Update all da-script-preview elements
+  document.querySelectorAll('.da-script-preview').forEach(el => {
+    el.style.fontSize = scriptFontSize + 'px';
+  });
 }
 
 /**
