@@ -24129,10 +24129,15 @@ function showPopupImage(imageData, soundData, duration = 500, className = '') {
   const popupImg = document.createElement('img');
   popupImg.src = imageData;
   popupImg.className = `popup-image ${className}`;
+  
+  // Calculate center position using actual viewport dimensions
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  
   popupImg.style.cssText = `
     position: fixed;
-    top: 50%;
-    left: 50%;
+    top: ${centerY}px;
+    left: ${centerX}px;
     transform: translate(-50%, -50%);
     z-index: 100000;
     max-width: 80vw;
@@ -24143,14 +24148,18 @@ function showPopupImage(imageData, soundData, duration = 500, className = '') {
   `;
 
   if (className === 'game-start') {
-    popupImg.style.top = '30%';
+    popupImg.style.top = (window.innerHeight * 0.3) + 'px';
   }
   
-  // On mobile, adjust position
+  // On mobile, adjust size
   if (window.innerWidth <= 768) {
     popupImg.style.maxWidth = '60vw';
     popupImg.style.maxHeight = '40vh';
-    popupImg.style.top = className === 'game-start' ? '25%' : '40%';
+    if (className === 'game-start') {
+      popupImg.style.top = (window.innerHeight * 0.25) + 'px';
+    } else {
+      popupImg.style.top = (window.innerHeight * 0.4) + 'px';
+    }
   }
 
   document.body.appendChild(popupImg);
@@ -24613,7 +24622,9 @@ function showJunbiPage() {
     junbiOverlay.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23f5f0e8" width="100" height="100"/><rect fill="%23e8e0d0" x="0" y="85" width="100" height="15"/><rect fill="%238B4513" x="5" y="5" width="3" height="80"/><rect fill="%238B4513" x="92" y="5" width="3" height="80"/><rect fill="%23c41e3a" x="30" y="10" width="40" height="60" rx="2"/><text x="50" y="45" font-size="8" fill="white" text-anchor="middle" font-weight="bold">道場</text></svg>')`;
   }
 
-  if (junbiConfig && junbiConfig.characterUrl) {
+  const isMobile = window.innerWidth <= 768;
+  
+  if (junbiConfig && junbiConfig.characterUrl && !isMobile) {
     characterImg.src = junbiConfig.characterUrl;
     characterImg.style.display = 'block';
 
@@ -24698,7 +24709,9 @@ function startGameFromJunbi() {
   gameInterface.style.backgroundPosition = 'center';
 
   const junbiCharacter = document.getElementById('junbiCharacterOverlay');
-  if (junbiCharacter && junbiCharacter.src && junbiCharacter.style.display !== 'none') {
+  const isMobile = window.innerWidth <= 768;
+  
+  if (junbiCharacter && junbiCharacter.src && junbiCharacter.style.display !== 'none' && !isMobile) {
     gameCharacter.src = junbiCharacter.src;
     gameCharacter.style.display = junbiCharacter.style.display;
     gameCharacter.style.left = junbiCharacter.style.left;
@@ -24708,6 +24721,8 @@ function startGameFromJunbi() {
     gameCharacter.style.transform = junbiCharacter.style.transform;
     gameCharacter.style.width = junbiCharacter.style.width;
     gameCharacter.style.maxHeight = junbiCharacter.style.maxHeight;
+  } else {
+    gameCharacter.style.display = 'none';
   }
 
   gameInterface.style.display = 'flex';
