@@ -10365,30 +10365,28 @@ input:checked + .toggle-slider:before {
 /* Mobile responsive for reactions */
 @media (max-width: 480px) {
   .kpop-post-reactions {
-    padding: 10px 12px;
-    gap: 6px;
-  }
-  
-  .kpop-reaction-buttons {
+    padding: 8px 10px;
     gap: 4px;
   }
   
+  .kpop-reaction-buttons {
+    gap: 3px;
+  }
+  
   .kpop-reaction-btn {
-    padding: 6px 10px;
-    font-size: 14px;
+    padding: 5px 8px;
+    font-size: 13px;
+    border-radius: 16px;
   }
   
   .kpop-reaction-count {
-    font-size: 11px;
+    font-size: 10px;
   }
   
   .kpop-comment-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  
-  .kpop-comment-btn span:last-child {
-    display: none;
+    padding: 5px 8px;
+    font-size: 11px;
+    border-radius: 16px;
   }
 }
 
@@ -12504,6 +12502,146 @@ body.light-mode .mobile-badge-name {
 
   #recognizedText {
     font-size: 14px !important;
+  }
+
+  /* ===== DAY 1 POWER PRACTICE MOBILE FIX ===== */
+  #day1IntervalsSection {
+    margin-bottom: 15px !important;
+  }
+  
+  #day1IntervalsSection > div {
+    padding: 12px !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+  }
+  
+  #day1IntervalsGrid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  #day1IntervalsGrid > div {
+    padding: 8px !important;
+    font-size: 11px !important;
+    min-width: 0 !important;
+    word-break: break-word !important;
+  }
+  
+  #day1IntervalsGrid .btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  /* ===== FLASHCARD GAME START IMAGE CENTERING ===== */
+  .game-start-image {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    max-width: 90% !important;
+    max-height: 200px !important;
+  }
+  
+  .game-start-screen {
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+  }
+
+  /* ===== REVIEW PAGE MOVE SELECTED FIX ===== */
+  #folderReviewPage > div:nth-child(2) > div:first-child {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  
+  #folderReviewPage > div:nth-child(2) > div:first-child > div {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+  
+  #folderReviewPage #reviewMoveToFolder {
+    flex: 1 !important;
+    min-width: 120px !important;
+    max-width: 100% !important;
+  }
+  
+  #folderReviewPage button[onclick="bulkMoveReviewCards()"] {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* Review table mobile */
+  #reviewTable {
+    font-size: 12px !important;
+  }
+  
+  #reviewTable th,
+  #reviewTable td {
+    padding: 8px 6px !important;
+  }
+  
+  #reviewTable th:first-child,
+  #reviewTable td:first-child {
+    width: 35px !important;
+    padding: 8px 4px !important;
+  }
+  
+  #reviewTable th:nth-child(2),
+  #reviewTable td:nth-child(2) {
+    width: 30px !important;
+    padding: 8px 4px !important;
+  }
+  
+  #reviewTable th:last-child,
+  #reviewTable td:last-child {
+    width: 50px !important;
+  }
+}
+
+/* ===== EXTRA SMALL SCREENS (320px - 380px) ===== */
+@media screen and (max-width: 380px) {
+  /* Day 1 Power Practice - single column on tiny screens */
+  #day1IntervalsGrid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Leitner boxes - single column on tiny screens */
+  #leitnerBoxGrid,
+  .leitner-box-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Review controls stack fully */
+  #folderReviewPage #reviewMoveToFolder {
+    width: 100% !important;
+  }
+  
+  #folderReviewPage button[onclick="bulkMoveReviewCards()"] {
+    width: 100% !important;
+  }
+  
+  /* Kpop reactions even smaller */
+  .kpop-reaction-btn {
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+  }
+  
+  .kpop-comment-btn {
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+  }
+  
+  /* Game start image smaller */
+  .game-start-image {
+    max-height: 150px !important;
   }
 }
 
@@ -43599,8 +43737,12 @@ async function loadStudentDailyActivity() {
           studentPhotoUrl = userData.avatarUrl || userData.photoUrl || userData.photoURL || null;
           coins = userData.coins || 0;
         }
-        
-        // Also check studentProfiles for coins if not in users
+      } catch(e) {
+        console.log('Error fetching user data:', e);
+      }
+      
+      // Try to get coins from studentProfiles if not in users
+      try {
         if (coins === 0) {
           const profileDoc = await db.collection('studentProfiles').doc(sub.studentId).get();
           if (profileDoc.exists) {
@@ -43608,13 +43750,19 @@ async function loadStudentDailyActivity() {
             coins = profileData.coins || 0;
           }
         }
-        
-        // Get actual vocab count from studentFlashcards
+      } catch(e) {
+        console.log('Error fetching profile data:', e);
+      }
+      
+      // Try to get vocab count from studentFlashcards
+      try {
         const vocabSnapshot = await db.collection('studentFlashcards')
           .where('studentId', '==', sub.studentId)
           .get();
         vocabCount = vocabSnapshot.size;
-      } catch(e) {}
+      } catch(e) {
+        console.log('Error fetching vocab count:', e);
+      }
 
       pronCarouselState.entries.push({
         id: doc.id,
