@@ -3820,44 +3820,27 @@ body.light-mode .main-content-area .form-group label {
 
 .popup-image {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   z-index: 100000;
   animation: popIn 0.5s ease-in-out;
   pointer-events: none;
-  max-width: 80vw;
-  max-height: 50vh;
   border-radius: 15px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 
-.popup-image.game-start {
-  top: 30%;
-}
-
-@media (max-width: 768px) {
-  .popup-image {
-    max-width: 60vw;
-    max-height: 40vh;
-    top: 40%;
-  }
-  
-  .popup-image.game-start {
-    top: 25%;
-  }
-}
-
 @keyframes popIn {
   0% {
-    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+    transform: translateX(-50%) scale(0.3) rotate(-10deg);
     opacity: 0;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.1) rotate(5deg);
+    transform: translateX(-50%) scale(1.1) rotate(5deg);
     opacity: 1;
   }
   100% {
+    transform: translateX(-50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
     opacity: 1;
   }
@@ -10327,22 +10310,20 @@ input:checked + .toggle-slider:before {
 .kpop-post-reactions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 12px 15px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   gap: 8px;
-  overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .kpop-reaction-buttons {
   display: flex;
-  gap: 6px;
-  flex-shrink: 1;
-  min-width: 0;
+  gap: 8px;
 }
 
 .kpop-reaction-btn {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
@@ -10354,12 +10335,11 @@ input:checked + .toggle-slider:before {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .kpop-reaction-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .kpop-reaction-btn.active {
@@ -10373,7 +10353,7 @@ input:checked + .toggle-slider:before {
 }
 
 .kpop-comment-btn {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
@@ -10384,70 +10364,37 @@ input:checked + .toggle-slider:before {
   align-items: center;
   gap: 5px;
   transition: all 0.2s;
-  flex-shrink: 0;
-  white-space: nowrap;
 }
 
 .kpop-comment-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Hide "Comments" text, show only emoji */
+.kpop-comment-btn-text {
+  display: none;
 }
 
 /* Mobile responsive for reactions */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .kpop-post-reactions {
     padding: 10px 12px;
     gap: 6px;
   }
   
   .kpop-reaction-buttons {
-    gap: 4px;
+    gap: 6px;
   }
   
   .kpop-reaction-btn {
-    padding: 6px 10px;
+    padding: 8px 12px;
     font-size: 14px;
   }
   
-  .kpop-reaction-count {
-    font-size: 11px;
-  }
-  
   .kpop-comment-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  
-  /* Hide "Comments" text on mobile, show only emoji and count */
-  .kpop-comment-btn-text {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .kpop-post-reactions {
-    padding: 8px 10px;
-    gap: 4px;
-  }
-  
-  .kpop-reaction-buttons {
-    gap: 3px;
-  }
-  
-  .kpop-reaction-btn {
-    padding: 5px 8px;
-    font-size: 13px;
-    border-radius: 16px;
-  }
-  
-  .kpop-reaction-count {
-    font-size: 10px;
-  }
-  
-  .kpop-comment-btn {
-    padding: 5px 8px;
-    font-size: 11px;
-    border-radius: 16px;
+    padding: 8px 12px;
+    font-size: 14px;
   }
 }
 
@@ -24130,36 +24077,35 @@ function showPopupImage(imageData, soundData, duration = 500, className = '') {
   popupImg.src = imageData;
   popupImg.className = `popup-image ${className}`;
   
-  // Calculate center position using actual viewport dimensions
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
+  // Find the game title element to position below it
+  const gameTitle = document.getElementById('gameSetTitle');
+  const gameContainer = document.getElementById('flashcardGameInterface');
+  
+  let topPosition = '120px'; // Default fallback
+  let leftPosition = '50%';
+  
+  if (gameTitle && gameContainer) {
+    const titleRect = gameTitle.getBoundingClientRect();
+    topPosition = (titleRect.bottom + 20) + 'px'; // 20px below the title
+  }
   
   popupImg.style.cssText = `
     position: fixed;
-    top: ${centerY}px;
-    left: ${centerX}px;
-    transform: translate(-50%, -50%);
+    top: ${topPosition};
+    left: ${leftPosition};
+    transform: translateX(-50%);
     z-index: 100000;
-    max-width: 80vw;
-    max-height: 50vh;
+    max-width: 50vw;
+    max-height: 35vh;
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     pointer-events: none;
   `;
-
-  if (className === 'game-start') {
-    popupImg.style.top = (window.innerHeight * 0.3) + 'px';
-  }
   
   // On mobile, adjust size
   if (window.innerWidth <= 768) {
-    popupImg.style.maxWidth = '60vw';
-    popupImg.style.maxHeight = '40vh';
-    if (className === 'game-start') {
-      popupImg.style.top = (window.innerHeight * 0.25) + 'px';
-    } else {
-      popupImg.style.top = (window.innerHeight * 0.4) + 'px';
-    }
+    popupImg.style.maxWidth = '40vw';
+    popupImg.style.maxHeight = '25vh';
   }
 
   document.body.appendChild(popupImg);
