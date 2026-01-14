@@ -5376,6 +5376,9 @@ body.light-mode .main-content-area .form-group label {
   align-items: center;
   justify-content: center;
   z-index: 15;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .game-start-title {
@@ -5388,11 +5391,15 @@ body.light-mode .main-content-area .form-group label {
 }
 
 .game-start-image {
-  max-width: 400px;
-  max-height: 300px;
+  display: block;
+  max-width: 90%;
+  max-height: 200px;
+  width: auto;
+  height: auto;
   border-radius: 20px;
-  margin-bottom: 40px;
+  margin: 0 auto 40px auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  object-fit: contain;
 }
 
 .game-start-btn {
@@ -10696,12 +10703,39 @@ input:checked + .toggle-slider:before {
 /* Comments Modal */
 .kpop-comment-modal-content {
   max-width: 500px;
+  width: calc(100% - 40px);
+  margin: 0 auto;
 }
 
 .kpop-comments-list {
   max-height: 300px;
   overflow-y: auto;
   margin-bottom: 15px;
+}
+
+@media (max-width: 480px) {
+  .kpop-comment-modal-content {
+    width: calc(100% - 20px);
+    max-width: none;
+  }
+  
+  .kpop-modal-body {
+    padding: 15px !important;
+  }
+  
+  .kpop-comment-input-area {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .kpop-comment-input-area input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .kpop-comment-submit-btn {
+    width: 100%;
+  }
 }
 
 .kpop-comment-item {
@@ -12556,26 +12590,37 @@ body.light-mode .mobile-badge-name {
   }
 
   /* ===== REVIEW PAGE MOVE SELECTED FIX ===== */
-  #folderReviewPage > div:nth-child(2) > div:first-child {
+  #reviewBulkActions {
+    padding: 12px !important;
+  }
+  
+  .review-bulk-actions-container {
     flex-direction: column !important;
+    align-items: stretch !important;
     gap: 12px !important;
   }
   
-  #folderReviewPage > div:nth-child(2) > div:first-child > div {
+  .review-bulk-select {
     width: 100% !important;
-    flex-wrap: wrap !important;
     justify-content: flex-start !important;
+  }
+  
+  .review-bulk-move {
+    width: 100% !important;
+    flex-direction: row !important;
+    gap: 8px !important;
   }
   
   #folderReviewPage #reviewMoveToFolder {
     flex: 1 !important;
-    min-width: 120px !important;
-    max-width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
   
   #folderReviewPage button[onclick="bulkMoveReviewCards()"] {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+    padding: 8px 12px !important;
   }
   
   /* Review table mobile */
@@ -47479,11 +47524,22 @@ async function loadKpopComments(postId) {
   const list = document.getElementById('kpopCommentsList');
 
   try {
-    const commentsSnap = await db.collection('kpopPosts').doc(postId)
-      .collection('comments')
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
+    // Try with orderBy first, fall back to unordered if index doesn't exist
+    let commentsSnap;
+    try {
+      commentsSnap = await db.collection('kpopPosts').doc(postId)
+        .collection('comments')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+    } catch (indexError) {
+      // Fallback: get without ordering if index doesn't exist
+      console.log('Falling back to unordered comments query');
+      commentsSnap = await db.collection('kpopPosts').doc(postId)
+        .collection('comments')
+        .limit(50)
+        .get();
+    }
 
     if (commentsSnap.empty) {
       list.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">No comments yet. Be the first!</div>';
@@ -47492,7 +47548,14 @@ async function loadKpopComments(postId) {
 
     let html = '';
 
-    commentsSnap.docs.forEach(doc => {
+    // Sort client-side if we got unordered results
+    const sortedDocs = commentsSnap.docs.sort((a, b) => {
+      const aTime = a.data().createdAt?.toDate?.() || new Date(0);
+      const bTime = b.data().createdAt?.toDate?.() || new Date(0);
+      return bTime - aTime;
+    });
+
+    sortedDocs.forEach(doc => {
       const comment = doc.data();
       const createdAt = comment.createdAt?.toDate?.() || new Date();
       const timeAgo = getTimeAgo(createdAt);
@@ -47512,6 +47575,7 @@ async function loadKpopComments(postId) {
     list.innerHTML = html;
 
   } catch (e) {
+    console.error('Error loading comments:', e);
     list.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Error loading comments</div>';
   }
 }
@@ -59436,19 +59500,19 @@ function handleGrammarWalkAwayContinue() {
       <div id="reviewAIProgress" style="font-size: 12px; margin-top: 5px; opacity: 0.9;">0 / 0 cards</div>
     </div>
 
-    <div id="reviewBulkActions" style="display: none; background: #ebf8ff; border: 2px solid #4299e1; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
+    <div id="reviewBulkActions" style="display: none; background: #ebf8ff; border: 2px solid #4299e1; border-radius: 12px; padding: 15px; margin-bottom: 20px; overflow: hidden;">
+      <div class="review-bulk-actions-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="review-bulk-select" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <input type="checkbox" id="reviewSelectAll" onchange="toggleSelectAllReviewCards()" style="width: 18px; height: 18px; cursor: pointer;">
           <label for="reviewSelectAll" style="cursor: pointer; font-weight: 600; color: #2b6cb0;">Select All</label>
           <span id="reviewSelectedCount" style="background: #4299e1; color: white; padding: 3px 10px; border-radius: 15px; font-size: 12px;">0 selected</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <select id="reviewMoveToFolder" style="padding: 8px 12px; border: 2px solid #4299e1; border-radius: 8px; font-size: 13px;">
+        <div class="review-bulk-move" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <select id="reviewMoveToFolder" style="padding: 8px 12px; border: 2px solid #4299e1; border-radius: 8px; font-size: 13px; min-width: 140px; max-width: 100%;">
             <option value="">Move to folder...</option>
           </select>
-          <button onclick="bulkMoveReviewCards()" class="btn" style="padding: 8px 16px; background: #4299e1; font-size: 13px;">
-            📦 Move Selected
+          <button onclick="bulkMoveReviewCards()" class="btn" style="padding: 8px 16px; background: #4299e1; font-size: 13px; white-space: nowrap;">
+            📦 Move
           </button>
         </div>
       </div>
