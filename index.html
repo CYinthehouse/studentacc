@@ -3823,17 +3823,29 @@ body.light-mode .main-content-area .form-group label {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10000;
+  z-index: 100000;
   animation: popIn 0.5s ease-in-out;
   pointer-events: none;
-  max-width: 300px;
-  max-height: 300px;
+  max-width: 80vw;
+  max-height: 50vh;
   border-radius: 15px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 
 .popup-image.game-start {
-  top: 20%;
+  top: 30%;
+}
+
+@media (max-width: 768px) {
+  .popup-image {
+    max-width: 60vw;
+    max-height: 40vh;
+    top: 40%;
+  }
+  
+  .popup-image.game-start {
+    top: 25%;
+  }
 }
 
 @keyframes popIn {
@@ -4100,6 +4112,13 @@ body.light-mode .main-content-area .form-group label {
   z-index: 1;
   pointer-events: none;
   object-fit: contain;
+}
+
+/* Mobile: hide or reposition character to not overlap content */
+@media (max-width: 768px) {
+  .junbi-character {
+    display: none !important;
+  }
 }
 
 /* Wrinkled Paper Effect - Dynamic Size */
@@ -10312,11 +10331,14 @@ input:checked + .toggle-slider:before {
   padding: 12px 15px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   gap: 8px;
+  overflow: hidden;
 }
 
 .kpop-reaction-buttons {
   display: flex;
   gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .kpop-reaction-btn {
@@ -10332,6 +10354,7 @@ input:checked + .toggle-slider:before {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .kpop-reaction-btn:hover {
@@ -10362,6 +10385,7 @@ input:checked + .toggle-slider:before {
   gap: 5px;
   transition: all 0.2s;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .kpop-comment-btn:hover {
@@ -10370,6 +10394,36 @@ input:checked + .toggle-slider:before {
 }
 
 /* Mobile responsive for reactions */
+@media (max-width: 768px) {
+  .kpop-post-reactions {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  
+  .kpop-reaction-buttons {
+    gap: 4px;
+  }
+  
+  .kpop-reaction-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .kpop-reaction-count {
+    font-size: 11px;
+  }
+  
+  .kpop-comment-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  /* Hide "Comments" text on mobile, show only emoji and count */
+  .kpop-comment-btn-text {
+    display: none;
+  }
+}
+
 @media (max-width: 480px) {
   .kpop-post-reactions {
     padding: 8px 10px;
@@ -24080,16 +24134,23 @@ function showPopupImage(imageData, soundData, duration = 500, className = '') {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 10000;
-    max-width: 300px;
-    max-height: 300px;
+    z-index: 100000;
+    max-width: 80vw;
+    max-height: 50vh;
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     pointer-events: none;
   `;
 
   if (className === 'game-start') {
-    popupImg.style.top = '20%';
+    popupImg.style.top = '30%';
+  }
+  
+  // On mobile, adjust position
+  if (window.innerWidth <= 768) {
+    popupImg.style.maxWidth = '60vw';
+    popupImg.style.maxHeight = '40vh';
+    popupImg.style.top = className === 'game-start' ? '25%' : '40%';
   }
 
   document.body.appendChild(popupImg);
@@ -47106,7 +47167,7 @@ async function loadKpopFeed() {
               </button>
             </div>
             <button class="kpop-comment-btn" onclick="openKpopComments('${post.id}')">
-              💬 <span>${commentCount || ''}</span> Comments
+              💬 <span>${commentCount || ''}</span><span class="kpop-comment-btn-text"> Comments</span>
             </button>
           </div>
         </div>
@@ -47523,22 +47584,30 @@ function closeKpopCommentModal() {
 async function loadKpopComments(postId) {
   const list = document.getElementById('kpopCommentsList');
 
+  if (!postId) {
+    list.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">No comments yet. Be the first!</div>';
+    return;
+  }
+
   try {
-    // Try with orderBy first, fall back to unordered if index doesn't exist
+    // First verify the post exists
+    const postDoc = await db.collection('kpopPosts').doc(postId).get();
+    if (!postDoc.exists) {
+      list.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">No comments yet. Be the first!</div>';
+      return;
+    }
+
+    // Try to get comments - use simple query without orderBy to avoid index requirement
     let commentsSnap;
     try {
       commentsSnap = await db.collection('kpopPosts').doc(postId)
         .collection('comments')
-        .orderBy('createdAt', 'desc')
         .limit(50)
         .get();
-    } catch (indexError) {
-      // Fallback: get without ordering if index doesn't exist
-      console.log('Falling back to unordered comments query');
-      commentsSnap = await db.collection('kpopPosts').doc(postId)
-        .collection('comments')
-        .limit(50)
-        .get();
+    } catch (queryError) {
+      console.error('Comments query error:', queryError);
+      list.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">No comments yet. Be the first!</div>';
+      return;
     }
 
     if (commentsSnap.empty) {
@@ -47548,7 +47617,7 @@ async function loadKpopComments(postId) {
 
     let html = '';
 
-    // Sort client-side if we got unordered results
+    // Sort client-side by createdAt
     const sortedDocs = commentsSnap.docs.sort((a, b) => {
       const aTime = a.data().createdAt?.toDate?.() || new Date(0);
       const bTime = b.data().createdAt?.toDate?.() || new Date(0);
@@ -47576,7 +47645,8 @@ async function loadKpopComments(postId) {
 
   } catch (e) {
     console.error('Error loading comments:', e);
-    list.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Error loading comments</div>';
+    // Show friendly message instead of error
+    list.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">No comments yet. Be the first!</div>';
   }
 }
 
