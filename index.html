@@ -43509,9 +43509,23 @@ async function loadStudentDailyActivity() {
           const userData = userDoc.data();
           studentName = userData.displayName || userData.email?.split('@')[0] || 'Student';
           studentPhotoUrl = userData.avatarUrl || userData.photoUrl || userData.photoURL || null;
-          vocabCount = userData.vocabMastered || 0;
           coins = userData.coins || 0;
         }
+        
+        // Also check studentProfiles for coins if not in users
+        if (coins === 0) {
+          const profileDoc = await db.collection('studentProfiles').doc(sub.studentId).get();
+          if (profileDoc.exists) {
+            const profileData = profileDoc.data();
+            coins = profileData.coins || 0;
+          }
+        }
+        
+        // Get actual vocab count from studentFlashcards
+        const vocabSnapshot = await db.collection('studentFlashcards')
+          .where('studentId', '==', sub.studentId)
+          .get();
+        vocabCount = vocabSnapshot.size;
       } catch(e) {}
 
       pronCarouselState.entries.push({
@@ -43811,18 +43825,22 @@ function openPronHallNear(x, y, sourceEntryIndex) {
   if (!hall) return;
 
   const pad = 12;
+  const isMobile = window.innerWidth <= 768;
   const w = Math.min(760, window.innerWidth - pad*2);
-  const h = Math.min(440, window.innerHeight - pad*2);
+  const h = Math.min(440, window.innerHeight - (isMobile ? 200 : 100));
 
   hall.style.width = w + 'px';
 
-  let left = x - w/2;
-  let top = y - h - 20;
-
+  // Center the hall on screen
+  let left = (window.innerWidth - w) / 2;
+  let top = (window.innerHeight - h) / 2;
+  
+  // Ensure it stays within bounds
   if (left < pad) left = pad;
-  if (left + w > window.innerWidth - pad) left = window.innerWidth - pad - w;
-  if (top < pad) top = y + 22;
-  if (top + h > window.innerHeight - pad) top = window.innerHeight - pad - h;
+  if (top < pad) top = pad;
+  if (isMobile) {
+    top = Math.min(top, window.innerHeight - h - 100); // Account for nav bar
+  }
 
   hall.style.left = left + 'px';
   hall.style.top = top + 'px';
