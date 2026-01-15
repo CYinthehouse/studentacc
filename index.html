@@ -24071,45 +24071,38 @@ function showPopupImage(imageData, soundData, duration = 500, className = '') {
     return;
   }
 
-  console.log('Showing popup image (base64)');
+  // Remove any existing popup images first
+  document.querySelectorAll('.popup-image').forEach(img => img.remove());
 
   const popupImg = document.createElement('img');
   popupImg.src = imageData;
-  popupImg.className = `popup-image ${className}`;
+  popupImg.className = 'popup-image';
   
   // Find the game title element to position below it
   const gameTitle = document.getElementById('gameSetTitle');
   
-  let topPosition = 120; // Default fallback in pixels
-  
+  let topPosition = 120;
   if (gameTitle) {
     const titleRect = gameTitle.getBoundingClientRect();
-    topPosition = titleRect.bottom + 20; // 20px below the title
+    topPosition = titleRect.bottom + 20;
   }
   
-  // Calculate horizontal center in pixels
   const leftPosition = Math.round(window.innerWidth / 2);
-  
-  // Set size based on screen
   const isMobile = window.innerWidth <= 768;
-  const maxWidth = isMobile ? '40vw' : '50vw';
-  const maxHeight = isMobile ? '25vh' : '35vh';
+  const imgSize = isMobile ? '120px' : '150px';
   
-  popupImg.style.position = 'fixed';
-  popupImg.style.top = topPosition + 'px';
-  popupImg.style.left = leftPosition + 'px';
-  popupImg.style.transform = 'translateX(-50%)';
-  popupImg.style.zIndex = '100000';
-  popupImg.style.maxWidth = maxWidth;
-  popupImg.style.maxHeight = maxHeight;
-  popupImg.style.borderRadius = '15px';
-  popupImg.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)';
-  popupImg.style.pointerEvents = 'none';
+  popupImg.style.setProperty('position', 'fixed', 'important');
+  popupImg.style.setProperty('top', topPosition + 'px', 'important');
+  popupImg.style.setProperty('left', leftPosition + 'px', 'important');
+  popupImg.style.setProperty('transform', 'translateX(-50%)', 'important');
+  popupImg.style.setProperty('z-index', '999999', 'important');
+  popupImg.style.setProperty('max-width', imgSize, 'important');
+  popupImg.style.setProperty('max-height', imgSize, 'important');
+  popupImg.style.setProperty('border-radius', '15px', 'important');
+  popupImg.style.setProperty('box-shadow', '0 10px 40px rgba(0,0,0,0.3)', 'important');
+  popupImg.style.setProperty('pointer-events', 'none', 'important');
 
   document.body.appendChild(popupImg);
-  
-  // Debug log for mobile
-  console.log('Popup position:', { top: topPosition, left: leftPosition, windowWidth: window.innerWidth });
 
   setTimeout(() => {
     if (popupImg.parentNode) {
@@ -43652,7 +43645,10 @@ async function loadStudentDailyActivity() {
       const data = doc.data();
       const publishDate = data.publishDate?.toDate() || new Date();
 
-      if (data.type === 'pronunciation' && data.status === 'published' && publishDate <= now) {
+      // Show published activities OR scheduled activities whose publishDate has passed
+      if (data.type === 'pronunciation' && 
+          ((data.status === 'published') || 
+           (data.status === 'scheduled' && publishDate <= now))) {
         activity = { id: doc.id, ...data };
         break;
       }
