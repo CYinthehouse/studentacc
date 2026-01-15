@@ -43482,7 +43482,10 @@ async function loadDailyActivities(filter = 'all') {
         deadline.setHours(4, 0, 0, 0);
       }
       const isPast = now > deadline;
-      const isPublished = a.status === 'published' && now >= publishDate;
+      // Consider it published if status is 'published' OR if scheduled and publishDate has passed
+      const isPublished = (a.status === 'published' && now >= publishDate) || 
+                          (a.status === 'scheduled' && now >= publishDate);
+      // Only scheduled if publishDate is still in the future
       const isScheduled = a.status === 'scheduled' && now < publishDate;
 
       if (filter === 'scheduled' && !isScheduled) return;
