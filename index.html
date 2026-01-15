@@ -14903,10 +14903,10 @@ body.light-mode .mobile-badge-name {
 
             <div class="form-group">
               <label>Parent Folder <span style="color: #718096; font-weight: normal;">(optional - create as subfolder)</span></label>
-              <select id="adminFolderParentSelect" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: white;">
+              <select id="adminFolderParentSelect" onchange="onParentFolderSelected(this.value)" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: white;">
                 <option value="">📂 Root Level (No Parent)</option>
               </select>
-              <p style="font-size: 11px; color: #718096; margin-top: 5px;">💡 Select a parent folder to create this as a subfolder. Master folders are shown in yellow.</p>
+              <p style="font-size: 11px; color: #718096; margin-top: 5px;">💡 Select a parent folder to create this as a subfolder. Students will be inherited from parent.</p>
             </div>
 
             <div class="form-group">
@@ -23458,49 +23458,98 @@ async function openFolder(folderId, folderName, isAdminFolder) {
 
   try {
     let folderDoc;
+    let folderData = {};
+    
     if (isAdminFolder) {
       folderDoc = await db.collection('adminFlashcardFolders').doc(folderId).get();
+      if (folderDoc.exists) {
+        folderData = folderDoc.data();
+      }
     } else {
       folderDoc = await db.collection('users').doc(currentUser.uid)
         .collection('flashcardFolders').doc(folderId).get();
+      if (!folderDoc.exists) {
+        grid.innerHTML = '<p>Folder not found</p>';
+        return;
+      }
+      folderData = folderDoc.data();
     }
 
-    if (!folderDoc.exists) {
-      grid.innerHTML = '<p>Folder not found</p>';
-      return;
-    }
-
-    const folderData = folderDoc.data();
     const flashcardIds = folderData.flashcardIds || [];
 
-    if (flashcardIds.length === 0) {
-      grid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">
-          <div style="font-size: 48px; margin-bottom: 15px;">📂</div>
-          <p>This folder is empty.</p>
-          <p style="font-size: 13px;">Drag flashcard sets here or use the menu to add them.</p>
-        </div>
-      `;
-      return;
+    grid.innerHTML = '';
+
+    // For admin folders, show all subfolders
+    if (isAdminFolder) {
+      // Get ALL subfolders of this master folder
+      const allSubfoldersSnap = await db.collection('adminFlashcardFolders')
+        .where('parentFolderId', '==', folderId)
+        .get();
+      
+      // Show all subfolders to students (no filtering)
+      const subfolders = [];
+      allSubfoldersSnap.forEach(doc => {
+        subfolders.push({ id: doc.id, ...doc.data() });
+      });
+      
+      if (subfolders.length > 0) {
+        // Add subfolders label
+        const subfoldersLabel = document.createElement('div');
+        subfoldersLabel.style.cssText = 'grid-column: 1/-1; color: #4a5568; font-weight: 600; margin-bottom: 10px;';
+        subfoldersLabel.textContent = '📁 Subfolders';
+        grid.appendChild(subfoldersLabel);
+        
+        // Add subfolder cards
+        subfolders.forEach(subfolder => {
+          const subfolderCard = document.createElement('div');
+          subfolderCard.className = 'fc-folder-card admin-folder';
+          subfolderCard.style.cssText = 'cursor: pointer;';
+          subfolderCard.onclick = () => openFolder(subfolder.id, subfolder.name, true);
+          
+          const subCount = (subfolder.flashcardIds || []).length;
+          subfolderCard.innerHTML = `
+            <div class="folder-badge">👑 Admin</div>
+            <div class="folder-icon">${subfolder.icon || '📁'}</div>
+            <div class="folder-name">${subfolder.name}</div>
+            <div class="folder-count">${subCount} set${subCount !== 1 ? 's' : ''}</div>
+          `;
+          grid.appendChild(subfolderCard);
+        });
+      }
     }
 
-    grid.innerHTML = '';
-    for (const setId of flashcardIds) {
-      const setDoc = await db.collection('flashcards').doc(setId).get();
-      if (setDoc.exists) {
-        const set = { id: setDoc.id, ...setDoc.data() };
-        if (set.title && Array.isArray(set.wordPairs) && set.wordPairs.length > 0) {
-          grid.appendChild(createFlashcardCard(set, folderId));
+    // Add flashcard sets - all students can see all flashcards in admin folders
+    if (flashcardIds.length > 0) {
+      // Add flashcards label if there were subfolders
+      if (grid.children.length > 0) {
+        const flashcardsLabel = document.createElement('div');
+        flashcardsLabel.style.cssText = 'grid-column: 1/-1; color: #4a5568; font-weight: 600; margin: 20px 0 10px 0;';
+        flashcardsLabel.textContent = '📚 Flashcard Sets';
+        grid.appendChild(flashcardsLabel);
+      }
+      
+      for (const setId of flashcardIds) {
+        const setDoc = await db.collection('flashcards').doc(setId).get();
+        if (setDoc.exists) {
+          const set = { id: setDoc.id, ...setDoc.data() };
+          if (set.title && Array.isArray(set.wordPairs) && set.wordPairs.length > 0) {
+            grid.appendChild(createFlashcardCard(set, folderId));
+          }
         }
       }
     }
 
     if (grid.children.length === 0) {
-      grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #718096;">No valid flashcard sets in this folder.</p>';
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">
+          <div style="font-size: 48px; margin-bottom: 15px;">📂</div>
+          <p>This folder is empty.</p>
+        </div>
+      `;
     }
 
   } catch (error) {
-    grid.innerHTML = '<p>Error loading folder contents</p>';
+    grid.innerHTML = '<p>Error loading folder contents: ' + error.message + '</p>';
   }
 }
 
@@ -24517,6 +24566,41 @@ function toggleAllStudents(checked) {
   document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = checked);
 }
 
+// When a parent folder is selected, inherit its students
+function onParentFolderSelected(parentFolderId) {
+  if (!parentFolderId) {
+    // Root level selected - don't change student selection
+    return;
+  }
+  
+  // Find the parent folder in cache
+  const parentFolder = adminFoldersCache?.find(f => f.id === parentFolderId);
+  if (!parentFolder) return;
+  
+  const parentStudentIds = parentFolder.studentIds || [];
+  
+  if (parentStudentIds.length === 0) {
+    showToast('ℹ️ Parent folder has no students assigned');
+    return;
+  }
+  
+  // Check all students that are in the parent folder
+  document.querySelectorAll('.student-checkbox').forEach(cb => {
+    if (parentStudentIds.includes(cb.value)) {
+      cb.checked = true;
+    }
+  });
+  
+  // Also check auto-assign if parent has it
+  const autoAssignEl = document.getElementById('autoAssignFutureStudents');
+  if (autoAssignEl && parentFolder.autoAssignFuture !== false) {
+    autoAssignEl.checked = true;
+  }
+  
+  updateSelectAllState();
+  showToast(`✅ Inherited ${parentStudentIds.length} student(s) from "${parentFolder.name}"`);
+}
+
 function updateSelectAllState() {
   const allCheckboxes = document.querySelectorAll('.student-checkbox');
   const checkedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
@@ -25153,17 +25237,14 @@ async function loadAvailableFlashcards() {
 
     const flashcardsInFolders = new Set();
 
+    // Load ALL admin folders - all folders are visible to all students
+    const allAdminFoldersSnap = await db.collection('adminFlashcardFolders').get();
     const adminFolders = [];
-    try {
-      const adminFoldersSnap = await db.collection('adminFlashcardFolders')
-        .where('studentIds', 'array-contains', currentUser.uid)
-        .get();
-      adminFoldersSnap.forEach(doc => {
-        const folder = { id: doc.id, ...doc.data(), isAdmin: true };
-        adminFolders.push(folder);
-        (folder.flashcardIds || []).forEach(id => flashcardsInFolders.add(id));
-      });
-    } catch(e) { }
+    allAdminFoldersSnap.forEach(doc => {
+      const folder = { id: doc.id, ...doc.data() };
+      adminFolders.push(folder);
+      (folder.flashcardIds || []).forEach(id => flashcardsInFolders.add(id));
+    });
 
     const studentFolders = [];
     try {
@@ -25231,8 +25312,10 @@ async function loadAvailableFlashcards() {
       const count = (folder.flashcardIds || []).length;
       const childCount = childAdminFolders.filter(c => c.parentFolderId === folder.id).length;
       
+      const badgeText = isMaster ? '⭐ MASTER' : '👑 Admin';
+      
       folderCard.innerHTML = `
-        <div class="folder-badge">${isMaster ? '⭐ MASTER' : '👑 Admin'}</div>
+        <div class="folder-badge">${badgeText}</div>
         <div class="folder-icon">${folder.icon || '📁'}</div>
         <div class="folder-name">${folder.name}</div>
         <div class="folder-count">${count} set${count !== 1 ? 's' : ''}${isMaster ? ' • 📁' + childCount : ''}</div>
@@ -25248,13 +25331,13 @@ async function loadAvailableFlashcards() {
           childCard.className = 'fc-folder-card admin-folder';
           childCard.onclick = () => openFolder(childFolder.id, childFolder.name, true);
           
-          const childCount = (childFolder.flashcardIds || []).length;
+          const childSetCount = (childFolder.flashcardIds || []).length;
           childCard.innerHTML = `
             <div class="folder-badge">👑 Admin</div>
             <div class="folder-parent-path" style="font-size: 9px; color: rgba(255,255,255,0.8); margin-bottom: 4px;">↳ in ${folder.name}</div>
             <div class="folder-icon">${childFolder.icon || '📁'}</div>
             <div class="folder-name">${childFolder.name}</div>
-            <div class="folder-count">${childCount} set${childCount !== 1 ? 's' : ''}</div>
+            <div class="folder-count">${childSetCount} set${childSetCount !== 1 ? 's' : ''}</div>
           `;
           foldersGrid.appendChild(childCard);
         });
