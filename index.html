@@ -46960,7 +46960,7 @@ async function submitStudentRec(activityId) {
     });
 
     await db.collection('dailyActivities').doc(activityId).update({ submissionCount: firebase.firestore.FieldValue.increment(1) });
-    awardCoins(20, 'Daily Pronunciation');
+    // Coins removed from daily activities - only earned through drills, flashcard games, etc.
     recordPracticeActivity('daily-pronunciation');
     showToast('✅ Submitted!');
     closeStudentRecModal();
@@ -46969,7 +46969,7 @@ async function submitStudentRec(activityId) {
 }
 
 async function deleteMyDailySubmission(submissionId, activityId) {
-  if (!confirm('Are you sure you want to delete your submission?\n\n⚠️ 20 coins will be deducted from your balance.\n⚠️ Any drills created from this submission will also be deleted.')) {
+  if (!confirm('Are you sure you want to delete your submission?\n\n⚠️ Any drills created from this submission will also be deleted.')) {
     return;
   }
 
@@ -46993,19 +46993,11 @@ async function deleteMyDailySubmission(submissionId, activityId) {
       submissionCount: firebase.firestore.FieldValue.increment(-1)
     });
 
-    studentProfileData.coins = Math.max(0, (studentProfileData.coins || 0) - 20);
-    await saveStudentProfile();
+    // No coin deduction - coins not awarded for daily activities anymore
 
-    if (document.getElementById('panelCoinsCount')) {
-      document.getElementById('panelCoinsCount').textContent = studentProfileData.coins;
-    }
-    if (document.getElementById('floatingCoinsCount')) {
-      document.getElementById('floatingCoinsCount').textContent = studentProfileData.coins;
-    }
+    await recordActivity('deleted daily submission');
 
-    await recordActivity('deleted daily submission (-20 coins)');
-
-    showToast('✅ Submission deleted. -20 coins.');
+    showToast('✅ Submission deleted.');
     loadStudentDailyActivity();
 
   } catch(e) {
