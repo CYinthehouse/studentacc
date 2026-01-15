@@ -12770,24 +12770,27 @@ body.light-mode .mobile-badge-name {
   }
 
   #flashcardGameInterface .junbi-container {
-    padding-top: 60px !important;
+    padding-top: 55px !important;
     justify-content: flex-start !important;
   }
 
   #flashcardGameInterface .junbi-title {
-    font-size: 28px !important;
+    font-size: 18px !important;
+    margin-bottom: 4px !important;
   }
 
   #flashcardGameInterface .junbi-subtitle {
-    font-size: 12px !important;
-    margin-bottom: 10px !important;
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
   }
 
   #flashcardGameInterface .wrinkled-paper {
-    padding: 12px !important;
+    padding: 10px !important;
     max-height: none !important;
-    flex: none !important;
+    flex: 1 !important;
     overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   #junbiPaper {
@@ -12829,15 +12832,35 @@ body.light-mode .mobile-badge-name {
     padding: 8px 16px !important;
   }
 
-  /* Game interface mobile */
+  /* Game interface mobile - word list gets more space */
   #flashcardGameInterface .wrinkled-paper {
     min-height: auto !important;
-    flex: none !important;
+    flex: 1 !important;
   }
 
   #wordsList {
-    max-height: 35vh !important;
-    overflow-y: auto !important;
+    flex: 1 !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+
+  #wordsList .word-item {
+    padding: 8px 10px !important;
+  }
+
+  /* Progress bar area - more compact */
+  #flashcardGameInterface #currentSetNumber {
+    font-size: 11px !important;
+  }
+
+  /* Timer and controls area - more compact */
+  #flashcardGameInterface #wordTimer {
+    font-size: 28px !important;
+  }
+
+  #flashcardGameInterface #voiceControls .junbi-btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
   }
 
   #gameResults .wrinkled-paper {
@@ -13020,6 +13043,34 @@ body.light-mode .mobile-badge-name {
   /* Game start image smaller */
   .game-start-image {
     max-height: 150px !important;
+  }
+
+  /* Flashcard game - extra compact for very small phones */
+  #flashcardGameInterface .junbi-container {
+    padding-top: 55px !important;
+  }
+
+  #flashcardGameInterface .junbi-title {
+    font-size: 16px !important;
+    margin-bottom: 2px !important;
+  }
+
+  #flashcardGameInterface .wrinkled-paper h3 {
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+  }
+
+  #wordsList .word-item {
+    padding: 6px 8px !important;
+  }
+
+  #flashcardGameInterface #wordTimer {
+    font-size: 24px !important;
+  }
+
+  #flashcardGameInterface #voiceControls .junbi-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
   }
 }
 
