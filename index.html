@@ -7676,7 +7676,7 @@ input:checked + .toggle-slider:before {
 /* ============= FLASHCARD FOLDER SYSTEM ============= */
 .fc-folder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -7687,9 +7687,12 @@ input:checked + .toggle-slider:before {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
-  min-height: 140px;
+  aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .fc-folder-card:hover {
@@ -7700,6 +7703,25 @@ input:checked + .toggle-slider:before {
 .fc-folder-card.admin-folder {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   border: 3px solid #d97706;
+}
+
+/* Master folder (contains subfolders) - Bright Yellow */
+.fc-folder-card.master-folder {
+  background: linear-gradient(135deg, #ffd700 0%, #ffcc00 50%, #f0b800 100%);
+  border: 3px solid #b8860b;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.fc-folder-card.master-folder:hover {
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+}
+
+.fc-folder-card.master-folder .folder-name {
+  color: #5c4600;
+}
+
+.fc-folder-card.master-folder .folder-count {
+  color: #6b5200;
 }
 
 .fc-folder-card.student-folder {
@@ -7727,7 +7749,315 @@ input:checked + .toggle-slider:before {
 .fc-folder-card .folder-count {
   font-size: 12px;
   color: rgba(255,255,255,0.85);
-  margin-top: auto;
+  margin-top: 8px;
+}
+
+/* Drag and Drop Styles */
+.fc-folder-card.drag-over,
+.fc-set-card-teacher.drag-over {
+  border: 3px dashed #48bb78 !important;
+  background: rgba(72, 187, 120, 0.2) !important;
+  transform: scale(1.02);
+}
+
+.fc-folder-card.dragging,
+.fc-set-card-teacher.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.drop-zone-indicator {
+  border: 3px dashed #667eea;
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.drop-zone-indicator.active {
+  border-color: #48bb78;
+  background: rgba(72, 187, 120, 0.15);
+  color: #48bb78;
+}
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+  display: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.bulk-actions-toolbar.visible {
+  display: flex;
+}
+
+.bulk-actions-toolbar .selected-count {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bulk-actions-toolbar button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-actions-toolbar button:hover {
+  transform: translateY(-2px);
+}
+
+.bulk-actions-toolbar .bulk-btn-move {
+  background: #48bb78;
+  color: white;
+}
+
+.bulk-actions-toolbar .bulk-btn-delete {
+  background: #f56565;
+  color: white;
+}
+
+.bulk-actions-toolbar .bulk-btn-cancel {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+/* Checkbox overlay for bulk selection */
+.bulk-select-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.bulk-select-checkbox:hover {
+  border-color: white;
+  background: rgba(0,0,0,0.5);
+}
+
+.bulk-select-checkbox.selected {
+  background: #48bb78;
+  border-color: #48bb78;
+}
+
+.bulk-select-checkbox.selected::after {
+  content: '✓';
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.fc-folder-card.selected,
+.fc-set-card-teacher.selected {
+  box-shadow: 0 0 0 3px #48bb78, 0 8px 25px rgba(72, 187, 120, 0.4);
+}
+
+/* Select All checkbox in header */
+.select-all-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+}
+
+.select-all-container label {
+  font-size: 13px;
+  color: #4a5568;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select-all-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Move to folder modal */
+.move-to-folder-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 7000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.move-to-folder-content {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  max-width: 400px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.move-to-folder-content h3 {
+  margin: 0 0 20px;
+  color: #2d3748;
+}
+
+.folder-option {
+  padding: 12px 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.folder-option:hover {
+  border-color: #667eea;
+  background: #f7fafc;
+}
+
+.folder-option.selected {
+  border-color: #48bb78;
+  background: #f0fff4;
+}
+
+.folder-option.root-option {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-color: #f59e0b;
+}
+
+/* Teacher Flashcard Sets Grid */
+.fc-sets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.fc-set-card-teacher {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border: 3px solid #5a67d8;
+}
+
+.fc-set-card-teacher:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+.fc-set-card-teacher .set-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.fc-set-card-teacher .set-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.fc-set-card-teacher .set-count {
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+}
+
+.fc-set-card-teacher .set-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.fc-set-card-teacher:hover .set-actions {
+  opacity: 1;
+}
+
+.fc-set-card-teacher .set-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.fc-set-card-teacher .set-action-btn:hover {
+  transform: scale(1.1);
+}
+
+.fc-set-card-teacher .set-action-btn.edit {
+  background: rgba(255,255,255,0.9);
+  color: #4299e1;
+}
+
+.fc-set-card-teacher .set-action-btn.duplicate {
+  background: rgba(255,255,255,0.9);
+  color: #48bb78;
+}
+
+.fc-set-card-teacher .set-action-btn.delete {
+  background: rgba(255,255,255,0.9);
+  color: #f56565;
 }
 
 .fc-folder-card .folder-badge {
@@ -8016,6 +8346,8 @@ input:checked + .toggle-slider:before {
   padding: 30px;
   max-width: 450px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 25px 80px rgba(0,0,0,0.3);
 }
 
@@ -14553,6 +14885,14 @@ body.light-mode .mobile-badge-name {
             </div>
 
             <div class="form-group">
+              <label>Parent Folder <span style="color: #718096; font-weight: normal;">(optional - create as subfolder)</span></label>
+              <select id="adminFolderParentSelect" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: white;">
+                <option value="">📂 Root Level (No Parent)</option>
+              </select>
+              <p style="font-size: 11px; color: #718096; margin-top: 5px;">💡 Select a parent folder to create this as a subfolder. Master folders are shown in yellow.</p>
+            </div>
+
+            <div class="form-group">
               <label>Assign to Students</label>
               <div style="max-height: 180px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                 <div style="margin-bottom: 10px;">
@@ -14663,14 +15003,6 @@ body.light-mode .mobile-badge-name {
           </div>
         </div>
 
-        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #e2e8f0;">
-          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-            <input type="text" id="newFolderNameFlashcards" placeholder="Enter folder name" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
-            <button onclick="createFolder('flashcards')" class="btn btn-secondary">📁 Create Folder</button>
-          </div>
-          <p style="color: #718096; font-size: 14px;">📌 Organize your flashcard sets into folders. Drag and drop sets to move them between folders.</p>
-        </div>
-
         <div class="test-card" style="margin-bottom: 30px;">
           <h3>Create New Flashcard Set</h3>
           <div class="form-group">
@@ -14733,263 +15065,6 @@ body.light-mode .mobile-badge-name {
 
             <div id="wordPairsList" style="background: #f7fafc; padding: 20px; border-radius: 12px; min-height: 100px;">
               <p style="color: #718096;">No word pairs added yet. Add at least 5 words to create a set.</p>
-            </div>
-          </div>
-
-          <div class="upload-section">
-            <h4 style="margin-bottom: 20px; color: #2d3748;">🎮 Game Assets (Optional but Recommended)</h4>
-            <p style="font-size: 13px; color: #718096; margin-bottom: 20px;">Upload images and sounds to make the game more engaging!</p>
-
-            <div class="upload-group">
-              <h5>📈 Progressive Correct Answer Rewards (Shows for correct answers 1-4)</h5>
-              <p style="font-size: 12px; color: #718096; margin-bottom: 10px;">Same image with 4 different sounds for increasing excitement!</p>
-
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="progressImage" class="file-input-label">Choose Image (PNG)</label>
-                  <input type="file" id="progressImage" accept="image/png" onchange="handleFileSelect(this, 'progressImage')">
-                </div>
-                <span class="file-name" id="progressImage-name">No file selected</span>
-              </div>
-              <div id="progressImage-preview"></div>
-
-              <div style="margin-top: 15px;">
-                <p style="font-size: 13px; color: #4a5568; margin-bottom: 10px;">Upload 4 different sounds:</p>
-
-                <div class="file-upload-container">
-                  <span style="width: 120px; font-size: 13px;">1st Correct:</span>
-                  <div class="file-input-wrapper">
-                    <label for="progressSound1" class="file-input-label">Sound 1</label>
-                    <input type="file" id="progressSound1" accept="audio/mp3" onchange="handleFileSelect(this, 'progressSound1')">
-                  </div>
-                  <span class="file-name" id="progressSound1-name">No file selected</span>
-                </div>
-
-                <div class="file-upload-container">
-                  <span style="width: 120px; font-size: 13px;">2nd Correct:</span>
-                  <div class="file-input-wrapper">
-                    <label for="progressSound2" class="file-input-label">Sound 2</label>
-                    <input type="file" id="progressSound2" accept="audio/mp3" onchange="handleFileSelect(this, 'progressSound2')">
-                  </div>
-                  <span class="file-name" id="progressSound2-name">No file selected</span>
-                </div>
-
-                <div class="file-upload-container">
-                  <span style="width: 120px; font-size: 13px;">3rd Correct:</span>
-                  <div class="file-input-wrapper">
-                    <label for="progressSound3" class="file-input-label">Sound 3</label>
-                    <input type="file" id="progressSound3" accept="audio/mp3" onchange="handleFileSelect(this, 'progressSound3')">
-                  </div>
-                  <span class="file-name" id="progressSound3-name">No file selected</span>
-                </div>
-
-                <div class="file-upload-container">
-                  <span style="width: 120px; font-size: 13px;">4th Correct:</span>
-                  <div class="file-input-wrapper">
-                    <label for="progressSound4" class="file-input-label">Sound 4</label>
-                    <input type="file" id="progressSound4" accept="audio/mp3" onchange="handleFileSelect(this, 'progressSound4')">
-                  </div>
-                  <span class="file-name" id="progressSound4-name">No file selected</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="upload-group">
-              <h5>🌟 Perfect Set (Shows when all 5 answers are correct)</h5>
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="perfectImage" class="file-input-label">100% Image (PNG)</label>
-                  <input type="file" id="perfectImage" accept="image/png" onchange="handleFileSelect(this, 'perfectImage')">
-                </div>
-                <span class="file-name" id="perfectImage-name">No file selected</span>
-              </div>
-              <div id="perfectImage-preview"></div>
-
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="perfectSound" class="file-input-label">Perfect Sound (MP3)</label>
-                  <input type="file" id="perfectSound" accept="audio/mp3" onchange="handleFileSelect(this, 'perfectSound')">
-                </div>
-                <span class="file-name" id="perfectSound-name">No file selected</span>
-              </div>
-            </div>
-
-            <div class="upload-group">
-              <h5>😅 Almost Had It (Shows on 5th answer when not all correct)</h5>
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="almostImage" class="file-input-label">Almost Image (PNG)</label>
-                  <input type="file" id="almostImage" accept="image/png" onchange="handleFileSelect(this, 'almostImage')">
-                </div>
-                <span class="file-name" id="almostImage-name">No file selected</span>
-              </div>
-              <div id="almostImage-preview"></div>
-
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="almostSound" class="file-input-label">Almost Sound (MP3)</label>
-                  <input type="file" id="almostSound" accept="audio/mp3" onchange="handleFileSelect(this, 'almostSound')">
-                </div>
-                <span class="file-name" id="almostSound-name">No file selected</span>
-              </div>
-            </div>
-
-            <div class="upload-group">
-              <h5>🎬 Game Start (Shows when game begins)</h5>
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="startImage" class="file-input-label">Start Image (PNG)</label>
-                  <input type="file" id="startImage" accept="image/png" onchange="handleFileSelect(this, 'startImage')">
-                </div>
-                <span class="file-name" id="startImage-name">No file selected</span>
-              </div>
-              <div id="startImage-preview"></div>
-
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="startSound" class="file-input-label">Start Sound (MP3)</label>
-                  <input type="file" id="startSound" accept="audio/mp3" onchange="handleFileSelect(this, 'startSound')">
-                </div>
-                <span class="file-name" id="startSound-name">No file selected</span>
-              </div>
-            </div>
-
-            <div class="upload-group">
-              <h5>⏰ Time's Up (Shows when timer runs out)</h5>
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="timeoutImage" class="file-input-label">Timeout Image (PNG)</label>
-                  <input type="file" id="timeoutImage" accept="image/png" onchange="handleFileSelect(this, 'timeoutImage')">
-                </div>
-                <span class="file-name" id="timeoutImage-name">No file selected</span>
-              </div>
-              <div id="timeoutImage-preview"></div>
-
-              <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                  <label for="timeoutSound" class="file-input-label">Timeout Sound (MP3)</label>
-                  <input type="file" id="timeoutSound" accept="audio/mp3" onchange="handleFileSelect(this, 'timeoutSound')">
-                </div>
-                <span class="file-name" id="timeoutSound-name">No file selected</span>
-              </div>
-            </div>
-
-            <div class="upload-group">
-              <h5>🏆 End Game Results (GIFs stay visible)</h5>
-
-              <div style="margin: 15px 0; padding: 10px; background: #fff5f5; border-radius: 6px;">
-                <span class="score-range-label" style="background: #fc8181;">0-50%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif1" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif1" accept="image/gif" onchange="handleFileSelect(this, 'endGif1')">
-                  </div>
-                  <span class="file-name" id="endGif1-name">No file selected</span>
-                </div>
-                <div id="endGif1-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound1" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound1" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound1')">
-                  </div>
-                  <span class="file-name" id="endSound1-name">No file selected</span>
-                </div>
-              </div>
-
-              <div style="margin: 15px 0; padding: 10px; background: #fffaf5; border-radius: 6px;">
-                <span class="score-range-label" style="background: #f6ad55;">51-65%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif2" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif2" accept="image/gif" onchange="handleFileSelect(this, 'endGif2')">
-                  </div>
-                  <span class="file-name" id="endGif2-name">No file selected</span>
-                </div>
-                <div id="endGif2-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound2" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound2" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound2')">
-                  </div>
-                  <span class="file-name" id="endSound2-name">No file selected</span>
-                </div>
-              </div>
-
-              <div style="margin: 15px 0; padding: 10px; background: #fffff5; border-radius: 6px;">
-                <span class="score-range-label" style="background: #ecc94b;">66-75%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif3" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif3" accept="image/gif" onchange="handleFileSelect(this, 'endGif3')">
-                  </div>
-                  <span class="file-name" id="endGif3-name">No file selected</span>
-                </div>
-                <div id="endGif3-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound3" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound3" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound3')">
-                  </div>
-                  <span class="file-name" id="endSound3-name">No file selected</span>
-                </div>
-              </div>
-
-              <div style="margin: 15px 0; padding: 10px; background: #f0fff4; border-radius: 6px;">
-                <span class="score-range-label" style="background: #48bb78;">76-85%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif4" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif4" accept="image/gif" onchange="handleFileSelect(this, 'endGif4')">
-                  </div>
-                  <span class="file-name" id="endGif4-name">No file selected</span>
-                </div>
-                <div id="endGif4-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound4" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound4" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound4')">
-                  </div>
-                  <span class="file-name" id="endSound4-name">No file selected</span>
-                </div>
-              </div>
-
-              <div style="margin: 15px 0; padding: 10px; background: #e6fffa; border-radius: 6px;">
-                <span class="score-range-label" style="background: #38b2ac;">86-99%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif5" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif5" accept="image/gif" onchange="handleFileSelect(this, 'endGif5')">
-                  </div>
-                  <span class="file-name" id="endGif5-name">No file selected</span>
-                </div>
-                <div id="endGif5-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound5" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound5" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound5')">
-                  </div>
-                  <span class="file-name" id="endSound5-name">No file selected</span>
-                </div>
-              </div>
-
-              <div style="margin: 15px 0; padding: 10px; background: #f0fdf4; border-radius: 6px;">
-                <span class="score-range-label" style="background: #10b981;">💯 100%</span>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endGif6" class="file-input-label">GIF</label>
-                    <input type="file" id="endGif6" accept="image/gif" onchange="handleFileSelect(this, 'endGif6')">
-                  </div>
-                  <span class="file-name" id="endGif6-name">No file selected</span>
-                </div>
-                <div id="endGif6-preview"></div>
-                <div class="file-upload-container">
-                  <div class="file-input-wrapper">
-                    <label for="endSound6" class="file-input-label">Sound</label>
-                    <input type="file" id="endSound6" accept="audio/mp3" onchange="handleFileSelect(this, 'endSound6')">
-                  </div>
-                  <span class="file-name" id="endSound6-name">No file selected</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -21778,15 +21853,28 @@ async function saveFlashcardSet() {
       }
     }
 
-    await db.collection('flashcards').add({
+    // Get current folder ID
+    let currentFolderId = null;
+    if (currentTeacherFolderPath && currentTeacherFolderPath.length > 0) {
+      currentFolderId = currentTeacherFolderPath[currentTeacherFolderPath.length - 1].id;
+    }
+
+    const flashcardData = {
       title: title,
       wordPairs: currentWordPairs,
       timerSeconds: timerValue,
       teacherId: currentUser.uid,
-      assets: assets, // New field for game assets
-      hasAIData: currentWordPairs.some(p => p.aiData), // Flag to indicate AI data exists
+      assets: assets,
+      hasAIData: currentWordPairs.some(p => p.aiData),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+
+    // Add folderId if we're inside a folder
+    if (currentFolderId) {
+      flashcardData.folderId = currentFolderId;
+    }
+
+    await db.collection('flashcards').add(flashcardData);
 
     statusEl.style.display = 'block';
     statusEl.style.background = 'linear-gradient(135deg, #48bb78 0%, #38b2ac 100%)';
@@ -21813,7 +21901,7 @@ async function saveFlashcardSet() {
       if (div) div.innerHTML = '';
     });
 
-    loadFlashcardSets();
+    loadFlashcardSets(currentFolderId);
   } catch (error) {
     statusEl.style.display = 'block';
     statusEl.style.background = '#f56565';
@@ -22000,67 +22088,210 @@ async function generateAIData() {
   }
 }
 
-async function loadFlashcardSets() {
+// Track current folder navigation path
+let currentTeacherFolderPath = []; // Array of {id, name} objects representing breadcrumb
+
+async function loadFlashcardSets(parentFolderId = null) {
   const listDiv = document.getElementById('flashcardSetsList');
+  if (!listDiv) return; // Exit if element doesn't exist
+  
   listDiv.innerHTML = '<div class="loading"></div>';
 
+  // Store current folder ID globally for drag/drop
+  window.currentViewingFolderId = parentFolderId;
+
   try {
-    const foldersSnapshot = await db.collection('folders')
-      .where('type', '==', 'flashcards')
-      .where('userId', '==', currentUser.uid)
-      .get();
+    // Load ALL admin flashcard folders (the ones students see)
+    const foldersSnapshot = await db.collection('adminFlashcardFolders').get();
 
-    folders = {}; // Use global variable
+    window.adminFoldersCache = {};
     foldersSnapshot.forEach(doc => {
-      folders[doc.id] = { id: doc.id, ...doc.data() };
+      window.adminFoldersCache[doc.id] = { id: doc.id, ...doc.data() };
     });
+    const adminFolders = window.adminFoldersCache;
 
-    const snapshot = await db.collection('flashcards')
-      .where('teacherId', '==', currentUser.uid)
-      .get();
+    // Load ALL flashcard sets
+    const snapshot = await db.collection('flashcards').get();
 
     listDiv.innerHTML = '';
-
-    if (snapshot.empty && Object.keys(folders).length === 0) {
-      listDiv.innerHTML = '<p style="color: #718096;">No flashcard sets created yet.</p>';
-      return;
-    }
 
     const flashcards = [];
     snapshot.forEach(doc => {
       flashcards.push({ id: doc.id, ...doc.data() });
     });
+    window.allFlashcardsCache = flashcards;
 
-    Object.values(folders).forEach(folder => {
-      const folderDiv = document.createElement('div');
-      folderDiv.className = 'folder-container';
-
-      const folderFlashcards = flashcards.filter(f => f.folderId === folder.id);
-
-      folderDiv.innerHTML = `
-        <div class="folder-header" onclick="toggleFolder('${folder.id}')">
-          <div class="folder-name">
-            <span class="folder-icon">📁</span>
-            <span>${folder.name}</span>
-            <span class="folder-count">${folderFlashcards.length}</span>
-          </div>
-          <div class="folder-actions" onclick="event.stopPropagation()">
-            <button class="btn btn-danger" onclick="deleteFolder('${folder.id}', 'flashcards')" style="padding: 6px 12px; font-size: 13px;">Delete Folder</button>
-          </div>
-        </div>
-        <div id="folder-contents-${folder.id}" class="folder-contents">
-          ${renderFlashcards(folderFlashcards, folder.id)}
-        </div>
-      `;
-
-      listDiv.appendChild(folderDiv);
+    // Get flashcard IDs that are in any folder
+    const flashcardsInFolders = new Set();
+    Object.values(adminFolders).forEach(folder => {
+      (folder.flashcardIds || []).forEach(id => flashcardsInFolders.add(id));
     });
 
-    const rootFlashcards = flashcards.filter(f => !f.folderId);
-    if (rootFlashcards.length > 0) {
-      const rootDiv = document.createElement('div');
-      rootDiv.innerHTML = renderFlashcards(rootFlashcards, null);
-      listDiv.appendChild(rootDiv);
+    // Get subfolders of current parent
+    const subfolders = Object.values(adminFolders).filter(f => 
+      (parentFolderId === null && !f.parentFolderId) || 
+      f.parentFolderId === parentFolderId
+    );
+
+    // Get flashcards in current folder (or unfiled if at root)
+    let currentFolderFlashcards = [];
+    if (parentFolderId === null) {
+      // At root - show unfiled flashcards
+      currentFolderFlashcards = flashcards.filter(f => !flashcardsInFolders.has(f.id));
+    } else {
+      // Inside a folder - show flashcards in this folder
+      const currentFolder = adminFolders[parentFolderId];
+      if (currentFolder && currentFolder.flashcardIds) {
+        currentFolderFlashcards = flashcards.filter(f => currentFolder.flashcardIds.includes(f.id));
+      }
+    }
+
+    // Add Bulk Actions Toolbar
+    const bulkToolbar = document.createElement('div');
+    bulkToolbar.className = 'bulk-actions-toolbar';
+    bulkToolbar.id = 'bulkActionsToolbar';
+    bulkToolbar.innerHTML = `
+      <span class="selected-count"><span id="selectedItemCount">0</span> item(s) selected</span>
+      <button class="bulk-btn-move" onclick="openMoveToFolderModal()">📁 Move to Folder</button>
+      <button class="bulk-btn-delete" onclick="bulkDeleteSelected()">🗑️ Delete</button>
+      <button class="bulk-btn-cancel" onclick="clearBulkSelection()">✕ Cancel</button>
+    `;
+    listDiv.appendChild(bulkToolbar);
+
+    // Render breadcrumb navigation if we're in a subfolder
+    if (currentTeacherFolderPath.length > 0) {
+      const breadcrumbDiv = document.createElement('div');
+      breadcrumbDiv.className = 'folder-breadcrumb';
+      breadcrumbDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 20px; padding: 12px 16px; background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%); border-radius: 10px; flex-wrap: wrap;';
+      
+      let breadcrumbHtml = `<span onclick="navigateToTeacherFolder(null)" style="cursor: pointer; color: #667eea; font-weight: 600;">🏠 Root</span>`;
+      
+      currentTeacherFolderPath.forEach((folder, index) => {
+        breadcrumbHtml += `<span style="color: #a0aec0;">›</span>`;
+        if (index === currentTeacherFolderPath.length - 1) {
+          breadcrumbHtml += `<span style="color: #2d3748; font-weight: 600;">📁 ${folder.name}</span>`;
+        } else {
+          breadcrumbHtml += `<span onclick="navigateToTeacherFolder('${folder.id}', ${index})" style="cursor: pointer; color: #667eea; font-weight: 600;">📁 ${folder.name}</span>`;
+        }
+      });
+      
+      breadcrumbDiv.innerHTML = breadcrumbHtml;
+      listDiv.appendChild(breadcrumbDiv);
+    }
+
+    // Check which folders are master folders (have children)
+    const masterFolderIds = new Set(Object.values(adminFolders).filter(f => f.parentFolderId).map(f => f.parentFolderId));
+
+    // Drop zone for moving items to current folder or root
+    if (parentFolderId !== null) {
+      const dropZone = document.createElement('div');
+      dropZone.className = 'drop-zone-indicator';
+      dropZone.id = 'currentFolderDropZone';
+      dropZone.innerHTML = '📥 Drop flashcard sets here to add to this folder';
+      dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('active'); };
+      dropZone.ondragleave = () => dropZone.classList.remove('active');
+      dropZone.ondrop = (e) => handleDropOnFolder(e, parentFolderId);
+      listDiv.appendChild(dropZone);
+    }
+
+    if (subfolders.length === 0 && currentFolderFlashcards.length === 0) {
+      if (parentFolderId === null) {
+        listDiv.innerHTML += '<p style="color: #718096;">No flashcard sets created yet. Use the "Admin Folder Dashboard" above to create folders and organize flashcard sets for students.</p>';
+      } else {
+        listDiv.innerHTML += '<p style="color: #718096; padding: 20px;">This folder is empty. Drag flashcard sets here to add them.</p>';
+      }
+      return;
+    }
+
+    // Select All checkbox
+    if (subfolders.length > 0 || currentFolderFlashcards.length > 0) {
+      const selectAllDiv = document.createElement('div');
+      selectAllDiv.className = 'select-all-container';
+      selectAllDiv.innerHTML = `
+        <label>
+          <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+          Select All
+        </label>
+        <span style="color: #718096; font-size: 12px; margin-left: auto;">
+          💡 Tip: Click checkboxes to select, then use bulk actions. Drag items to move them.
+        </span>
+      `;
+      listDiv.appendChild(selectAllDiv);
+    }
+
+    // Render subfolders grid
+    if (subfolders.length > 0) {
+      const foldersLabel = document.createElement('h4');
+      foldersLabel.style.cssText = 'color: #4a5568; margin: 0 0 15px 0; font-size: 14px;';
+      foldersLabel.textContent = '📁 Folders';
+      listDiv.appendChild(foldersLabel);
+
+      const foldersGridDiv = document.createElement('div');
+      foldersGridDiv.className = 'fc-sets-grid';
+      foldersGridDiv.style.marginBottom = '30px';
+      
+      subfolders.forEach(folder => {
+        // Count items in this folder
+        const childFolders = Object.values(adminFolders).filter(f => f.parentFolderId === folder.id);
+        const folderFlashcardCount = (folder.flashcardIds || []).length;
+        const totalItems = childFolders.length + folderFlashcardCount;
+        
+        // Check if this is a master folder (has subfolders inside)
+        const isMasterFolder = masterFolderIds.has(folder.id);
+        
+        // Get the parent folder name if this folder has a parent
+        const parentFolder = folder.parentFolderId ? adminFolders[folder.parentFolderId] : null;
+        let parentPathHtml = '';
+        if (parentFolder) {
+          parentPathHtml = `<div class="folder-parent-path" style="font-size: 9px; color: #ffd700; margin-bottom: 4px; opacity: 0.9;">📂 ${parentFolder.name}</div>`;
+        }
+        
+        const folderCard = document.createElement('div');
+        // Master folders get yellow styling
+        folderCard.className = isMasterFolder ? 'fc-folder-card master-folder' : 'fc-folder-card admin-folder';
+        folderCard.style.cursor = 'pointer';
+        folderCard.dataset.folderId = folder.id;
+        folderCard.dataset.type = 'folder';
+        
+        // Drag and drop handlers for folder (as drop target)
+        folderCard.ondragover = (e) => { e.preventDefault(); folderCard.classList.add('drag-over'); };
+        folderCard.ondragleave = () => folderCard.classList.remove('drag-over');
+        folderCard.ondrop = (e) => handleDropOnFolder(e, folder.id);
+        
+        folderCard.onclick = (e) => {
+          if (e.target.classList.contains('bulk-select-checkbox') || e.target.closest('.set-actions')) return;
+          navigateIntoTeacherFolder(folder.id, folder.name);
+        };
+        
+        folderCard.innerHTML = `
+          <div class="bulk-select-checkbox" onclick="event.stopPropagation(); toggleItemSelection('${folder.id}', 'folder', this)"></div>
+          <div class="set-actions" onclick="event.stopPropagation()">
+            <button class="set-action-btn duplicate" onclick="event.stopPropagation(); duplicateAdminFolder('${folder.id}')" title="Duplicate Folder">📋</button>
+            <button class="set-action-btn edit" onclick="event.stopPropagation(); openEditAdminFolderModal('${folder.id}')" title="Edit Folder">✏️</button>
+            <button class="set-action-btn delete" onclick="event.stopPropagation(); deleteAdminFolder('${folder.id}')" title="Delete Folder">🗑️</button>
+          </div>
+          ${isMasterFolder ? '<div class="folder-badge" style="background: rgba(120, 53, 15, 0.8); color: #fef3c7;">MASTER</div>' : ''}
+          ${parentPathHtml}
+          <div class="folder-icon">${folder.icon || '📁'}</div>
+          <div class="folder-name">${folder.name}</div>
+          <div class="folder-count">${totalItems} item${totalItems !== 1 ? 's' : ''}${isMasterFolder ? ' (📁' + childFolders.length + ')' : ''}</div>
+        `;
+        foldersGridDiv.appendChild(folderCard);
+      });
+      
+      listDiv.appendChild(foldersGridDiv);
+    }
+
+    // Render flashcards in current folder
+    if (currentFolderFlashcards.length > 0) {
+      const setsLabel = document.createElement('h4');
+      setsLabel.style.cssText = 'color: #4a5568; margin: 0 0 15px 0; font-size: 14px;';
+      setsLabel.textContent = parentFolderId ? '📚 Flashcard Sets in this Folder' : '📚 Unfiled Flashcard Sets';
+      listDiv.appendChild(setsLabel);
+      
+      const setsDiv = document.createElement('div');
+      setsDiv.innerHTML = renderFlashcardsWithBulk(currentFolderFlashcards, parentFolderId);
+      listDiv.appendChild(setsDiv);
     }
 
   } catch (error) {
@@ -22068,41 +22299,540 @@ async function loadFlashcardSets() {
   }
 }
 
+function navigateIntoTeacherFolder(folderId, folderName) {
+  currentTeacherFolderPath.push({ id: folderId, name: folderName });
+  updateCurrentFolderIndicator();
+  loadFlashcardSets(folderId);
+}
+
+function navigateToTeacherFolder(folderId, pathIndex = -1) {
+  if (folderId === null) {
+    currentTeacherFolderPath = [];
+  } else {
+    // Truncate path to the clicked folder
+    currentTeacherFolderPath = currentTeacherFolderPath.slice(0, pathIndex + 1);
+  }
+  updateCurrentFolderIndicator();
+  loadFlashcardSets(folderId);
+}
+
+function updateCurrentFolderIndicator() {
+  const indicator = document.getElementById('currentFolderIndicator');
+  const nameSpan = document.getElementById('currentFolderName');
+  
+  if (!indicator || !nameSpan) return;
+  
+  if (currentTeacherFolderPath.length > 0) {
+    const fullPath = currentTeacherFolderPath.map(f => f.name).join(' › ');
+    nameSpan.textContent = fullPath;
+    indicator.style.display = 'block';
+  } else {
+    indicator.style.display = 'none';
+  }
+}
+
+async function deleteTeacherFolder(folderId) {
+  if (!confirm('Are you sure you want to delete this folder? All contents will be moved to the parent folder.')) {
+    return;
+  }
+
+  try {
+    const folder = folders[folderId];
+    const parentId = folder?.parentFolderId || null;
+    
+    // Move all flashcards in this folder to parent
+    const flashcardsSnap = await db.collection('flashcards')
+      .where('folderId', '==', folderId)
+      .get();
+    
+    const batch = db.batch();
+    flashcardsSnap.forEach(doc => {
+      if (parentId) {
+        batch.update(doc.ref, { folderId: parentId });
+      } else {
+        batch.update(doc.ref, { folderId: firebase.firestore.FieldValue.delete() });
+      }
+    });
+    
+    // Move all subfolders to parent
+    const subfoldersSnap = await db.collection('folders')
+      .where('parentFolderId', '==', folderId)
+      .get();
+    
+    subfoldersSnap.forEach(doc => {
+      if (parentId) {
+        batch.update(doc.ref, { parentFolderId: parentId });
+      } else {
+        batch.update(doc.ref, { parentFolderId: firebase.firestore.FieldValue.delete() });
+      }
+    });
+    
+    // Delete the folder
+    batch.delete(db.collection('folders').doc(folderId));
+    
+    await batch.commit();
+    alert('Folder deleted successfully');
+    
+    // Reload current view
+    const currentFolderId = currentTeacherFolderPath.length > 0 
+      ? currentTeacherFolderPath[currentTeacherFolderPath.length - 1].id 
+      : null;
+    
+    // If we deleted the folder we're in, go up one level
+    if (currentFolderId === folderId) {
+      currentTeacherFolderPath.pop();
+      const newFolderId = currentTeacherFolderPath.length > 0 
+        ? currentTeacherFolderPath[currentTeacherFolderPath.length - 1].id 
+        : null;
+      loadFlashcardSets(newFolderId);
+    } else {
+      loadFlashcardSets(currentFolderId);
+    }
+  } catch (error) {
+    alert('Error deleting folder: ' + error.message);
+  }
+}
+
 function renderFlashcards(flashcards, folderId) {
-  if (flashcards.length === 0) return '<p style="color: #718096; padding: 15px;">No flashcard sets in this folder yet. Drag sets here or create new ones.</p>';
+  if (!flashcards || flashcards.length === 0) return '<p style="color: #718096; padding: 15px;">No flashcard sets in this folder yet. Drag sets here or create new ones.</p>';
 
-  return flashcards.map(set => {
-    const folderOptions = `
-      <select onchange="moveToFolder('${set.id}', this.value, 'flashcards')" style="padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
-        <option value="">📂 Move to...</option>
-        ${Object.values(folders).filter(f => f.id !== folderId).map(f =>
-          `<option value="${f.id}">${f.name}</option>`
-        ).join('')}
-        ${folderId ? '<option value="">Root (No Folder)</option>' : ''}
-      </select>
-    `;
-
+  const cardsHtml = flashcards.map(set => {
+    const wordCount = (set.wordPairs && Array.isArray(set.wordPairs)) ? set.wordPairs.length : 0;
     return `
-      <div class="test-card draggable-item" draggable="true" ondragstart="handleDragStart(event, '${set.id}', 'flashcards')" style="margin-bottom: 15px;">
-        <div class="test-header">
-          <div>
-            <span class="drag-handle">⋮⋮</span>
-            <div class="test-title">${set.title}</div>
-            <div class="test-date">Words: ${set.wordPairs.length} | Timer: ${set.timerSeconds}s</div>
-          </div>
+      <div class="fc-set-card-teacher" draggable="true" ondragstart="handleDragStart(event, '${set.id}', 'flashcards')" onclick="editFlashcard('${set.id}')">
+        <div class="set-actions" onclick="event.stopPropagation()">
+          <button class="set-action-btn duplicate" onclick="event.stopPropagation(); duplicateFlashcardSet('${set.id}')" title="Duplicate">📋</button>
+          <button class="set-action-btn delete" onclick="event.stopPropagation(); deleteFlashcardSet('${set.id}')" title="Delete">🗑️</button>
         </div>
-        <div style="margin-top: 15px;">
-          <strong>Sample words:</strong> ${set.wordPairs.slice(0, 3).map(p => p.english).join(', ')}${set.wordPairs.length > 3 ? '...' : ''}
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-          ${folderOptions}
-          <button onclick="duplicateFlashcardSet('${set.id}')" style="padding: 8px 16px; font-size: 14px; background: #48bb78; color: white; border: none; border-radius: 8px; cursor: pointer;">📋 Duplicate</button>
-          <button onclick="editFlashcard('${set.id}')" style="padding: 8px 16px; font-size: 14px; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer;">✏️ Edit</button>
-          <button class="btn btn-danger" onclick="deleteFlashcardSet('${set.id}')" style="padding: 8px 16px; font-size: 14px;">🗑️ Delete</button>
-        </div>
+        <div class="set-icon">📚</div>
+        <div class="set-title">${set.title || 'Untitled'}</div>
+        <div class="set-count">${wordCount} words</div>
       </div>
     `;
   }).join('');
+
+  return `<div class="fc-sets-grid">${cardsHtml}</div>`;
+}
+
+// New function with bulk selection checkboxes
+function renderFlashcardsWithBulk(flashcards, folderId) {
+  if (!flashcards || flashcards.length === 0) return '<p style="color: #718096; padding: 15px;">No flashcard sets in this folder yet. Drag sets here or create new ones.</p>';
+
+  const cardsHtml = flashcards.map(set => {
+    const wordCount = (set.wordPairs && Array.isArray(set.wordPairs)) ? set.wordPairs.length : 0;
+    return `
+      <div class="fc-set-card-teacher" 
+           draggable="true" 
+           data-set-id="${set.id}"
+           data-type="flashcard"
+           ondragstart="handleFlashcardDragStart(event, '${set.id}')"
+           ondragend="handleDragEnd(event)"
+           onclick="handleFlashcardClick(event, '${set.id}')">
+        <div class="bulk-select-checkbox" onclick="event.stopPropagation(); toggleItemSelection('${set.id}', 'flashcard', this)"></div>
+        <div class="set-actions" onclick="event.stopPropagation()">
+          <button class="set-action-btn duplicate" onclick="event.stopPropagation(); duplicateFlashcardSet('${set.id}')" title="Duplicate">📋</button>
+          <button class="set-action-btn delete" onclick="event.stopPropagation(); deleteFlashcardSet('${set.id}')" title="Delete">🗑️</button>
+        </div>
+        <div class="set-icon">📚</div>
+        <div class="set-title">${set.title || 'Untitled'}</div>
+        <div class="set-count">${wordCount} words</div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="fc-sets-grid">${cardsHtml}</div>`;
+}
+
+// ==========================================
+// BULK SELECTION FUNCTIONS
+// ==========================================
+
+window.selectedItems = { folders: new Set(), flashcards: new Set() };
+
+function toggleItemSelection(itemId, type, checkboxEl) {
+  const setKey = type === 'folder' ? 'folders' : 'flashcards';
+  const card = checkboxEl.closest('.fc-folder-card, .fc-set-card-teacher');
+  
+  if (window.selectedItems[setKey].has(itemId)) {
+    window.selectedItems[setKey].delete(itemId);
+    checkboxEl.classList.remove('selected');
+    if (card) card.classList.remove('selected');
+  } else {
+    window.selectedItems[setKey].add(itemId);
+    checkboxEl.classList.add('selected');
+    if (card) card.classList.add('selected');
+  }
+  
+  updateBulkToolbar();
+}
+
+function toggleSelectAll(checked) {
+  const allCheckboxes = document.querySelectorAll('.bulk-select-checkbox');
+  
+  allCheckboxes.forEach(cb => {
+    const card = cb.closest('.fc-folder-card, .fc-set-card-teacher');
+    const itemId = card?.dataset?.folderId || card?.dataset?.setId;
+    const type = card?.dataset?.type;
+    
+    if (!itemId || !type) return;
+    
+    const setKey = type === 'folder' ? 'folders' : 'flashcards';
+    
+    if (checked) {
+      window.selectedItems[setKey].add(itemId);
+      cb.classList.add('selected');
+      if (card) card.classList.add('selected');
+    } else {
+      window.selectedItems[setKey].delete(itemId);
+      cb.classList.remove('selected');
+      if (card) card.classList.remove('selected');
+    }
+  });
+  
+  updateBulkToolbar();
+}
+
+function updateBulkToolbar() {
+  const toolbar = document.getElementById('bulkActionsToolbar');
+  const countEl = document.getElementById('selectedItemCount');
+  const totalSelected = window.selectedItems.folders.size + window.selectedItems.flashcards.size;
+  
+  if (countEl) countEl.textContent = totalSelected;
+  
+  if (toolbar) {
+    if (totalSelected > 0) {
+      toolbar.classList.add('visible');
+    } else {
+      toolbar.classList.remove('visible');
+    }
+  }
+}
+
+function clearBulkSelection() {
+  window.selectedItems = { folders: new Set(), flashcards: new Set() };
+  
+  document.querySelectorAll('.bulk-select-checkbox.selected').forEach(cb => {
+    cb.classList.remove('selected');
+  });
+  document.querySelectorAll('.fc-folder-card.selected, .fc-set-card-teacher.selected').forEach(card => {
+    card.classList.remove('selected');
+  });
+  
+  const selectAllCb = document.getElementById('selectAllCheckbox');
+  if (selectAllCb) selectAllCb.checked = false;
+  
+  updateBulkToolbar();
+}
+
+async function bulkDeleteSelected() {
+  const totalSelected = window.selectedItems.folders.size + window.selectedItems.flashcards.size;
+  
+  if (totalSelected === 0) {
+    alert('No items selected');
+    return;
+  }
+  
+  if (!confirm(`Are you sure you want to delete ${totalSelected} item(s)?\n\nThis action cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const batch = db.batch();
+    
+    // Delete selected folders
+    for (const folderId of window.selectedItems.folders) {
+      batch.delete(db.collection('adminFlashcardFolders').doc(folderId));
+    }
+    
+    // Delete selected flashcards
+    for (const flashcardId of window.selectedItems.flashcards) {
+      batch.delete(db.collection('flashcards').doc(flashcardId));
+    }
+    
+    await batch.commit();
+    
+    showToast(`✅ Deleted ${totalSelected} item(s)`);
+    clearBulkSelection();
+    loadFlashcardSets(window.currentViewingFolderId);
+    loadAdminFolderDashboard();
+  } catch (error) {
+    alert('Error deleting items: ' + error.message);
+  }
+}
+
+// ==========================================
+// MOVE TO FOLDER MODAL
+// ==========================================
+
+function openMoveToFolderModal() {
+  const totalSelected = window.selectedItems.folders.size + window.selectedItems.flashcards.size;
+  
+  if (totalSelected === 0) {
+    alert('No items selected');
+    return;
+  }
+  
+  // Only allow moving flashcards (not folders for now to keep it simple)
+  if (window.selectedItems.flashcards.size === 0) {
+    alert('Please select flashcard sets to move. Folder moving is done via edit.');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'move-to-folder-modal';
+  modal.id = 'moveToFolderModal';
+  modal.onclick = (e) => { if (e.target === modal) closeMoveToFolderModal(); };
+  
+  const folders = Object.values(window.adminFoldersCache || {});
+  const rootFolders = folders.filter(f => !f.parentFolderId);
+  
+  let foldersHtml = `
+    <div class="folder-option root-option" data-folder-id="" onclick="selectMoveFolder(this, '')">
+      <span>🏠</span>
+      <span>Remove from folders (Unfiled)</span>
+    </div>
+  `;
+  
+  rootFolders.forEach(folder => {
+    const childFolders = folders.filter(f => f.parentFolderId === folder.id);
+    foldersHtml += `
+      <div class="folder-option" data-folder-id="${folder.id}" onclick="selectMoveFolder(this, '${folder.id}')">
+        <span>${folder.icon || '📁'}</span>
+        <span>${folder.name}</span>
+      </div>
+    `;
+    // Add child folders indented
+    childFolders.forEach(child => {
+      foldersHtml += `
+        <div class="folder-option" data-folder-id="${child.id}" onclick="selectMoveFolder(this, '${child.id}')" style="padding-left: 35px;">
+          <span style="color: #a0aec0;">↳</span>
+          <span>${child.icon || '📁'}</span>
+          <span>${child.name}</span>
+        </div>
+      `;
+    });
+  });
+  
+  modal.innerHTML = `
+    <div class="move-to-folder-content">
+      <h3>📁 Move ${window.selectedItems.flashcards.size} Flashcard Set(s) to...</h3>
+      <div style="max-height: 400px; overflow-y: auto;">
+        ${foldersHtml}
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button onclick="closeMoveToFolderModal()" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer;">Cancel</button>
+        <button onclick="executeMoveToFolder()" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(135deg, #48bb78, #38a169); color: white; font-weight: 600; cursor: pointer;">Move</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  window.selectedMoveTargetFolderId = null;
+}
+
+function closeMoveToFolderModal() {
+  const modal = document.getElementById('moveToFolderModal');
+  if (modal) modal.remove();
+  window.selectedMoveTargetFolderId = null;
+}
+
+function selectMoveFolder(element, folderId) {
+  document.querySelectorAll('#moveToFolderModal .folder-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  element.classList.add('selected');
+  window.selectedMoveTargetFolderId = folderId;
+}
+
+async function executeMoveToFolder() {
+  if (window.selectedMoveTargetFolderId === null && window.selectedMoveTargetFolderId !== '') {
+    alert('Please select a destination folder');
+    return;
+  }
+  
+  const targetFolderId = window.selectedMoveTargetFolderId;
+  const flashcardIds = Array.from(window.selectedItems.flashcards);
+  
+  try {
+    // Remove flashcards from all current folders first
+    const allFolders = Object.values(window.adminFoldersCache || {});
+    const batch = db.batch();
+    
+    for (const folder of allFolders) {
+      const currentIds = folder.flashcardIds || [];
+      const newIds = currentIds.filter(id => !flashcardIds.includes(id));
+      if (newIds.length !== currentIds.length) {
+        batch.update(db.collection('adminFlashcardFolders').doc(folder.id), {
+          flashcardIds: newIds
+        });
+      }
+    }
+    
+    // Add to target folder if not "unfiled"
+    if (targetFolderId) {
+      const targetFolder = window.adminFoldersCache[targetFolderId];
+      const existingIds = targetFolder?.flashcardIds || [];
+      const newIds = [...new Set([...existingIds, ...flashcardIds])];
+      batch.update(db.collection('adminFlashcardFolders').doc(targetFolderId), {
+        flashcardIds: newIds
+      });
+    }
+    
+    await batch.commit();
+    
+    showToast(`✅ Moved ${flashcardIds.length} flashcard set(s)`);
+    closeMoveToFolderModal();
+    clearBulkSelection();
+    loadFlashcardSets(window.currentViewingFolderId);
+    loadAdminFolderDashboard();
+  } catch (error) {
+    alert('Error moving items: ' + error.message);
+  }
+}
+
+// ==========================================
+// DRAG AND DROP FUNCTIONS
+// ==========================================
+
+window.draggedItemId = null;
+window.draggedItemType = null;
+
+function handleFlashcardDragStart(event, flashcardId) {
+  window.draggedItemId = flashcardId;
+  window.draggedItemType = 'flashcard';
+  event.target.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', flashcardId);
+}
+
+function handleDragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  window.draggedItemId = null;
+  window.draggedItemType = null;
+}
+
+async function handleDropOnFolder(event, targetFolderId) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const dropTarget = event.currentTarget;
+  dropTarget.classList.remove('drag-over');
+  
+  if (!window.draggedItemId || window.draggedItemType !== 'flashcard') {
+    return;
+  }
+  
+  const flashcardId = window.draggedItemId;
+  
+  try {
+    // Remove from current folder if in one
+    const allFolders = Object.values(window.adminFoldersCache || {});
+    const batch = db.batch();
+    
+    for (const folder of allFolders) {
+      const currentIds = folder.flashcardIds || [];
+      if (currentIds.includes(flashcardId)) {
+        const newIds = currentIds.filter(id => id !== flashcardId);
+        batch.update(db.collection('adminFlashcardFolders').doc(folder.id), {
+          flashcardIds: newIds
+        });
+      }
+    }
+    
+    // Add to target folder
+    const targetFolder = window.adminFoldersCache[targetFolderId];
+    const existingIds = targetFolder?.flashcardIds || [];
+    if (!existingIds.includes(flashcardId)) {
+      batch.update(db.collection('adminFlashcardFolders').doc(targetFolderId), {
+        flashcardIds: [...existingIds, flashcardId]
+      });
+    }
+    
+    await batch.commit();
+    
+    showToast('✅ Moved flashcard set to folder');
+    loadFlashcardSets(window.currentViewingFolderId);
+    loadAdminFolderDashboard();
+  } catch (error) {
+    alert('Error moving flashcard: ' + error.message);
+  }
+}
+
+function handleFlashcardClick(event, setId) {
+  // Don't trigger if clicking on checkbox or actions
+  if (event.target.classList.contains('bulk-select-checkbox') || 
+      event.target.closest('.set-actions') ||
+      event.target.closest('.bulk-select-checkbox')) {
+    return;
+  }
+  editFlashcard(setId);
+}
+
+// ==========================================
+// DUPLICATE FOLDER FUNCTION
+// ==========================================
+
+async function duplicateAdminFolder(folderId) {
+  const folder = window.adminFoldersCache?.[folderId];
+  if (!folder) {
+    alert('Folder not found');
+    return;
+  }
+  
+  const newName = prompt('Enter a name for the duplicated folder:', `${folder.name} (Copy)`);
+  if (!newName) return;
+  
+  const includeSubfolders = folder.parentFolderId ? false : confirm('This folder may have subfolders. Include subfolders in the copy?');
+  
+  try {
+    // Create the duplicated folder
+    const newFolderData = {
+      name: newName,
+      icon: folder.icon || '📁',
+      flashcardIds: [...(folder.flashcardIds || [])],
+      studentIds: [...(folder.studentIds || [])],
+      autoAssignFuture: folder.autoAssignFuture !== false,
+      parentFolderId: folder.parentFolderId || null,
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // Remove null parentFolderId
+    if (!newFolderData.parentFolderId) {
+      delete newFolderData.parentFolderId;
+    }
+    
+    const newFolderRef = await db.collection('adminFlashcardFolders').add(newFolderData);
+    
+    // If including subfolders, duplicate them too
+    if (includeSubfolders) {
+      const allFolders = Object.values(window.adminFoldersCache || {});
+      const childFolders = allFolders.filter(f => f.parentFolderId === folderId);
+      
+      for (const child of childFolders) {
+        const childCopy = {
+          name: child.name,
+          icon: child.icon || '📁',
+          flashcardIds: [...(child.flashcardIds || [])],
+          studentIds: [...(child.studentIds || [])],
+          autoAssignFuture: child.autoAssignFuture !== false,
+          parentFolderId: newFolderRef.id, // Point to the new parent
+          createdBy: currentUser.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('adminFlashcardFolders').add(childCopy);
+      }
+    }
+    
+    showToast(`✅ Folder duplicated${includeSubfolders ? ' with subfolders' : ''}`);
+    loadFlashcardSets(window.currentViewingFolderId);
+    loadAdminFolderDashboard();
+  } catch (error) {
+    alert('Error duplicating folder: ' + error.message);
+  }
 }
 
 async function deleteFlashcardSet(setId) {
@@ -23003,7 +23733,33 @@ function renderAfdFoldersTable(folders = adminFoldersCache) {
     return;
   }
 
-  tbody.innerHTML = folders.map(folder => {
+  // Organize folders into hierarchy
+  const rootFolders = folders.filter(f => !f.parentFolderId);
+  const childFolders = folders.filter(f => f.parentFolderId);
+  
+  // Check which folders are master folders (have children)
+  const masterFolderIds = new Set(childFolders.map(f => f.parentFolderId));
+
+  // Build hierarchical list: root folders first, then their children
+  const orderedFolders = [];
+  rootFolders.forEach(rootFolder => {
+    orderedFolders.push({ ...rootFolder, isMaster: masterFolderIds.has(rootFolder.id), depth: 0 });
+    // Add children of this root folder
+    const children = childFolders.filter(f => f.parentFolderId === rootFolder.id);
+    children.forEach(child => {
+      orderedFolders.push({ ...child, depth: 1, parentName: rootFolder.name });
+    });
+  });
+
+  // Add orphan children (whose parent might have been deleted)
+  const addedChildIds = new Set(orderedFolders.filter(f => f.depth === 1).map(f => f.id));
+  childFolders.forEach(child => {
+    if (!addedChildIds.has(child.id)) {
+      orderedFolders.push({ ...child, depth: 1, parentName: '(Unknown)' });
+    }
+  });
+
+  tbody.innerHTML = orderedFolders.map(folder => {
     const setsCount = folder.flashcardIds?.length || 0;
     const studentsCount = folder.studentIds?.length || 0;
     const icon = folder.icon || '📁';
@@ -23017,15 +23773,48 @@ function renderAfdFoldersTable(folders = adminFoldersCache) {
       ? '<span class="afd-badge afd-badge-info">✓ On</span>'
       : '<span class="afd-badge afd-badge-archived">Off</span>';
 
+    // Styling for master folders (yellow) and subfolders (indented)
+    const isMaster = folder.isMaster;
+    const isChild = folder.depth === 1;
+    
+    let rowStyle = '';
+    let folderNameHtml = '';
+    
+    if (isMaster) {
+      // Master folder - yellow background
+      rowStyle = 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;';
+      folderNameHtml = `
+        <div class="afd-folder-name" style="font-weight: 700;">
+          <span>${icon}</span>
+          <span>${folder.name}</span>
+          <span class="afd-badge" style="background: #f59e0b; color: white; margin-left: 8px; font-size: 9px;">MASTER</span>
+        </div>
+      `;
+    } else if (isChild) {
+      // Subfolder - indented with parent path
+      rowStyle = 'background: #f8fafc;';
+      folderNameHtml = `
+        <div class="afd-folder-name" style="padding-left: 25px;">
+          <span style="color: #a0aec0; margin-right: 5px;">↳</span>
+          <span>${icon}</span>
+          <span>${folder.name}</span>
+          <span style="font-size: 10px; color: #718096; margin-left: 8px;">in 📁 ${folder.parentName}</span>
+        </div>
+      `;
+    } else {
+      // Regular root folder (no children)
+      folderNameHtml = `
+        <div class="afd-folder-name">
+          <span>${icon}</span>
+          <span>${folder.name}</span>
+        </div>
+      `;
+    }
+
     return `
-      <tr data-folder-id="${folder.id}">
+      <tr data-folder-id="${folder.id}" style="${rowStyle}">
         <td style="cursor: grab; color: #a0aec0;">⋮⋮</td>
-        <td>
-          <div class="afd-folder-name">
-            <span>${icon}</span>
-            <span>${folder.name}</span>
-          </div>
-        </td>
+        <td>${folderNameHtml}</td>
         <td>${setsCount}</td>
         <td>${studentsCount}</td>
         <td>${statusBadge}</td>
@@ -23074,10 +23863,31 @@ function filterAdminFolders() {
   if (filtered.length === 0) {
     container.innerHTML = '<div class="afd-empty"><div class="afd-empty-icon">🔍</div><div class="afd-empty-text">No folders match your filters</div></div>';
   } else {
+    // Check which folders are master folders
+    const childFolderParentIds = new Set(adminFoldersCache.filter(f => f.parentFolderId).map(f => f.parentFolderId));
+    
     container.innerHTML = '<div class="afd-table-container"><table class="afd-table"><thead><tr><th>Folder</th><th>Sets</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
-      filtered.map(f => `
-        <tr>
-          <td><div class="afd-folder-name"><span>${f.icon || '📁'}</span> ${f.name}</div></td>
+      filtered.map(f => {
+        const isMaster = childFolderParentIds.has(f.id);
+        const isChild = !!f.parentFolderId;
+        const parentFolder = isChild ? adminFoldersCache.find(p => p.id === f.parentFolderId) : null;
+        
+        let rowStyle = '';
+        let folderNameHtml = '';
+        
+        if (isMaster) {
+          rowStyle = 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;';
+          folderNameHtml = `<div class="afd-folder-name" style="font-weight: 700;"><span>${f.icon || '📁'}</span> ${f.name} <span class="afd-badge" style="background: #f59e0b; color: white; margin-left: 8px; font-size: 9px;">MASTER</span></div>`;
+        } else if (isChild) {
+          rowStyle = 'background: #f8fafc;';
+          folderNameHtml = `<div class="afd-folder-name" style="padding-left: 20px;"><span style="color: #a0aec0;">↳</span> <span>${f.icon || '📁'}</span> ${f.name} <span style="font-size: 10px; color: #718096; margin-left: 5px;">in 📁 ${parentFolder?.name || 'Unknown'}</span></div>`;
+        } else {
+          folderNameHtml = `<div class="afd-folder-name"><span>${f.icon || '📁'}</span> ${f.name}</div>`;
+        }
+        
+        return `
+        <tr style="${rowStyle}">
+          <td>${folderNameHtml}</td>
           <td>${f.flashcardIds?.length || 0}</td>
           <td>${f.studentIds?.length || 0}</td>
           <td>${f.archived ? '<span class="afd-badge afd-badge-archived">Archived</span>' : '<span class="afd-badge afd-badge-success">Active</span>'}</td>
@@ -23086,7 +23896,7 @@ function filterAdminFolders() {
             <button class="afd-action-btn delete" onclick="deleteAdminFolder('${f.id}')">🗑️</button>
           </div></td>
         </tr>
-      `).join('') + '</tbody></table></div>';
+      `}).join('') + '</tbody></table></div>';
   }
 }
 
@@ -23511,6 +24321,23 @@ async function openAdminFolderModal() {
     btn.style.background = btn.dataset.icon === selectedFolderIcon ? '#fef3c7' : 'white';
   });
 
+  // Reset and populate parent folder dropdown
+  const parentSelect = document.getElementById('adminFolderParentSelect');
+  if (parentSelect) {
+    parentSelect.innerHTML = '<option value="">📂 Root Level (No Parent)</option>';
+    // Add existing folders as potential parents (only root-level folders can be parents)
+    if (adminFoldersCache && adminFoldersCache.length > 0) {
+      const rootFolders = adminFoldersCache.filter(f => !f.parentFolderId);
+      rootFolders.forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder.id;
+        option.textContent = `📁 ${folder.name}`;
+        parentSelect.appendChild(option);
+      });
+    }
+    parentSelect.value = '';
+  }
+
   const autoAssignEl = document.getElementById('autoAssignFutureStudents');
   if (autoAssignEl) autoAssignEl.checked = true;
 
@@ -23557,6 +24384,23 @@ async function openEditAdminFolderModal(folderId) {
     document.getElementById('adminFolderModalTitle').textContent = '✏️ Edit Admin Folder';
     document.getElementById('adminFolderNameInput').value = folder.name || '';
     document.getElementById('saveAdminFolderBtn').textContent = 'Save Changes';
+
+    // Populate parent folder dropdown (exclude current folder and its children)
+    const parentSelect = document.getElementById('adminFolderParentSelect');
+    if (parentSelect) {
+      parentSelect.innerHTML = '<option value="">📂 Root Level (No Parent)</option>';
+      if (adminFoldersCache && adminFoldersCache.length > 0) {
+        // Only show root-level folders as potential parents, excluding current folder
+        const rootFolders = adminFoldersCache.filter(f => !f.parentFolderId && f.id !== folderId);
+        rootFolders.forEach(f => {
+          const option = document.createElement('option');
+          option.value = f.id;
+          option.textContent = `📁 ${f.name}`;
+          parentSelect.appendChild(option);
+        });
+      }
+      parentSelect.value = folder.parentFolderId || '';
+    }
 
     const autoAssignCb = document.getElementById('autoAssignFutureStudents');
     if (autoAssignCb) {
@@ -23697,6 +24541,9 @@ async function saveAdminFolder() {
     flashcardIds.push(cb.value);
   });
 
+  // Get parent folder ID
+  const parentFolderId = document.getElementById('adminFolderParentSelect')?.value || null;
+
   try {
     const folderData = {
       name: name,
@@ -23707,11 +24554,23 @@ async function saveAdminFolder() {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // Add parentFolderId if selected
+    if (parentFolderId) {
+      folderData.parentFolderId = parentFolderId;
+    } else {
+      // Remove parentFolderId if moving to root
+      folderData.parentFolderId = firebase.firestore.FieldValue.delete();
+    }
+
     if (editingAdminFolderId) {
       await db.collection('adminFlashcardFolders').doc(editingAdminFolderId).update(folderData);
       showToast('✅ Admin folder updated!');
     } else {
       folderData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      // For new folders, don't use delete() - just don't include the field
+      if (!parentFolderId) {
+        delete folderData.parentFolderId;
+      }
       await db.collection('adminFlashcardFolders').add(folderData);
       const msg = autoAssignFuture
         ? `✅ Folder created! Pushed to ${studentIds.length} student(s) + future students`
@@ -23720,7 +24579,8 @@ async function saveAdminFolder() {
     }
 
     closeAdminFolderModal();
-    loadAdminFoldersList();
+    loadAdminFolderDashboard();
+    loadFlashcardSets(); // Refresh the Existing Flashcard Sets view
 
   } catch (error) {
     showToast('❌ Error saving folder');
@@ -23733,9 +24593,21 @@ async function deleteAdminFolder(folderId) {
   }
 
   try {
-    await db.collection('adminFlashcardFolders').doc(folderId).delete();
+    // Also delete any child folders
+    const childFoldersSnap = await db.collection('adminFlashcardFolders')
+      .where('parentFolderId', '==', folderId)
+      .get();
+    
+    const batch = db.batch();
+    childFoldersSnap.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    batch.delete(db.collection('adminFlashcardFolders').doc(folderId));
+    await batch.commit();
+    
     showToast('🗑️ Admin folder deleted');
-    loadAdminFoldersList();
+    loadAdminFolderDashboard();
+    loadFlashcardSets(); // Refresh the Existing Flashcard Sets view
   } catch (error) {
     showToast('❌ Error deleting folder');
   }
@@ -24318,20 +25190,58 @@ async function loadAvailableFlashcards() {
 
     foldersGrid.innerHTML = '';
 
-    adminFolders.forEach(folder => {
+    // Identify master folders (folders that have children)
+    const childFolderParentIds = new Set(adminFolders.filter(f => f.parentFolderId).map(f => f.parentFolderId));
+    
+    // Separate root and child admin folders
+    const rootAdminFolders = adminFolders.filter(f => !f.parentFolderId);
+    const childAdminFolders = adminFolders.filter(f => f.parentFolderId);
+
+    // Render root admin folders first (master folders in yellow)
+    rootAdminFolders.forEach(folder => {
       const folderCard = document.createElement('div');
-      folderCard.className = 'fc-folder-card admin-folder';
+      const isMaster = childFolderParentIds.has(folder.id);
+      
+      // Master folders get yellow styling
+      if (isMaster) {
+        folderCard.className = 'fc-folder-card master-folder';
+      } else {
+        folderCard.className = 'fc-folder-card admin-folder';
+      }
+      
       folderCard.onclick = () => openFolder(folder.id, folder.name, true);
 
       const count = (folder.flashcardIds || []).length;
+      const childCount = childAdminFolders.filter(c => c.parentFolderId === folder.id).length;
+      
       folderCard.innerHTML = `
-        <div class="folder-badge">👑 Admin</div>
-        <div class="folder-icon">📁</div>
+        <div class="folder-badge">${isMaster ? '⭐ MASTER' : '👑 Admin'}</div>
+        <div class="folder-icon">${folder.icon || '📁'}</div>
         <div class="folder-name">${folder.name}</div>
-        <div class="folder-count">${count} set${count !== 1 ? 's' : ''}</div>
+        <div class="folder-count">${count} set${count !== 1 ? 's' : ''}${isMaster ? ' • 📁' + childCount : ''}</div>
       `;
 
       foldersGrid.appendChild(folderCard);
+      
+      // Render child folders of this master folder right after it
+      if (isMaster) {
+        const children = childAdminFolders.filter(c => c.parentFolderId === folder.id);
+        children.forEach(childFolder => {
+          const childCard = document.createElement('div');
+          childCard.className = 'fc-folder-card admin-folder';
+          childCard.onclick = () => openFolder(childFolder.id, childFolder.name, true);
+          
+          const childCount = (childFolder.flashcardIds || []).length;
+          childCard.innerHTML = `
+            <div class="folder-badge">👑 Admin</div>
+            <div class="folder-parent-path" style="font-size: 9px; color: rgba(255,255,255,0.8); margin-bottom: 4px;">↳ in ${folder.name}</div>
+            <div class="folder-icon">${childFolder.icon || '📁'}</div>
+            <div class="folder-name">${childFolder.name}</div>
+            <div class="folder-count">${childCount} set${childCount !== 1 ? 's' : ''}</div>
+          `;
+          foldersGrid.appendChild(childCard);
+        });
+      }
     });
 
     const unfiledFlashcards = allFlashcards.filter(fc => !flashcardsInFolders.has(fc.id));
@@ -24867,6 +25777,9 @@ function loadFlashcardRound() {
       </div>
     `;
   }).join('');
+
+  // Reset scroll to top so word #1 is always visible
+  wordsListDiv.scrollTop = 0;
 
   currentWordIndex = 0;
   document.getElementById('gameResults').style.display = 'none';
@@ -26090,6 +27003,9 @@ function loadMasteryRound() {
       </div>
     `;
   }).join('');
+
+  // Reset scroll to top so word #1 is always visible
+  wordsListDiv.scrollTop = 0;
 
   document.getElementById('masteryResults').style.display = 'none';
   document.getElementById('masteryRecognizedText').textContent = '-';
@@ -30916,12 +31832,25 @@ async function createFolder(type) {
   }
 
   try {
-    await db.collection('folders').add({
+    // Get current parent folder ID for flashcards
+    let parentFolderId = null;
+    if (type === 'flashcards' && currentTeacherFolderPath && currentTeacherFolderPath.length > 0) {
+      parentFolderId = currentTeacherFolderPath[currentTeacherFolderPath.length - 1].id;
+    }
+
+    const folderData = {
       name: folderName,
       type: type,
-      userId: currentUser.uid,
+      createdBy: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+
+    // Add parentFolderId if we're inside a folder
+    if (parentFolderId) {
+      folderData.parentFolderId = parentFolderId;
+    }
+
+    await db.collection('folders').add(folderData);
 
     alert('Folder created successfully!');
     document.getElementById(inputId).value = '';
@@ -30929,7 +31858,7 @@ async function createFolder(type) {
     if (type === 'tests2') {
       loadTests2();
     } else if (type === 'flashcards') {
-      loadFlashcardSets();
+      loadFlashcardSets(parentFolderId);
     }
   } catch (error) {
     alert('Error creating folder: ' + error.message);
@@ -43482,10 +44411,7 @@ async function loadDailyActivities(filter = 'all') {
         deadline.setHours(4, 0, 0, 0);
       }
       const isPast = now > deadline;
-      // Consider it published if status is 'published' OR if scheduled and publishDate has passed
-      const isPublished = (a.status === 'published' && now >= publishDate) || 
-                          (a.status === 'scheduled' && now >= publishDate);
-      // Only scheduled if publishDate is still in the future
+      const isPublished = a.status === 'published' && now >= publishDate;
       const isScheduled = a.status === 'scheduled' && now < publishDate;
 
       if (filter === 'scheduled' && !isScheduled) return;
