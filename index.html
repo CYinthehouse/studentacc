@@ -21449,7 +21449,29 @@ function initializeSpeechRecognition() {
       const currentWord = currentGameWords[currentWordIndex];
 
       const normalizeKorean = (str) => {
-        return str.replace(/\s+/g, '').replace(/[.,!?~～·。'"'""]/g, '');
+        return str
+          .replace(/\s+/g, '')
+          .replace(/[.,!?~～·。'"'""]/g, '')
+          // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
+          .replace(/ㅐ/g, 'ㅔ')
+          .replace(/애/g, '에')
+          .replace(/새/g, '세')
+          .replace(/배/g, '베')
+          .replace(/대/g, '데')
+          .replace(/래/g, '레')
+          .replace(/매/g, '메')
+          .replace(/재/g, '제')
+          .replace(/채/g, '체')
+          .replace(/개/g, '게')
+          .replace(/내/g, '네')
+          .replace(/태/g, '테')
+          .replace(/패/g, '페')
+          .replace(/해/g, '헤')
+          .replace(/깨/g, '께')
+          .replace(/때/g, '떼')
+          .replace(/빼/g, '뻬')
+          .replace(/싸/g, '쎄')
+          .replace(/짜/g, '쩨');
       };
 
       const normalizedTranscript = normalizeKorean(transcript);
@@ -27041,7 +27063,29 @@ function initializeMasterySpeechRecognition() {
       const currentWord = currentMasteryWords[masteryWordIndex];
 
       const normalizeKorean = (str) => {
-        return str.replace(/\s+/g, '').replace(/[.,!?~～·。'"'""]/g, '');
+        return str
+          .replace(/\s+/g, '')
+          .replace(/[.,!?~～·。'"'""]/g, '')
+          // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
+          .replace(/ㅐ/g, 'ㅔ')
+          .replace(/애/g, '에')
+          .replace(/새/g, '세')
+          .replace(/배/g, '베')
+          .replace(/대/g, '데')
+          .replace(/래/g, '레')
+          .replace(/매/g, '메')
+          .replace(/재/g, '제')
+          .replace(/채/g, '체')
+          .replace(/개/g, '게')
+          .replace(/내/g, '네')
+          .replace(/태/g, '테')
+          .replace(/패/g, '페')
+          .replace(/해/g, '헤')
+          .replace(/깨/g, '께')
+          .replace(/때/g, '떼')
+          .replace(/빼/g, '뻬')
+          .replace(/싸/g, '쎄')
+          .replace(/짜/g, '쩨');
       };
 
       const normalizedTranscript = normalizeKorean(transcript);
