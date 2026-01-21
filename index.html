@@ -23555,7 +23555,7 @@ async function openFolder(folderId, folderName, isAdminFolder) {
         if (setDoc.exists) {
           const set = { id: setDoc.id, ...setDoc.data() };
           if (set.title && Array.isArray(set.wordPairs) && set.wordPairs.length > 0) {
-            grid.appendChild(createFlashcardCard(set, folderId));
+            grid.appendChild(createFlashcardCard(set, folderId, isAdminFolder));
           }
         }
       }
@@ -23582,7 +23582,7 @@ function closeFolderView() {
   document.getElementById('unfiledFlashcardsSection').style.display = 'block';
 }
 
-function createFlashcardCard(set, inFolderId = null) {
+function createFlashcardCard(set, inFolderId = null, isAdminFolder = false) {
   const card = document.createElement('div');
   card.className = 'flashcard-game-card';
   card.dataset.title = set.title.toLowerCase();
@@ -23601,6 +23601,12 @@ function createFlashcardCard(set, inFolderId = null) {
   card.onmouseover = () => { card.style.transform = 'translateY(-3px)'; card.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)'; };
   card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = 'none'; };
 
+  // Only show move button if NOT in an admin folder (students can't move teacher's flashcards)
+  const moveButton = isAdminFolder ? '' : `
+      <button onclick="event.stopPropagation(); showFlashcardMoveMenu('${set.id}', this)" style="padding: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; font-size: 11px; cursor: pointer;" title="Move to folder">
+        📁
+      </button>`;
+
   card.innerHTML = `
     <div>
       <div class="flashcard-card-title" style="font-size: 13px; font-weight: 600; color: white; margin-bottom: 6px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">🎮 ${set.title}</div>
@@ -23610,9 +23616,7 @@ function createFlashcardCard(set, inFolderId = null) {
       <button onclick="event.stopPropagation(); startFlashcardGame('${set.id}')" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; font-size: 11px; font-weight: 600; cursor: pointer;">
         Play →
       </button>
-      <button onclick="event.stopPropagation(); showFlashcardMoveMenu('${set.id}', this)" style="padding: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; font-size: 11px; cursor: pointer;" title="Move to folder">
-        📁
-      </button>
+      ${moveButton}
     </div>
   `;
 
@@ -44555,7 +44559,11 @@ async function loadDailyActivities(filter = 'all') {
         deadline.setHours(4, 0, 0, 0);
       }
       const isPast = now > deadline;
-      const isPublished = a.status === 'published' && now >= publishDate;
+      // A post is "live/published" if:
+      // 1. status is 'published' and publish date has passed, OR
+      // 2. status is 'scheduled' but publish date has passed (auto-published)
+      const isPublished = now >= publishDate && (a.status === 'published' || a.status === 'scheduled');
+      // A post is "scheduled" only if status is 'scheduled' AND publish date is still in the future
       const isScheduled = a.status === 'scheduled' && now < publishDate;
 
       if (filter === 'scheduled' && !isScheduled) return;
@@ -44564,9 +44572,9 @@ async function loadDailyActivities(filter = 'all') {
 
       const statusBadge = isPast
         ? '<span style="background:#e2e8f0;color:#4a5568;padding:4px 12px;border-radius:12px;font-size:12px">Past</span>'
-        : isPublished
-          ? '<span style="background:#c6f6d5;color:#276749;padding:4px 12px;border-radius:12px;font-size:12px">Live</span>'
-          : '<span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:12px;font-size:12px">Scheduled</span>';
+        : isScheduled
+          ? '<span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:12px;font-size:12px">Scheduled</span>'
+          : '<span style="background:#c6f6d5;color:#276749;padding:4px 12px;border-radius:12px;font-size:12px">Live</span>';
 
       const date = publishDate.toLocaleDateString();
       const scriptPreview = (a.script || '').substring(0, 100) + ((a.script || '').length > 100 ? '...' : '');
@@ -44686,17 +44694,26 @@ let pronCarouselState = {
   activeDrag: null,
   activeDropStudent: null,
   isLoading: false,
-  lastLoadTime: 0
+  lastLoadTime: 0,
+  forceRefresh: false
 };
 
 async function loadStudentDailyActivity() {
-  // Prevent multiple simultaneous loads and rapid reloading
+  // Prevent multiple simultaneous loads
   const now = Date.now();
-  if (pronCarouselState.isLoading || (now - pronCarouselState.lastLoadTime < 2000 && pronCarouselState.entries.length > 0)) {
+  if (pronCarouselState.isLoading) {
     return;
   }
+  
+  // Allow reload if it's been more than 2 seconds OR if we're forcing a refresh
+  const timeSinceLastLoad = now - pronCarouselState.lastLoadTime;
+  if (timeSinceLastLoad < 2000 && pronCarouselState.entries.length > 0 && !pronCarouselState.forceRefresh) {
+    return;
+  }
+  
   pronCarouselState.isLoading = true;
   pronCarouselState.lastLoadTime = now;
+  pronCarouselState.forceRefresh = false;
 
   const teacherCard = document.getElementById('pronTeacherCard');
   const viewport = document.getElementById('pronViewport');
@@ -44712,7 +44729,7 @@ async function loadStudentDailyActivity() {
       .get();
 
     let activity = null;
-    const now = new Date();
+    const nowDate = new Date();
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
@@ -44721,7 +44738,7 @@ async function loadStudentDailyActivity() {
       // Show published activities OR scheduled activities whose publishDate has passed
       if (data.type === 'pronunciation' && 
           ((data.status === 'published') || 
-           (data.status === 'scheduled' && publishDate <= now))) {
+           (data.status === 'scheduled' && publishDate <= nowDate))) {
         activity = { id: doc.id, ...data };
         break;
       }
@@ -44736,7 +44753,15 @@ async function loadStudentDailyActivity() {
         </div>`;
       viewport.style.display = 'none';
       controls.style.display = 'none';
+      // Clear old entries when no activity
+      pronCarouselState.entries = [];
+      pronCarouselState.activity = null;
       return;
+    }
+
+    // If the activity has changed from what we had before, clear old entries
+    if (pronCarouselState.activity && pronCarouselState.activity.id !== activity.id) {
+      pronCarouselState.entries = [];
     }
 
     pronCarouselState.activity = activity;
