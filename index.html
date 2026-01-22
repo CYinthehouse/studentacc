@@ -29232,7 +29232,12 @@ function showNextLeitnerCard() {
       </div>
 
       <!-- Flashcard -->
-      <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''}>
+      <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''} style="position: relative;">
+        ${card.box === 1 && !card.day1Intervals?.first ? `
+        <button onclick="event.stopPropagation(); openLeitnerEditModal('${card.id}')" 
+          style="position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; background: #f97316; border: none; border-radius: 6px; color: white; font-size: 14px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;"
+          title="Edit card before first practice">✏️</button>
+        ` : ''}
         <div class="leitner-flashcard-inner">
           <div class="leitner-flashcard-face leitner-flashcard-front">
             <div style="font-size: 14px; opacity: 0.8; margin-bottom: 15px;">${swipeMode.enabled ? '👆 Tap to reveal answer:' : '🎤 Say this in Korean:'}</div>
@@ -29317,6 +29322,146 @@ function flipLeitnerCardManual() {
   if (card && !card.classList.contains('flipped')) {
     card.classList.add('flipped');
     document.getElementById('leitnerSwipeButtons').style.display = 'block';
+  }
+}
+
+// Open edit modal for Day 1 Leitner card
+function openLeitnerEditModal(cardId) {
+  // Pause timer and recognition while editing
+  stopLeitnerTimer();
+  stopLeitnerRecognition();
+  
+  const card = leitnerCards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  const modal = document.createElement('div');
+  modal.id = 'leitnerEditModal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    padding: 20px;
+  `;
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; padding: 25px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #1a202c; font-size: 18px;">✏️ Edit Card</h3>
+        <button onclick="closeLeitnerEditModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #a0aec0;">×</button>
+      </div>
+      
+      <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 12px; margin-bottom: 20px;">
+        <div style="font-weight: 600; color: #c2410c; font-size: 13px; margin-bottom: 8px;">Edit before you begin</div>
+        <ul style="margin: 0; padding-left: 18px; color: #9a3412; font-size: 12px; line-height: 1.6;">
+          <li>Numbers are recognized as digits (1, 2, 3) not words</li>
+          <li>Shorten long sentences for easier practice</li>
+          <li>Fix spelling or spacing errors</li>
+        </ul>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #fed7aa; color: #c2410c; font-size: 11px;">
+          ⚠️ After your first practice, this card becomes locked.
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 6px;">English</label>
+        <input type="text" id="leitnerEditEnglish" value="${card.english.replace(/"/g, '&quot;')}" 
+          style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; box-sizing: border-box;">
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 6px;">Korean</label>
+        <input type="text" id="leitnerEditKorean" value="${card.korean.replace(/"/g, '&quot;')}" 
+          style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; box-sizing: border-box;">
+      </div>
+      
+      <div style="display: flex; gap: 10px;">
+        <button onclick="closeLeitnerEditModal()" 
+          style="flex: 1; padding: 12px; background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; color: #4a5568; cursor: pointer;">
+          Cancel
+        </button>
+        <button onclick="saveLeitnerCardEdit('${cardId}')" 
+          style="flex: 1; padding: 12px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: white; cursor: pointer;">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Focus on Korean field
+  setTimeout(() => {
+    document.getElementById('leitnerEditKorean').focus();
+  }, 100);
+}
+
+// Close the edit modal
+function closeLeitnerEditModal() {
+  const modal = document.getElementById('leitnerEditModal');
+  if (modal) modal.remove();
+  
+  // Resume the card review
+  const card = currentLeitnerQueue[currentLeitnerIndex];
+  if (card && !swipeMode.enabled) {
+    startLeitnerTimer();
+    startLeitnerRecognition(card.korean);
+  }
+}
+
+// Save the edited card
+async function saveLeitnerCardEdit(cardId) {
+  const english = document.getElementById('leitnerEditEnglish').value.trim();
+  const korean = document.getElementById('leitnerEditKorean').value.trim();
+  
+  if (!english || !korean) {
+    showToast('⚠️ Both fields are required');
+    return;
+  }
+  
+  try {
+    // Update in Firestore
+    await db.collection('pronunciationLeitner').doc(cardId).update({
+      english: english,
+      korean: korean,
+      editedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Update local cache
+    const cardIndex = leitnerCards.findIndex(c => c.id === cardId);
+    if (cardIndex !== -1) {
+      leitnerCards[cardIndex].english = english;
+      leitnerCards[cardIndex].korean = korean;
+    }
+    
+    // Update current queue
+    const queueIndex = currentLeitnerQueue.findIndex(c => c.id === cardId);
+    if (queueIndex !== -1) {
+      currentLeitnerQueue[queueIndex].english = english;
+      currentLeitnerQueue[queueIndex].korean = korean;
+    }
+    
+    showToast('✅ Card updated!');
+    
+    // Close modal without restarting recognition (we'll do that after re-render)
+    const modal = document.getElementById('leitnerEditModal');
+    if (modal) modal.remove();
+    
+    // Update the target Korean for voice recognition
+    leitnerTargetKorean = korean;
+    
+    // Re-render the current card with new values
+    showNextLeitnerCard();
+    
+  } catch (error) {
+    console.error('Error updating card:', error);
+    showToast('❌ Failed to update card');
   }
 }
 
