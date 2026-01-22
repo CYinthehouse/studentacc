@@ -21452,6 +21452,31 @@ function initializeSpeechRecognition() {
         return str
           .replace(/\s+/g, '')
           .replace(/[.,!?~～·。'"'""]/g, '')
+          // Convert Korean number words to digits (Sino-Korean)
+          .replace(/영/g, '0')
+          .replace(/일/g, '1')
+          .replace(/이/g, '2')
+          .replace(/삼/g, '3')
+          .replace(/사/g, '4')
+          .replace(/오/g, '5')
+          .replace(/육/g, '6')
+          .replace(/칠/g, '7')
+          .replace(/팔/g, '8')
+          .replace(/구/g, '9')
+          .replace(/십/g, '10')
+          .replace(/백/g, '100')
+          .replace(/천/g, '1000')
+          // Convert Native Korean numbers to digits
+          .replace(/하나/g, '1')
+          .replace(/둘/g, '2')
+          .replace(/셋/g, '3')
+          .replace(/넷/g, '4')
+          .replace(/다섯/g, '5')
+          .replace(/여섯/g, '6')
+          .replace(/일곱/g, '7')
+          .replace(/여덟/g, '8')
+          .replace(/아홉/g, '9')
+          .replace(/열/g, '10')
           // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
           .replace(/ㅐ/g, 'ㅔ')
           .replace(/애/g, '에')
@@ -25814,6 +25839,61 @@ function resumeFlashcardGameFromInterrupt() {
   }
 }
 
+/**
+ * Global Korean text normalization for voice recognition
+ * Converts number words to digits and normalizes vowels
+ */
+function normalizeKoreanForVoice(str) {
+  return str
+    .replace(/\s+/g, '')
+    .replace(/[.,!?~～·。'"'""]/g, '')
+    // Convert Korean number words to digits (Sino-Korean)
+    .replace(/영/g, '0')
+    .replace(/일/g, '1')
+    .replace(/이/g, '2')
+    .replace(/삼/g, '3')
+    .replace(/사/g, '4')
+    .replace(/오/g, '5')
+    .replace(/육/g, '6')
+    .replace(/칠/g, '7')
+    .replace(/팔/g, '8')
+    .replace(/구/g, '9')
+    .replace(/십/g, '10')
+    .replace(/백/g, '100')
+    .replace(/천/g, '1000')
+    // Convert Native Korean numbers to digits
+    .replace(/하나/g, '1')
+    .replace(/둘/g, '2')
+    .replace(/셋/g, '3')
+    .replace(/넷/g, '4')
+    .replace(/다섯/g, '5')
+    .replace(/여섯/g, '6')
+    .replace(/일곱/g, '7')
+    .replace(/여덟/g, '8')
+    .replace(/아홉/g, '9')
+    .replace(/열/g, '10')
+    // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
+    .replace(/ㅐ/g, 'ㅔ')
+    .replace(/애/g, '에')
+    .replace(/새/g, '세')
+    .replace(/배/g, '베')
+    .replace(/대/g, '데')
+    .replace(/래/g, '레')
+    .replace(/매/g, '메')
+    .replace(/재/g, '제')
+    .replace(/채/g, '체')
+    .replace(/개/g, '게')
+    .replace(/내/g, '네')
+    .replace(/태/g, '테')
+    .replace(/패/g, '페')
+    .replace(/해/g, '헤')
+    .replace(/깨/g, '께')
+    .replace(/때/g, '떼')
+    .replace(/빼/g, '뻬')
+    .replace(/싸/g, '쎄')
+    .replace(/짜/g, '쩨');
+}
+
 function calculateSimilarity(str1, str2) {
   if (str1 === str2) return 1;
   if (str1.length === 0 || str2.length === 0) return 0;
@@ -25894,15 +25974,22 @@ function loadFlashcardRound() {
   wordsListDiv.innerHTML = currentGameWords.map((word, index) => {
     const isReviewWord = missedWords.some(w => w.english === word.english && w.korean === word.korean);
     return `
-      <div class="word-item" id="word-${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'};">
-        <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="word-item" id="word-${index}" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'}; position: relative; overflow: hidden; touch-action: pan-y;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
           <span class="word-number" style="font-weight: bold; color: ${isReviewWord ? '#f56565' : '#667eea'}; font-size: 14px;">${index + 1}.${isReviewWord ? '🔄' : ''}</span>
           <span class="word-text" style="font-size: 16px; font-weight: 600; color: #000000;">${word.english}</span>
+          <span class="word-korean-reveal" id="korean-${index}" style="display: none; font-size: 14px; color: #667eea; margin-left: 8px; background: #f0f4ff; padding: 2px 8px; border-radius: 4px;">${word.korean}</span>
         </div>
-        <div class="word-status" id="status-${index}" style="font-size: 18px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="swipe-hint" id="swipe-hint-${index}" style="display: none; font-size: 10px; color: #a0aec0;">← swipe to skip</span>
+          <div class="word-status" id="status-${index}" style="font-size: 18px;"></div>
+        </div>
       </div>
     `;
   }).join('');
+
+  // Add swipe listeners to word items
+  setupFlashcardSwipe();
 
   // Reset scroll to top so word #1 is always visible
   wordsListDiv.scrollTop = 0;
@@ -25934,6 +26021,9 @@ function highlightCurrentWord() {
     item.style.background = 'white';
     item.style.transform = 'scale(1)';
   });
+  
+  // Hide all swipe hints
+  document.querySelectorAll('.swipe-hint').forEach(hint => hint.style.display = 'none');
 
   if (currentWordIndex < currentGameWords.length) {
     const currentItem = document.getElementById(`word-${currentWordIndex}`);
@@ -25941,6 +26031,124 @@ function highlightCurrentWord() {
       currentItem.style.background = 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)';
       currentItem.style.transform = 'scale(1.02)';
     }
+    
+    // Show swipe hint for current word
+    const swipeHint = document.getElementById(`swipe-hint-${currentWordIndex}`);
+    if (swipeHint) swipeHint.style.display = 'inline';
+  }
+}
+
+// Setup swipe functionality for flashcard game words
+function setupFlashcardSwipe() {
+  const wordItems = document.querySelectorAll('.word-item');
+  
+  wordItems.forEach(item => {
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    const index = parseInt(item.dataset.index);
+    
+    const handleStart = (e) => {
+      if (index !== currentWordIndex) return;
+      startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+      currentX = startX;
+      isDragging = true;
+    };
+    
+    const handleMove = (e) => {
+      if (!isDragging || index !== currentWordIndex) return;
+      currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+      const diff = currentX - startX;
+      
+      // Only allow left swipe (negative diff)
+      if (diff < 0) {
+        const translateX = Math.max(diff, -150);
+        item.style.transform = `translateX(${translateX}px) scale(1.02)`;
+        item.style.transition = 'none';
+        
+        // Show Korean answer when swiped enough
+        const koreanEl = document.getElementById(`korean-${index}`);
+        if (diff < -40 && koreanEl) {
+          koreanEl.style.display = 'inline';
+        }
+        
+        // Change background to indicate bypass zone
+        if (diff < -100) {
+          item.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+        }
+      }
+    };
+    
+    const handleEnd = (e) => {
+      if (!isDragging || index !== currentWordIndex) return;
+      isDragging = false;
+      
+      const diff = currentX - startX;
+      item.style.transition = 'transform 0.2s ease, background 0.2s ease';
+      item.style.transform = 'scale(1.02)';
+      
+      // If swiped far enough, bypass the word (1 coin)
+      if (diff < -100) {
+        bypassFlashcardWord(index);
+      } else {
+        // Reset if not swiped enough
+        const koreanEl = document.getElementById(`korean-${index}`);
+        if (koreanEl) koreanEl.style.display = 'none';
+        item.style.background = 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)';
+      }
+    };
+    
+    // Touch events
+    item.addEventListener('touchstart', handleStart, { passive: true });
+    item.addEventListener('touchmove', handleMove, { passive: true });
+    item.addEventListener('touchend', handleEnd);
+    
+    // Mouse events for desktop
+    item.addEventListener('mousedown', handleStart);
+    item.addEventListener('mousemove', handleMove);
+    item.addEventListener('mouseup', handleEnd);
+    item.addEventListener('mouseleave', handleEnd);
+  });
+}
+
+// Bypass the current word with swipe (gives 1 coin, moves on)
+function bypassFlashcardWord(index) {
+  if (index !== currentWordIndex) return;
+  
+  clearInterval(flashcardTimer);
+  
+  // Award 1 coin for bypass
+  awardCoinsWithPopup(1);
+  
+  // Mark visually as bypassed
+  const wordItem = document.getElementById(`word-${index}`);
+  const statusEl = document.getElementById(`status-${index}`);
+  
+  if (wordItem) {
+    wordItem.style.background = '#fef3c7';
+    wordItem.style.transform = 'scale(1)';
+    wordItem.style.borderColor = '#fcd34d';
+  }
+  if (statusEl) {
+    statusEl.textContent = '⏭️';
+  }
+  
+  // Track as bypassed (not incorrect, not correct - just skipped)
+  totalGameWords++;
+  
+  // Add to missed words for review
+  const bypassedWord = currentGameWords[index];
+  if (!missedWords.some(w => w.english === bypassedWord.english && w.korean === bypassedWord.korean)) {
+    missedWords.push(bypassedWord);
+  }
+  
+  // Move to next word
+  currentWordIndex++;
+  if (currentWordIndex < currentGameWords.length) {
+    highlightCurrentWord();
+    startWordTimer();
+  } else {
+    setTimeout(() => showRoundResults(), 500);
   }
 }
 
@@ -27070,6 +27278,31 @@ function initializeMasterySpeechRecognition() {
         return str
           .replace(/\s+/g, '')
           .replace(/[.,!?~～·。'"'""]/g, '')
+          // Convert Korean number words to digits (Sino-Korean)
+          .replace(/영/g, '0')
+          .replace(/일/g, '1')
+          .replace(/이/g, '2')
+          .replace(/삼/g, '3')
+          .replace(/사/g, '4')
+          .replace(/오/g, '5')
+          .replace(/육/g, '6')
+          .replace(/칠/g, '7')
+          .replace(/팔/g, '8')
+          .replace(/구/g, '9')
+          .replace(/십/g, '10')
+          .replace(/백/g, '100')
+          .replace(/천/g, '1000')
+          // Convert Native Korean numbers to digits
+          .replace(/하나/g, '1')
+          .replace(/둘/g, '2')
+          .replace(/셋/g, '3')
+          .replace(/넷/g, '4')
+          .replace(/다섯/g, '5')
+          .replace(/여섯/g, '6')
+          .replace(/일곱/g, '7')
+          .replace(/여덟/g, '8')
+          .replace(/아홉/g, '9')
+          .replace(/열/g, '10')
           // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
           .replace(/ㅐ/g, 'ㅔ')
           .replace(/애/g, '에')
@@ -29268,12 +29501,8 @@ function startLeitnerRecognition(targetKorean) {
       }
 
 
-      const normalizeKorean = (str) => {
-        return str.replace(/\s+/g, '').replace(/[.,!?~～·。'"'""]/g, '');
-      };
-
-      const targetClean = normalizeKorean(leitnerTargetKorean);
-      const transcriptClean = normalizeKorean(transcript);
+      const targetClean = normalizeKoreanForVoice(leitnerTargetKorean);
+      const transcriptClean = normalizeKoreanForVoice(transcript);
 
 
       const similarity = calculateSimilarity(transcriptClean, targetClean);
@@ -36788,11 +37017,11 @@ function startAllInOnePronListening() {
 
 function checkAllInOnePronAnswer(transcript) {
   const target = allInOnePronState.words[allInOnePronState.currentWordIndex];
-  const normalized = transcript.replace(/\s+/g, '').toLowerCase();
-  const targetNorm = target.replace(/\s+/g, '').toLowerCase();
+  const normalized = normalizeKoreanForVoice(transcript);
+  const targetNorm = normalizeKoreanForVoice(target);
 
-  const isCorrect = normalized.includes(targetNorm) || targetNorm.includes(normalized) ||
-                    levenshteinDistance(normalized, targetNorm) <= Math.max(1, Math.floor(targetNorm.length * 0.3));
+  const similarity = calculateSimilarity(normalized, targetNorm);
+  const isCorrect = similarity >= 0.90;
 
   allInOnePronState.totalAttempts++;
 
@@ -37218,11 +37447,11 @@ function startAllInOneFlashcardListening() {
     document.getElementById('aioFlashcardRecognized').textContent = transcript;
 
     if (event.results[0].isFinal) {
-      const normalized = transcript.replace(/\s+/g, '');
-      const targetNorm = card.korean.replace(/\s+/g, '');
-      const isCorrect = normalized.includes(targetNorm) || targetNorm.includes(normalized);
+      const normalized = normalizeKoreanForVoice(transcript);
+      const targetNorm = normalizeKoreanForVoice(card.korean);
+      const similarity = calculateSimilarity(normalized, targetNorm);
 
-      if (isCorrect) {
+      if (similarity >= 0.90) {
         awardCoinsWithPopup(swipeMode.enabled ? 1 : 5);
         submitAllInOneFlashcard(true);
       } else {
@@ -40325,10 +40554,11 @@ function startPronRecognition(targetWord) {
         statusEl.textContent = transcript;
       }
 
-      const transcriptClean = transcript.replace(/\s+/g, '').toLowerCase();
-      const targetClean = pronTargetWord.replace(/\s+/g, '').toLowerCase();
+      const transcriptClean = normalizeKoreanForVoice(transcript);
+      const targetClean = normalizeKoreanForVoice(pronTargetWord);
 
-      if (transcriptClean === targetClean) {
+      const similarity = calculateSimilarity(transcriptClean, targetClean);
+      if (similarity >= 0.90) {
         stopPronTimer();
         pronDrillState.correctInRep++;
         pronDrillState.totalCorrect++;
@@ -58598,10 +58828,11 @@ function startMyCardsRecognition() {
 
     document.getElementById('myCardsRecognizedText').textContent = transcript;
 
-    const normalized = transcript.toLowerCase().replace(/[.,!?]/g, '').trim();
-    const expected = expectedAnswer.toLowerCase().replace(/[.,!?]/g, '').trim();
+    const normalized = normalizeKoreanForVoice(transcript);
+    const expected = normalizeKoreanForVoice(expectedAnswer);
 
-    if (normalized.includes(expected) || expected.includes(normalized)) {
+    const similarity = calculateSimilarity(normalized, expected);
+    if (similarity >= 0.90) {
       stopMyCardsRecognition();
       stopMyCardsTimer();
 
