@@ -51843,9 +51843,8 @@ function startDailyDrillListening() {
         }
       }
 
-      if (!isCorrect && bestSimilarity >= 0.98) {
-        isCorrect = true;
-      }
+      // Only exact matches pass - no similarity threshold fallback
+      // isCorrect is already set to true above if normalizedAlt === normalizedTarget
 
 
       state.totalAttempts++;
