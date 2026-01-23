@@ -51810,7 +51810,6 @@ function startDailyDrillListening() {
       const resultIndex = event.results.length - 1;
       const results = event.results[resultIndex];
       let recognized = results[0].transcript.trim();
-      let recognizedConfidence = results[0].confidence || 0;
 
       const recognizedEl = document.getElementById('dailyDrillRecognizedText');
       if (recognizedEl) recognizedEl.textContent = recognized;
@@ -51825,30 +51824,19 @@ function startDailyDrillListening() {
 
       console.log(`[Drill Debug] Target: "${targetText}" -> Normalized: "${normalizedTarget}"`);
       console.log(`[Drill Debug] Said: "${recognized}" -> Normalized: "${normalizedRecognized}"`);
-      console.log(`[Drill Debug] Confidence: ${recognizedConfidence}`);
       console.log(`[Drill Debug] Exact match: ${normalizedRecognized === normalizedTarget}`);
 
       // Only check the FIRST (best) result - do NOT loop through alternatives
       // Google's alternatives often include the "correct" word even when mispronounced
       const isCorrect = normalizedRecognized === normalizedTarget;
-      const bestConfidence = recognizedConfidence;
 
-      // Minimum confidence threshold - below this, pronunciation is "unclear"
-      const MIN_CONFIDENCE = 0.85;
-      
-      // Check if text matched but confidence was too low (unclear pronunciation)
-      const confidenceTooLow = isCorrect && bestConfidence < MIN_CONFIDENCE;
-      
-      // For display, reduce confidence by 10% to show the warning more often
-      const displayConfidence = Math.max(0, bestConfidence - 0.10);
-
-      console.log(`[Drill Debug] Final isCorrect: ${isCorrect}, confidence: ${bestConfidence}`);
+      console.log(`[Drill Debug] Final isCorrect: ${isCorrect}`);
 
 
       state.totalAttempts++;
 
       if (isCorrect) {
-        // Text matched - they pass, but check confidence for scoring
+        // Text matched - they pass
         state.correctCount++;
         state.correctInCurrentSet++;
 
@@ -51856,49 +51844,28 @@ function startDailyDrillListening() {
         const isFirstTry = !state.wordAttempted[state.currentWordIndex];
         
         if (isFirstTry) {
-          if (confidenceTooLow) {
-            // Text matched but unclear pronunciation - count as 0.5 correct for grading
-            state.firstTryCorrectCount += 0.5;
-            state.firstTryCorrectInSet += 0.5;
-          } else {
-            // Clear pronunciation - full credit
-            state.firstTryCorrectCount++;
-            state.firstTryCorrectInSet++;
-          }
+          state.firstTryCorrectCount++;
+          state.firstTryCorrectInSet++;
         }
         
         // Mark this word as attempted
         state.wordAttempted[state.currentWordIndex] = true;
 
-        // Award 3 coins for correct answer (even if pronunciation unclear)
+        // Award 3 coins for correct answer
         awardCoinsWithPopup(3);
 
         playDailyDrillCorrectSound(state.correctInCurrentSet);
 
         const wordInSet = (state.currentWordIndex % 5) + 1;
 
-        if (confidenceTooLow) {
-          // Show unclear pronunciation feedback, then advance after delay
-          showDailyDrillFeedback(false, `Pronunciation unclear (${Math.round(displayConfidence * 100)}%) - Speak more clearly!`);
-          
-          setTimeout(() => {
-            if (wordInSet === 5) {
-              showSetCompletionCelebration(Math.floor(state.firstTryCorrectInSet));
-            } else {
-              advanceDailyDrill();
-            }
-          }, 2000);  // 2 seconds to read the message
-        } else {
-          // Perfect pronunciation
-          showDailyDrillFeedback(true, '✅ Perfect!');
+        showDailyDrillFeedback(true, '✅ Perfect!');
 
-          if (wordInSet === 5) {
-            showSetCompletionCelebration(Math.floor(state.firstTryCorrectInSet));
-          } else {
-            setTimeout(() => {
-              advanceDailyDrill();
-            }, 600);
-          }
+        if (wordInSet === 5) {
+          showSetCompletionCelebration(state.firstTryCorrectInSet);
+        } else {
+          setTimeout(() => {
+            advanceDailyDrill();
+          }, 600);
         }
 
       } else {
@@ -51987,9 +51954,26 @@ function normalizeKoreanForDrillComparison(text) {
       const medial = Math.floor((syllableIndex % 588) / 28); // 중성 (21 types)
       const final = syllableIndex % 28; // 종성 (28 types, 0 = no final)
 
+      // Vowel indices: ㅐ=1, ㅒ=3, ㅔ=5, ㅖ=7
+      // Initial ㅇ = 11
+      
       let normalizedMedial = medial;
-      if (medial === 1 || medial === 3 || medial === 5 || medial === 7) {
-        normalizedMedial = 1; // Treat ㅐ, ㅒ, ㅔ, ㅖ ALL as ㅐ
+      
+      if (initial === 11) {
+        // With ㅇ initial: 애/에 equivalent, 얘/예 equivalent, but NOT all four equivalent
+        // 애(ㅐ=1) and 에(ㅔ=5) -> normalize to 1
+        // 얘(ㅒ=3) and 예(ㅖ=7) -> normalize to 3
+        if (medial === 1 || medial === 5) {
+          normalizedMedial = 1; // 애/에 -> 애
+        } else if (medial === 3 || medial === 7) {
+          normalizedMedial = 3; // 얘/예 -> 얘
+        }
+      } else {
+        // With any other consonant: ㅐ/ㅔ/ㅒ/ㅖ are ALL equivalent
+        // 개/게/걔/계 all sound the same
+        if (medial === 1 || medial === 3 || medial === 5 || medial === 7) {
+          normalizedMedial = 1; // Treat all as ㅐ
+        }
       }
 
       const newCode = 0xAC00 + (initial * 588) + (normalizedMedial * 28) + final;
