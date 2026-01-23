@@ -17360,8 +17360,8 @@ body.light-mode .mobile-badge-name {
                   <button id="startGameBtn" class="junbi-btn" onclick="startFlashcardRound()" style="padding: 10px 20px; font-size: 14px;">
                     🎤 Start
                   </button>
-                  <button class="junbi-btn" onclick="skipWord()" style="padding: 10px 20px; font-size: 14px; background: linear-gradient(135deg, #718096 0%, #4a5568 100%);">
-                    Skip
+                  <button class="junbi-btn" onclick="skipFlashcardWordCompletely()" style="padding: 10px 20px; font-size: 14px; background: linear-gradient(135deg, #f56565 0%, #dc2626 100%);">
+                    ⏭️ Skip
                   </button>
                 </div>
 
@@ -21411,6 +21411,7 @@ let isListening = false;
 let isFlashcardGameActive = false; // Track if game is in progress (for continuous recognition)
 let flashcardWakeLock = null; // Keep screen awake during game
 let missedWords = []; // Words that were incorrect - carry over to next set
+let newWordsAddedToLeitner = 0; // Track new words added to calendar during game
 
 let flashcardIsProcessingMatch = false;
 let isGamePaused = false;
@@ -25514,6 +25515,7 @@ async function startFlashcardGame(setId) {
     currentSetIndex = 0;
     gameResults = [];
     missedWords = []; // Reset missed words for new game
+    newWordsAddedToLeitner = 0; // Reset counter for new words added to calendar
 
     const setAssets = currentFlashcardSet.assets || null;
     currentGameAssets = getEffectiveGameAssets(setAssets);
@@ -25974,22 +25976,17 @@ function loadFlashcardRound() {
   wordsListDiv.innerHTML = currentGameWords.map((word, index) => {
     const isReviewWord = missedWords.some(w => w.english === word.english && w.korean === word.korean);
     return `
-      <div class="word-item" id="word-${index}" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'}; position: relative; overflow: hidden; touch-action: pan-y;">
+      <div class="word-item" id="word-${index}" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'}; position: relative;">
         <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
           <span class="word-number" style="font-weight: bold; color: ${isReviewWord ? '#f56565' : '#667eea'}; font-size: 14px;">${index + 1}.${isReviewWord ? '🔄' : ''}</span>
           <span class="word-text" style="font-size: 16px; font-weight: 600; color: #000000;">${word.english}</span>
-          <span class="word-korean-reveal" id="korean-${index}" style="display: none; font-size: 14px; color: #667eea; margin-left: 8px; background: #f0f4ff; padding: 2px 8px; border-radius: 4px;">${word.korean}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="swipe-hint" id="swipe-hint-${index}" style="display: none; font-size: 10px; color: #a0aec0;">← swipe to skip</span>
           <div class="word-status" id="status-${index}" style="font-size: 18px;"></div>
         </div>
       </div>
     `;
   }).join('');
-
-  // Add swipe listeners to word items
-  setupFlashcardSwipe();
 
   // Reset scroll to top so word #1 is always visible
   wordsListDiv.scrollTop = 0;
@@ -26021,9 +26018,6 @@ function highlightCurrentWord() {
     item.style.background = 'white';
     item.style.transform = 'scale(1)';
   });
-  
-  // Hide all swipe hints
-  document.querySelectorAll('.swipe-hint').forEach(hint => hint.style.display = 'none');
 
   if (currentWordIndex < currentGameWords.length) {
     const currentItem = document.getElementById(`word-${currentWordIndex}`);
@@ -26031,128 +26025,181 @@ function highlightCurrentWord() {
       currentItem.style.background = 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)';
       currentItem.style.transform = 'scale(1.02)';
     }
-    
-    // Show swipe hint for current word
-    const swipeHint = document.getElementById(`swipe-hint-${currentWordIndex}`);
-    if (swipeHint) swipeHint.style.display = 'inline';
   }
 }
 
-// Setup swipe functionality for flashcard game words
-function setupFlashcardSwipe() {
-  const wordItems = document.querySelectorAll('.word-item');
-  
-  wordItems.forEach(item => {
-    let startX = 0;
-    let currentX = 0;
-    let isDragging = false;
-    const index = parseInt(item.dataset.index);
-    
-    const handleStart = (e) => {
-      if (index !== currentWordIndex) return;
-      startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-      currentX = startX;
-      isDragging = true;
-    };
-    
-    const handleMove = (e) => {
-      if (!isDragging || index !== currentWordIndex) return;
-      currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-      const diff = currentX - startX;
-      
-      // Only allow left swipe (negative diff)
-      if (diff < 0) {
-        const translateX = Math.max(diff, -150);
-        item.style.transform = `translateX(${translateX}px) scale(1.02)`;
-        item.style.transition = 'none';
-        
-        // Show Korean answer when swiped enough
-        const koreanEl = document.getElementById(`korean-${index}`);
-        if (diff < -40 && koreanEl) {
-          koreanEl.style.display = 'inline';
-        }
-        
-        // Change background to indicate bypass zone
-        if (diff < -100) {
-          item.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
-        }
-      }
-    };
-    
-    const handleEnd = (e) => {
-      if (!isDragging || index !== currentWordIndex) return;
-      isDragging = false;
-      
-      const diff = currentX - startX;
-      item.style.transition = 'transform 0.2s ease, background 0.2s ease';
-      item.style.transform = 'scale(1.02)';
-      
-      // If swiped far enough, bypass the word (1 coin)
-      if (diff < -100) {
-        bypassFlashcardWord(index);
-      } else {
-        // Reset if not swiped enough
-        const koreanEl = document.getElementById(`korean-${index}`);
-        if (koreanEl) koreanEl.style.display = 'none';
-        item.style.background = 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)';
-      }
-    };
-    
-    // Touch events
-    item.addEventListener('touchstart', handleStart, { passive: true });
-    item.addEventListener('touchmove', handleMove, { passive: true });
-    item.addEventListener('touchend', handleEnd);
-    
-    // Mouse events for desktop
-    item.addEventListener('mousedown', handleStart);
-    item.addEventListener('mousemove', handleMove);
-    item.addEventListener('mouseup', handleEnd);
-    item.addEventListener('mouseleave', handleEnd);
-  });
-}
-
-// Bypass the current word with swipe (gives 1 coin, moves on)
-function bypassFlashcardWord(index) {
-  if (index !== currentWordIndex) return;
+// Skip the current word completely (no coins, no redo)
+function skipFlashcardWordCompletely() {
+  if (currentWordIndex >= currentGameWords.length) return;
   
   clearInterval(flashcardTimer);
   
-  // Award 1 coin for bypass
-  awardCoinsWithPopup(1);
+  const index = currentWordIndex;
   
-  // Mark visually as bypassed
+  // Mark visually as skipped
   const wordItem = document.getElementById(`word-${index}`);
   const statusEl = document.getElementById(`status-${index}`);
   
   if (wordItem) {
-    wordItem.style.background = '#fef3c7';
+    wordItem.style.background = '#fee2e2';
     wordItem.style.transform = 'scale(1)';
-    wordItem.style.borderColor = '#fcd34d';
+    wordItem.style.borderColor = '#f87171';
   }
   if (statusEl) {
     statusEl.textContent = '⏭️';
   }
   
-  // Track as bypassed (not incorrect, not correct - just skipped)
-  totalGameWords++;
-  
-  // Add to missed words for review
-  const bypassedWord = currentGameWords[index];
-  if (!missedWords.some(w => w.english === bypassedWord.english && w.korean === bypassedWord.korean)) {
-    missedWords.push(bypassedWord);
+  // Show the Korean answer
+  const wordText = wordItem.querySelector('.word-text');
+  if (wordText) {
+    wordText.innerHTML = `<span style="color: #718096;">${currentGameWords[index].english}</span> → <span style="color: #f56565;">${currentGameWords[index].korean}</span>`;
   }
   
-  // Move to next word
+  // Speak the Korean
+  speakKorean(currentGameWords[index].korean);
+  
+  // Track as skipped
+  totalGameWords++;
+  gameResults.push({ word: currentGameWords[index], correct: false, skipped: true });
+  
+  // Add skipped word to Leitner calendar
+  if (currentFlashcardSet && currentFlashcardSet.id) {
+    addCardToLeitnerBoxWithDupeCheck(currentGameWords[index], currentFlashcardSet.id).then(wasAdded => {
+      if (wasAdded) {
+        newWordsAddedToLeitner++;
+      }
+    });
+  }
+  
+  // Move to next word (don't add to missedWords - fully skipped)
   currentWordIndex++;
   if (currentWordIndex < currentGameWords.length) {
     highlightCurrentWord();
-    startWordTimer();
+    setTimeout(() => startWordTimer(), 1500);
   } else {
-    setTimeout(() => showRoundResults(), 500);
+    // Check if game is complete (all original words done and no missed words to review)
+    const totalSets = Math.ceil(currentFlashcardSet.wordPairs.length / 5);
+    const allOriginalWordsDone = currentSetIndex >= totalSets - 1;
+    if (allOriginalWordsDone && missedWords.length === 0) {
+      setTimeout(() => showRoundResults(), 500);
+    } else {
+      setTimeout(() => showRoundResults(), 500);
+    }
   }
 }
 
+/**
+ * Check if speech disclaimer needs to be shown
+ * Returns true if user has acknowledged within last 24 hours
+ */
+function hasSpeechDisclaimerBeenAcknowledged() {
+  const dismissedUntil = localStorage.getItem('speechDisclaimerDismissedUntil');
+  if (dismissedUntil) {
+    const dismissedTime = parseInt(dismissedUntil);
+    if (Date.now() < dismissedTime) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Show the speech disclaimer popup
+ * @param {Function} onProceed - Callback when user acknowledges
+ */
+function showSpeechDisclaimer(onProceed) {
+  // If already acknowledged, proceed directly
+  if (hasSpeechDisclaimerBeenAcknowledged()) {
+    onProceed();
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.id = 'speechDisclaimerModal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    padding: 20px;
+  `;
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; padding: 25px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 50px; margin-bottom: 10px;">🎤</div>
+        <h3 style="margin: 0; color: #1a202c; font-size: 20px;">Voice Recognition Notice</h3>
+      </div>
+      
+      <div style="background: #f7fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px; color: #4a5568; font-size: 14px; line-height: 1.6;">
+        <p style="margin: 0 0 12px 0;">This game runs on speech-to-text transcription. Please note:</p>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li style="margin-bottom: 8px;">Speaking too slowly or unclear pronunciation may not be marked correct</li>
+          <li style="margin-bottom: 8px;">Background noise can interfere with recognition</li>
+          <li>🎧 <strong>Use headphones</strong> for the best experience</li>
+        </ul>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button onclick="acknowledgeSpeechDisclaimer(true)" 
+          style="width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 10px; font-size: 15px; font-weight: 600; color: white; cursor: pointer;">
+          ✓ I Understand, Let's Go!
+        </button>
+        <button onclick="acknowledgeSpeechDisclaimer(false)" 
+          style="width: 100%; padding: 12px; background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-weight: 500; color: #718096; cursor: pointer;">
+          Don't show this for 24 hours
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Store the callback for later
+  window.speechDisclaimerCallback = onProceed;
+  
+  document.body.appendChild(modal);
+}
+
+/**
+ * Handle disclaimer acknowledgment
+ * @param {boolean} justOnce - If false, dismiss for 24 hours
+ */
+function acknowledgeSpeechDisclaimer(justOnce) {
+  const modal = document.getElementById('speechDisclaimerModal');
+  if (modal) modal.remove();
+  
+  if (!justOnce) {
+    // Dismiss for 24 hours
+    const dismissUntil = Date.now() + (24 * 60 * 60 * 1000);
+    localStorage.setItem('speechDisclaimerDismissedUntil', dismissUntil.toString());
+  }
+  
+  // Call the stored callback
+  if (window.speechDisclaimerCallback) {
+    window.speechDisclaimerCallback();
+    window.speechDisclaimerCallback = null;
+  }
+}
+
+// Wrapper that shows disclaimer before starting
 function startFlashcardRound() {
+  if (swipeMode.enabled) {
+    // Swipe mode doesn't need voice disclaimer
+    _startFlashcardRoundInternal();
+    return;
+  }
+  
+  showSpeechDisclaimer(() => {
+    _startFlashcardRoundInternal();
+  });
+}
+
+function _startFlashcardRoundInternal() {
   if (currentWordIndex >= currentGameWords.length) {
     showRoundResults();
     return;
@@ -26304,7 +26351,11 @@ function wordIncorrect(index) {
   }
 
   if (currentFlashcardSet && currentFlashcardSet.id) {
-    addCardToLeitnerBoxWithDupeCheck(currentGameWords[index], currentFlashcardSet.id);
+    addCardToLeitnerBoxWithDupeCheck(currentGameWords[index], currentFlashcardSet.id).then(wasAdded => {
+      if (wasAdded) {
+        newWordsAddedToLeitner++;
+      }
+    });
   }
 
   currentWordIndex++;
@@ -26422,6 +26473,17 @@ function showRoundResults() {
         ${finalPercentage}%
       </div>
       ${endGifHtml}
+      ${newWordsAddedToLeitner > 0 ? `
+        <div onclick="exitFlashcardGame(); switchTab('leitnerBox');" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 28px;">📅</div>
+            <div style="text-align: left;">
+              <div style="font-weight: 700; color: #92400e; font-size: 14px;">You have ${newWordsAddedToLeitner} new word${newWordsAddedToLeitner > 1 ? 's' : ''} added to your calendar!</div>
+              <div style="color: #b45309; font-size: 12px; margin-top: 3px;">Tap here to review these words →</div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
       ${walkAwayMode.enabled ? `
         <div id="handsFreeContinueStatus" style="background: linear-gradient(135deg, #e9d8fd 0%, #d6bcfa 100%); border: 2px solid #9f7aea; padding: 10px; border-radius: 10px; margin: 10px auto; max-width: 300px;">
           <p style="color: #6b46c1; font-size: 12px; margin: 0;">
@@ -27217,6 +27279,12 @@ function startMasteryPosPractice() {
  * Start mastery deck practice session
  */
 function startMasteryPractice() {
+  showSpeechDisclaimer(() => {
+    _startMasteryPracticeInternal();
+  });
+}
+
+function _startMasteryPracticeInternal() {
   if (masteryDeckWords.length === 0) {
     alert('No words in your mastery deck!');
     return;
@@ -28185,6 +28253,17 @@ function startDay1DrillSession() {
  * Start Leitner Review Session (for cards in other boxes that are due)
  */
 function startLeitnerReviewSession() {
+  if (swipeMode.enabled) {
+    _startLeitnerReviewSessionInternal();
+    return;
+  }
+  
+  showSpeechDisclaimer(() => {
+    _startLeitnerReviewSessionInternal();
+  });
+}
+
+function _startLeitnerReviewSessionInternal() {
   const todayStr = new Date().toISOString().split('T')[0];
   const dueCards = leitnerDueCards.filter(c => c.box > 1 && c.movedFromDay1Date !== todayStr);
 
@@ -28993,10 +29072,25 @@ function renderLeitnerDailyReview() {
 }
 
 /**
- * Start practicing Day 1 cards (unlimited practice for today)
- * Includes cards in box 1 AND cards moved from Day 1 today
+ * Start practicing Day 1 cards - wrapper with disclaimer
  */
 function startDay1Practice() {
+  if (swipeMode.enabled) {
+    // Swipe mode doesn't need voice disclaimer
+    _startDay1PracticeInternal();
+    return;
+  }
+  
+  showSpeechDisclaimer(() => {
+    _startDay1PracticeInternal();
+  });
+}
+
+/**
+ * Internal: Start practicing Day 1 cards (unlimited practice for today)
+ * Includes cards in box 1 AND cards moved from Day 1 today
+ */
+function _startDay1PracticeInternal() {
   const todayStr = new Date().toISOString().split('T')[0];
   const day1Cards = leitnerCards.filter(c => c.box === 1);
   const movedTodayCards = leitnerCards.filter(c => c.box === 2 && c.movedFromDay1Date === todayStr);
@@ -29233,7 +29327,7 @@ function showNextLeitnerCard() {
 
       <!-- Flashcard -->
       <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''} style="position: relative;">
-        ${card.box === 1 && !card.day1Intervals?.first ? `
+        ${card.box === 1 && !card.day1Intervals?.first && window.currentDay1Interval !== 'thirtyMin' && window.currentDay1Interval !== 'twoHours' && window.currentDay1Interval !== 'beforeSleep' ? `
         <button onclick="event.stopPropagation(); openLeitnerEditModal('${card.id}')" 
           style="position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; background: #f97316; border: none; border-radius: 6px; color: white; font-size: 14px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;"
           title="Edit card before first practice">✏️</button>
@@ -30055,7 +30149,9 @@ function practiceAgain() {
 function exitLeitnerReview() {
   stopLeitnerTimer();
   stopLeitnerRecognition();
-  renderLeitnerDailyReview();
+  
+  // Switch back to the calendar page with the brains
+  switchTab('leitnerBoxes');
 }
 
 /**
@@ -30644,9 +30740,23 @@ function startBoxPractice(boxNum) {
 }
 
 /**
- * Start review for a specific box's due cards
+ * Start review for a specific box's due cards - wrapper with disclaimer
  */
 function startBoxSpecificReview(boxNum, dueCards) {
+  if (swipeMode.enabled) {
+    _startBoxSpecificReviewInternal(boxNum, dueCards);
+    return;
+  }
+  
+  showSpeechDisclaimer(() => {
+    _startBoxSpecificReviewInternal(boxNum, dueCards);
+  });
+}
+
+/**
+ * Internal: Start review for a specific box's due cards
+ */
+function _startBoxSpecificReviewInternal(boxNum, dueCards) {
   switchTab('leitnerReview');
 
   currentLeitnerQueue = [...dueCards].sort(() => Math.random() - 0.5);
@@ -36925,6 +37035,12 @@ function updateAllInOneBadge() {
  * Start the all-in-one session
  */
 async function startAllInOneSession() {
+  showSpeechDisclaimer(() => {
+    _startAllInOneSessionInternal();
+  });
+}
+
+async function _startAllInOneSessionInternal() {
   allInOneState = {
     isActive: true,
     currentPhase: null,
