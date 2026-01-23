@@ -2846,7 +2846,7 @@ body.light-mode .main-content-area .form-group label {
 .leitner-flashcard-inner {
   position: relative;
   width: 100%;
-  height: 280px;
+  min-height: 280px;
   transform-style: preserve-3d;
   transition: transform 0.6s;
 }
@@ -2858,7 +2858,7 @@ body.light-mode .main-content-area .form-group label {
 .leitner-flashcard-face {
   position: absolute;
   width: 100%;
-  height: 100%;
+  min-height: 280px;
   backface-visibility: hidden;
   border-radius: 16px;
   display: flex;
@@ -2867,6 +2867,8 @@ body.light-mode .main-content-area .form-group label {
   justify-content: center;
   padding: 30px;
   box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .leitner-flashcard-front {
@@ -29283,7 +29285,7 @@ function showNextLeitnerCard() {
         <div class="leitner-flashcard-inner">
           <div class="leitner-flashcard-face leitner-flashcard-front">
             <div style="font-size: 14px; opacity: 0.8; margin-bottom: 15px;">${swipeMode.enabled ? '👆 Tap to reveal answer:' : '🎤 Say this in Korean:'}</div>
-            <div style="font-size: 38px; font-weight: bold;">${card.english}</div>
+            <div style="font-size: ${card.english.length > 80 ? '20px' : card.english.length > 50 ? '24px' : card.english.length > 30 ? '28px' : '38px'}; font-weight: bold; line-height: 1.3; text-align: center; word-wrap: break-word; max-width: 100%;">${card.english}</div>
             ${!swipeMode.enabled ? `
             <div id="leitnerListeningIndicator" style="margin-top: 30px;">
               <div class="listening-pulse" style="width: 60px; height: 60px; background: #48bb78; border-radius: 50%; margin: 0 auto; animation: leitnerPulse 1.5s infinite;"></div>
@@ -29297,7 +29299,7 @@ function showNextLeitnerCard() {
           </div>
           <div class="leitner-flashcard-face leitner-flashcard-back">
             <div style="font-size: 14px; color: #718096; margin-bottom: 15px;">Correct answer:</div>
-            <div style="font-size: 42px; font-weight: bold; color: #667eea;">${card.korean}</div>
+            <div style="font-size: ${card.korean.length > 40 ? '24px' : card.korean.length > 20 ? '32px' : '42px'}; font-weight: bold; color: #667eea; line-height: 1.3; text-align: center; word-wrap: break-word; max-width: 100%;">${card.korean}</div>
             <div id="leitnerYourAnswer" style="margin-top: 20px; font-size: 14px; color: #718096;"></div>
           </div>
         </div>
