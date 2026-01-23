@@ -28,6 +28,7 @@ body {
   background-size: auto;
   min-height: 100vh;
   color: #333;
+  overflow-x: hidden;
 }
 
 /* Login page background - same as body now */
@@ -2688,6 +2689,29 @@ body.light-mode .main-content-area .form-group label {
   .brain-popup {
     max-height: calc(100vh - 160px);
     margin-bottom: 80px;
+  }
+  
+  #dailyDrillStatsBar {
+    display: none !important;
+  }
+  
+  #dailyCorrectionsOverlay {
+    overflow-x: hidden !important;
+  }
+  
+  #dailyCorrectionsOverlay > div {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+  
+  #teacherFeedbackGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 769px) {
+  #teacherFeedbackGrid {
+    grid-template-columns: 1fr 1fr !important;
   }
 }
 
@@ -15859,37 +15883,37 @@ body.light-mode .mobile-badge-name {
           </div>
         </div>
 
-        <div class="daily-corrections-overlay" id="dailyCorrectionsOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); z-index: 5000; overflow-y: auto; padding-bottom: 100px;">
+        <div class="daily-corrections-overlay" id="dailyCorrectionsOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); z-index: 5000; overflow-y: auto; overflow-x: hidden; padding-bottom: 100px;">
 
-          <div style="position: sticky; top: 0; background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 10;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-              <button onclick="closeDailyCorrectionsPage()" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 20px; cursor: pointer;">←</button>
+          <div style="position: sticky; top: 0; background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 10; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="closeDailyCorrectionsPage()" style="width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; cursor: pointer;">←</button>
               <div>
-                <div style="font-size: 20px; font-weight: 700; color: white;">🎬 Daily Corrections</div>
-                <div style="font-size: 13px; color: #a0aec0;">Practice your pronunciation drills</div>
+                <div style="font-size: 16px; font-weight: 700; color: white;">🎬 Daily Corrections</div>
+                <div style="font-size: 11px; color: #a0aec0;">Practice your pronunciation drills</div>
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <button onclick="navigateDailyCorrectionsDate(-1)" style="width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; cursor: pointer;">◀</button>
-              <div id="dailyDrillsDate" style="color: #a78bfa; font-size: 14px; min-width: 180px; text-align: center; font-weight: 600;"></div>
-              <button onclick="navigateDailyCorrectionsDate(1)" style="width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; cursor: pointer;">▶</button>
-              <button onclick="goToTodayCorrections()" style="padding: 8px 12px; background: rgba(167, 139, 250, 0.2); border: 1px solid rgba(167, 139, 250, 0.4); border-radius: 8px; color: #a78bfa; font-size: 12px; cursor: pointer; margin-left: 10px;">Today</button>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button onclick="navigateDailyCorrectionsDate(-1)" style="width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 14px; cursor: pointer;">◀</button>
+              <div id="dailyDrillsDate" style="color: #a78bfa; font-size: 12px; min-width: 120px; text-align: center; font-weight: 600;"></div>
+              <button onclick="navigateDailyCorrectionsDate(1)" style="width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 14px; cursor: pointer;">▶</button>
+              <button onclick="goToTodayCorrections()" style="padding: 6px 10px; background: rgba(167, 139, 250, 0.2); border: 1px solid rgba(167, 139, 250, 0.4); border-radius: 8px; color: #a78bfa; font-size: 11px; cursor: pointer;">Today</button>
             </div>
           </div>
 
-          <div style="padding: 20px; max-width: 1100px; margin: 0 auto;">
+          <div style="padding: 15px; max-width: 100%; margin: 0 auto; box-sizing: border-box;">
 
-            <div style="background: linear-gradient(135deg, rgba(246, 135, 179, 0.15), rgba(167, 139, 250, 0.15)); border: 2px solid rgba(246, 135, 179, 0.3); border-radius: 16px; padding: 25px; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, rgba(246, 135, 179, 0.15), rgba(167, 139, 250, 0.15)); border: 2px solid rgba(246, 135, 179, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <span style="font-size: 24px;">📹</span>
                 <div>
-                  <div style="font-size: 18px; font-weight: 600; color: #f687b3;">Teacher Feedback</div>
+                  <div style="font-size: 16px; font-weight: 600; color: #f687b3;">Teacher Feedback</div>
                   <div id="latestCorrectionDate" style="font-size: 12px; color: #a0aec0;"></div>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div id="teacherFeedbackGrid" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
 
                 <div>
                   <div id="latestVideoContainer" style="background: #1a202c; border-radius: 12px; overflow: hidden; min-height: 250px; display: flex; align-items: center; justify-content: center;">
@@ -16019,7 +16043,7 @@ body.light-mode .mobile-badge-name {
               </div>
             </div>
 
-            <div style="padding: 15px 20px; background: rgba(0,0,0,0.2); display: flex; justify-content: space-around; text-align: center;">
+            <div id="dailyDrillStatsBar" style="padding: 15px 20px; background: rgba(0,0,0,0.2); display: flex; justify-content: space-around; text-align: center;">
               <div>
                 <div id="dailyDrillCorrectCount" style="font-size: 24px; font-weight: bold; color: #48bb78;">0</div>
                 <div style="font-size: 11px; color: #68d391;">Correct</div>
@@ -21449,59 +21473,8 @@ function initializeSpeechRecognition() {
     if (currentWordIndex < currentGameWords.length) {
       const currentWord = currentGameWords[currentWordIndex];
 
-      const normalizeKorean = (str) => {
-        return str
-          .replace(/\s+/g, '')
-          .replace(/[.,!?~～·。'"'""]/g, '')
-          // Convert Korean number words to digits (Sino-Korean)
-          .replace(/영/g, '0')
-          .replace(/일/g, '1')
-          .replace(/이/g, '2')
-          .replace(/삼/g, '3')
-          .replace(/사/g, '4')
-          .replace(/오/g, '5')
-          .replace(/육/g, '6')
-          .replace(/칠/g, '7')
-          .replace(/팔/g, '8')
-          .replace(/구/g, '9')
-          .replace(/십/g, '10')
-          .replace(/백/g, '100')
-          .replace(/천/g, '1000')
-          // Convert Native Korean numbers to digits
-          .replace(/하나/g, '1')
-          .replace(/둘/g, '2')
-          .replace(/셋/g, '3')
-          .replace(/넷/g, '4')
-          .replace(/다섯/g, '5')
-          .replace(/여섯/g, '6')
-          .replace(/일곱/g, '7')
-          .replace(/여덟/g, '8')
-          .replace(/아홉/g, '9')
-          .replace(/열/g, '10')
-          // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
-          .replace(/ㅐ/g, 'ㅔ')
-          .replace(/애/g, '에')
-          .replace(/새/g, '세')
-          .replace(/배/g, '베')
-          .replace(/대/g, '데')
-          .replace(/래/g, '레')
-          .replace(/매/g, '메')
-          .replace(/재/g, '제')
-          .replace(/채/g, '체')
-          .replace(/개/g, '게')
-          .replace(/내/g, '네')
-          .replace(/태/g, '테')
-          .replace(/패/g, '페')
-          .replace(/해/g, '헤')
-          .replace(/깨/g, '께')
-          .replace(/때/g, '떼')
-          .replace(/빼/g, '뻬')
-          .replace(/싸/g, '쎄')
-          .replace(/짜/g, '쩨');
-      };
-
-      const normalizedTranscript = normalizeKorean(transcript);
-      const koreanWord = normalizeKorean(currentWord.korean);
+      const normalizedTranscript = normalizeKoreanForVoice(transcript);
+      const koreanWord = normalizeKoreanForVoice(currentWord.korean);
 
 
       const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
@@ -25583,23 +25556,9 @@ function showJunbiPage() {
 
   const wordListBody = document.getElementById('junbiWordList');
   wordListBody.innerHTML = currentFlashcardSet.wordPairs.map((word, index) => {
-    const hasAIData = word.aiData && word.aiData.wordData && word.aiData.wordData.length > 0;
-
+    // Always use the original Korean text for display
+    // AI data is only used for hover definitions, not for display text
     let koreanCell = word.korean;
-    if (hasAIData) {
-      const koreanWords = word.aiData.wordData;
-      koreanCell = koreanWords.map((w, wIndex) => {
-        return `<span class="clickable-word"
-                      data-word="${encodeURIComponent(JSON.stringify(w))}"
-                      data-phrase-index="${index}"
-                      data-word-index="${wIndex}"
-                      onmouseenter="showWordHover(event, this)"
-                      onmouseleave="hideWordHover()"
-                      style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; border-bottom: 2px dotted rgba(102,126,234,0.4);"
-                      onmouseover="this.style.background='rgba(102,126,234,0.2)'"
-                      onmouseout="this.style.background='transparent'">${w.word}</span>`;
-      }).join(' ');
-    }
 
     let englishCell = word.english;
 
@@ -25863,7 +25822,7 @@ function normalizeKoreanForVoice(str) {
     .replace(/십/g, '10')
     .replace(/백/g, '100')
     .replace(/천/g, '1000')
-    // Convert Native Korean numbers to digits
+    // Convert Native Korean numbers to digits (full forms)
     .replace(/하나/g, '1')
     .replace(/둘/g, '2')
     .replace(/셋/g, '3')
@@ -25874,6 +25833,13 @@ function normalizeKoreanForVoice(str) {
     .replace(/여덟/g, '8')
     .replace(/아홉/g, '9')
     .replace(/열/g, '10')
+    .replace(/스물/g, '20')
+    // Convert bound/counter forms (한, 두, 세, 네, 스무 before counters)
+    .replace(/한(?=[개명번살시장마리권병잔벌채그루송이바퀴켤레])/g, '1')
+    .replace(/두(?=[개명번살시장마리권병잔벌채그루송이바퀴켤레])/g, '2')
+    .replace(/세(?=[개명번살시장마리권병잔벌채그루송이바퀴켤레])/g, '3')
+    .replace(/네(?=[개명번살시장마리권병잔벌채그루송이바퀴켤레])/g, '4')
+    .replace(/스무(?=[개명번살시장마리권병잔벌채그루송이바퀴켤레])/g, '20')
     // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
     .replace(/ㅐ/g, 'ㅔ')
     .replace(/애/g, '에')
@@ -26034,6 +26000,13 @@ function skipFlashcardWordCompletely() {
   
   clearInterval(flashcardTimer);
   
+  // Stop recognition temporarily
+  if (recognition && isListening) {
+    try {
+      recognition.stop();
+    } catch (e) {}
+  }
+  
   const index = currentWordIndex;
   
   // Mark visually as skipped
@@ -26075,16 +26048,20 @@ function skipFlashcardWordCompletely() {
   currentWordIndex++;
   if (currentWordIndex < currentGameWords.length) {
     highlightCurrentWord();
-    setTimeout(() => startWordTimer(), 1500);
+    setTimeout(() => {
+      // Restart recognition for next word
+      if (recognition && !swipeMode.enabled) {
+        try {
+          recognition.start();
+          isListening = true;
+        } catch (e) {}
+      }
+      startWordTimer();
+    }, 1500);
   } else {
-    // Check if game is complete (all original words done and no missed words to review)
-    const totalSets = Math.ceil(currentFlashcardSet.wordPairs.length / 5);
-    const allOriginalWordsDone = currentSetIndex >= totalSets - 1;
-    if (allOriginalWordsDone && missedWords.length === 0) {
-      setTimeout(() => showRoundResults(), 500);
-    } else {
-      setTimeout(() => showRoundResults(), 500);
-    }
+    // All words in this set done, show results
+    isListening = false;
+    setTimeout(() => showRoundResults(), 500);
   }
 }
 
@@ -26142,7 +26119,7 @@ function showSpeechDisclaimer(onProceed) {
         <ul style="margin: 0; padding-left: 20px;">
           <li style="margin-bottom: 8px;">Speaking too slowly or unclear pronunciation may not be marked correct</li>
           <li style="margin-bottom: 8px;">Background noise can interfere with recognition</li>
-          <li>🎧 <strong>Use headphones</strong> for the best experience</li>
+          <li>🎧 <strong>Use headphones with a dedicated external microphone</strong> for the best experience</li>
         </ul>
       </div>
       
@@ -26223,6 +26200,15 @@ function _startFlashcardRoundInternal() {
 function pauseFlashcardRound() {
   if (isListening) {
     clearInterval(flashcardTimer);
+    
+    // Stop speech recognition
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }
+    isListening = false;
+    
     document.getElementById('listeningIndicator').style.display = 'none';
     document.getElementById('startGameBtn').textContent = '🎤 Resume';
     document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
@@ -26231,6 +26217,14 @@ function pauseFlashcardRound() {
 
 function resumeFlashcardRound() {
   if (isFlashcardGameActive) {
+    // Restart speech recognition
+    if (recognition) {
+      try {
+        recognition.start();
+      } catch (e) {}
+    }
+    isListening = true;
+    
     document.getElementById('listeningIndicator').style.display = 'block';
     document.getElementById('startGameBtn').textContent = '⏸ Pause';
     document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
@@ -26441,7 +26435,7 @@ function showRoundResults() {
 
   if (isGameComplete) {
     document.getElementById('gameResults').style.display = 'block';
-    const finalPercentage = Math.round((totalGameCorrect / totalGameWords) * 100);
+    const finalPercentage = totalGameWords > 0 ? Math.round((totalGameCorrect / totalGameWords) * 100) : 0;
 
     let endGifHtml = '';
     if (currentGameAssets && currentGameAssets.endGifs) {
@@ -26474,7 +26468,7 @@ function showRoundResults() {
       </div>
       ${endGifHtml}
       ${newWordsAddedToLeitner > 0 ? `
-        <div onclick="exitFlashcardGame(); switchTab('leitnerBox');" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+        <div onclick="exitFlashcardGame(); switchTab('leitnerBoxes');" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="font-size: 28px;">📅</div>
             <div style="text-align: left;">
@@ -27342,59 +27336,8 @@ function initializeMasterySpeechRecognition() {
     if (masteryWordIndex < currentMasteryWords.length) {
       const currentWord = currentMasteryWords[masteryWordIndex];
 
-      const normalizeKorean = (str) => {
-        return str
-          .replace(/\s+/g, '')
-          .replace(/[.,!?~～·。'"'""]/g, '')
-          // Convert Korean number words to digits (Sino-Korean)
-          .replace(/영/g, '0')
-          .replace(/일/g, '1')
-          .replace(/이/g, '2')
-          .replace(/삼/g, '3')
-          .replace(/사/g, '4')
-          .replace(/오/g, '5')
-          .replace(/육/g, '6')
-          .replace(/칠/g, '7')
-          .replace(/팔/g, '8')
-          .replace(/구/g, '9')
-          .replace(/십/g, '10')
-          .replace(/백/g, '100')
-          .replace(/천/g, '1000')
-          // Convert Native Korean numbers to digits
-          .replace(/하나/g, '1')
-          .replace(/둘/g, '2')
-          .replace(/셋/g, '3')
-          .replace(/넷/g, '4')
-          .replace(/다섯/g, '5')
-          .replace(/여섯/g, '6')
-          .replace(/일곱/g, '7')
-          .replace(/여덟/g, '8')
-          .replace(/아홉/g, '9')
-          .replace(/열/g, '10')
-          // Treat ㅔ/ㅐ as equivalent (세/새, 에/애, etc.)
-          .replace(/ㅐ/g, 'ㅔ')
-          .replace(/애/g, '에')
-          .replace(/새/g, '세')
-          .replace(/배/g, '베')
-          .replace(/대/g, '데')
-          .replace(/래/g, '레')
-          .replace(/매/g, '메')
-          .replace(/재/g, '제')
-          .replace(/채/g, '체')
-          .replace(/개/g, '게')
-          .replace(/내/g, '네')
-          .replace(/태/g, '테')
-          .replace(/패/g, '페')
-          .replace(/해/g, '헤')
-          .replace(/깨/g, '께')
-          .replace(/때/g, '떼')
-          .replace(/빼/g, '뻬')
-          .replace(/싸/g, '쎄')
-          .replace(/짜/g, '쩨');
-      };
-
-      const normalizedTranscript = normalizeKorean(transcript);
-      const koreanWord = normalizeKorean(currentWord.korean);
+      const normalizedTranscript = normalizeKoreanForVoice(transcript);
+      const koreanWord = normalizeKoreanForVoice(currentWord.korean);
 
 
       const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
@@ -30721,7 +30664,7 @@ function showLeitnerBoxDetail(boxNum) {
 function startBoxPractice(boxNum) {
 
   if (boxNum === 8) {
-    alert('🎉 These words are mastered! No practice needed - they\'re in your long-term memory.');
+    // Box 8 cards are mastered - just return silently
     return;
   }
 
@@ -45061,10 +45004,13 @@ async function loadDailyActivities(filter = 'all') {
       if (filter === 'published' && !isPublished) return;
       if (filter === 'past' && !isPast) return;
 
+      // Format scheduled time for display in EST (New York)
+      const scheduledTimeStr = isScheduled ? publishDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York' }) + ' EST' : '';
+
       const statusBadge = isPast
         ? '<span style="background:#e2e8f0;color:#4a5568;padding:4px 12px;border-radius:12px;font-size:12px">Past</span>'
         : isScheduled
-          ? '<span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:12px;font-size:12px">Scheduled</span>'
+          ? `<span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:12px;font-size:12px">📅 Scheduled for ${scheduledTimeStr}</span>`
           : '<span style="background:#c6f6d5;color:#276749;padding:4px 12px;border-radius:12px;font-size:12px">Live</span>';
 
       const date = publishDate.toLocaleDateString();
@@ -51042,6 +50988,14 @@ async function loadLatestVideoCorrection() {
 }
 
 async function loadDailyActivityDrills() {
+  // Reload drills for the currently selected date in daily corrections
+  if (dailyCorrectionsSelectedDate) {
+    await loadDrillsForDate(dailyCorrectionsSelectedDate);
+  } else {
+    // If no date selected, use today
+    const today = new Date().toISOString().split('T')[0];
+    await loadDrillsForDate(today);
+  }
 }
 
 function renderHoverableKoreanTranscript(transcript) {
@@ -52175,6 +52129,71 @@ function closeDailyDrillPopup() {
   }
 
   document.getElementById('dailyDrillPopup').style.display = 'none';
+  
+  // Restore the popup HTML to original state for next drill
+  const popup = document.getElementById('dailyDrillPopup');
+  popup.querySelector('div > div').innerHTML = `
+    <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div id="dailyDrillPopupTitle" style="font-size: 18px; font-weight: 700; color: white;">Pronunciation Drill</div>
+        <div id="dailyDrillPopupSubtitle" style="font-size: 13px; color: rgba(255,255,255,0.8);"></div>
+      </div>
+      <button onclick="closeDailyDrillPopup()" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+
+    <div style="padding: 15px 20px; background: rgba(0,0,0,0.2);">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #a0aec0;">
+        <span id="dailyDrillWordCount">Word 1 of 20</span>
+        <span id="dailyDrillRepCount">One-time practice</span>
+      </div>
+      <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+        <div id="dailyDrillProgressBar" style="height: 100%; width: 0%; background: linear-gradient(135deg, #48bb78, #38a169); transition: width 0.3s;"></div>
+      </div>
+    </div>
+
+    <div style="padding: 30px; text-align: center;">
+      <div id="dailyDrillCard" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2)); border: 2px solid rgba(102, 126, 234, 0.4); border-radius: 16px; padding: 40px; margin-bottom: 25px; position: relative;">
+        <button id="dailyDrillAudioBtn" onclick="playDailyDrillAudio()" style="position: absolute; top: 15px; right: 15px; width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Listen to pronunciation">
+          🔊
+        </button>
+        <div id="dailyDrillWord" style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 10px;">가방</div>
+        <div id="dailyDrillMeaning" style="font-size: 16px; color: #a0aec0;">bag</div>
+      </div>
+
+      <div id="dailyDrillVoiceStatus" style="margin-bottom: 20px;">
+        <div id="dailyDrillListeningIndicator" style="color: #f56565; font-size: 16px; margin-bottom: 10px;">
+          <span class="pulse-dot" style="display: inline-block; width: 12px; height: 12px; background: #f56565; border-radius: 50%; margin-right: 8px; animation: pulse 1s infinite;"></span>
+          <span id="dailyDrillListeningText">Listening... Say the word!</span>
+        </div>
+        <div id="dailyDrillRecognizedText" style="color: #68d391; font-size: 18px; min-height: 30px;"></div>
+      </div>
+
+      <div id="dailyDrillFeedback" style="display: none; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+        <div id="dailyDrillFeedbackText" style="font-size: 16px; font-weight: 600;"></div>
+      </div>
+
+      <div style="display: flex; gap: 15px; justify-content: center;">
+        <button id="dailyDrillSkipBtn" onclick="skipDailyDrillWord()" style="padding: 15px 25px; background: rgba(255,255,255,0.1); color: #a0aec0; border: 1px solid rgba(255,255,255,0.2); border-radius: 25px; font-size: 14px; cursor: pointer;">
+          Skip →
+        </button>
+      </div>
+    </div>
+
+    <div id="dailyDrillStatsBar" style="padding: 15px 20px; background: rgba(0,0,0,0.2); display: flex; justify-content: space-around; text-align: center;">
+      <div>
+        <div id="dailyDrillCorrectCount" style="font-size: 24px; font-weight: bold; color: #48bb78;">0</div>
+        <div style="font-size: 11px; color: #68d391;">Correct</div>
+      </div>
+      <div>
+        <div id="dailyDrillTotalCount" style="font-size: 24px; font-weight: bold; color: #a0aec0;">0</div>
+        <div style="font-size: 11px; color: #718096;">Total</div>
+      </div>
+      <div>
+        <div id="dailyDrillAccuracy" style="font-size: 24px; font-weight: bold; color: #667eea;">0%</div>
+        <div style="font-size: 11px; color: #a78bfa;">Accuracy</div>
+      </div>
+    </div>
+  `;
 
   dailyDrillPopupState = {
     drillId: null,
