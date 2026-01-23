@@ -59237,25 +59237,8 @@ function populateMyCardsJunbi() {
   }
 
   tbody.innerHTML = cards.map((card, index) => {
-    const hasAIData = card.aiData && card.aiData.wordData && card.aiData.wordData.length > 0;
-
+    // Always use the original Korean text for display
     let koreanCell = card.korean || '';
-    if (hasAIData) {
-      koreanCell = card.aiData.wordData.map(w => {
-        const wordJson = encodeURIComponent(JSON.stringify({
-          ...w,
-          sourceSetId: card.folderId,
-          sourceSetTitle: 'My Flashcards'
-        }));
-        return `<span class="junbi-hoverable-word"
-                      data-word="${wordJson}"
-                      onmouseenter="showWordHover(event, this)"
-                      onmouseleave="hideWordHover()"
-                      style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; border-bottom: 2px dotted rgba(102,126,234,0.4);"
-                      onmouseover="this.style.background='rgba(102,126,234,0.2)'"
-                      onmouseout="this.style.background='transparent'">${w.word}</span>`;
-      }).join(' ');
-    }
 
     const boxColors = ['#c53030', '#c05621', '#975a16', '#276749', '#2b6cb0'];
     const boxColor = boxColors[Math.min((card.leitnerBox || 1) - 1, 4)];
@@ -59516,26 +59499,10 @@ function renderReviewTable() {
   }
 
   tbody.innerHTML = currentReviewCards.map((card, index) => {
-    const hasAIData = card.aiData && card.aiData.wordData && card.aiData.wordData.length > 0;
     const isSelected = selectedReviewCards.has(card.id);
 
+    // Always use the original Korean text for display
     let koreanCell = card.korean || '';
-    if (hasAIData) {
-      koreanCell = card.aiData.wordData.map(w => {
-        const wordJson = encodeURIComponent(JSON.stringify({
-          ...w,
-          sourceSetId: currentReviewFolderId,
-          sourceSetTitle: 'My Flashcards'
-        }));
-        return `<span class="review-hoverable-word"
-                      data-word="${wordJson}"
-                      onmouseenter="showWordHover(event, this)"
-                      onmouseleave="hideWordHover()"
-                      style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; border-bottom: 2px dotted rgba(102,126,234,0.4);"
-                      onmouseover="this.style.background='rgba(102,126,234,0.2)'"
-                      onmouseout="this.style.background='transparent'">${w.word}</span>`;
-      }).join(' ');
-    }
 
     const boxColors = ['#c53030', '#c05621', '#975a16', '#276749', '#2b6cb0'];
     const boxColor = boxColors[Math.min((card.leitnerBox || 1) - 1, 4)];
