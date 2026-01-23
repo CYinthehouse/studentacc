@@ -51465,6 +51465,9 @@ async function startDailyDrill(drillId) {
       words: drillWords,
       currentWordIndex: 0,
       correctCount: 0,
+      firstTryCorrectCount: 0,  // Track first-try correct for percentage/GIF
+      firstTryCorrectInSet: 0,  // Track first-try correct in current set
+      wordAttempted: {},        // Track which words have been attempted (by index)
       totalAttempts: 0,
       recognition: null,
       isListening: false,
@@ -51499,6 +51502,9 @@ let dailyDrillPopupState = {
   words: [],
   currentWordIndex: 0,
   correctCount: 0,
+  firstTryCorrectCount: 0,  // Track first-try correct for percentage/GIF
+  firstTryCorrectInSet: 0,  // Track first-try correct in current set
+  wordAttempted: {},        // Track which words have been attempted (by index)
   totalAttempts: 0,
   recognition: null,
   isListening: false,
@@ -51689,26 +51695,30 @@ function showSetCompletionCelebration(correctInSet) {
   const state = dailyDrillPopupState;
   const assets = state.gameAssets;
 
+  // Use firstTryCorrectInSet for set results (strict scoring)
   state.setResults.push({
-    correct: correctInSet,
+    correct: state.firstTryCorrectInSet,
     total: 5
   });
 
   const isLastSet = state.currentWordIndex >= 19;
 
+  // Show celebration based on first-try correct count
+  const firstTryCorrect = state.firstTryCorrectInSet;
+  
   const celebrationHtml = `
     <div id="setCompletionOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;
                 background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center;
                 justify-content: center; z-index: 100; animation: fadeIn 0.3s ease;">
-      ${assets?.perfectImage && correctInSet === 5 ? `
+      ${assets?.perfectImage && firstTryCorrect === 5 ? `
         <img src="${assets.perfectImage}" style="max-width: 200px; max-height: 200px; margin-bottom: 20px; animation: bounceIn 0.5s ease;">
       ` : `
         <div style="font-size: 80px; margin-bottom: 20px; animation: bounceIn 0.5s ease;">
-          ${correctInSet === 5 ? '🎉' : correctInSet >= 3 ? '👍' : '💪'}
+          ${firstTryCorrect === 5 ? '🎉' : firstTryCorrect >= 3 ? '👍' : '💪'}
         </div>
       `}
-      <div style="font-size: 28px; font-weight: bold; color: ${correctInSet === 5 ? '#48bb78' : '#fbbf24'}; margin-bottom: 10px;">
-        ${correctInSet === 5 ? 'PERFECT SET!' : `${correctInSet}/5 Correct!`}
+      <div style="font-size: 28px; font-weight: bold; color: ${firstTryCorrect === 5 ? '#48bb78' : '#fbbf24'}; margin-bottom: 10px;">
+        ${firstTryCorrect === 5 ? 'PERFECT SET!' : `${firstTryCorrect}/5 Correct!`}
       </div>
       <div style="font-size: 16px; color: #a0aec0; margin-bottom: 25px;">
         Set ${state.setResults.length} Complete
@@ -51725,7 +51735,7 @@ function showSetCompletionCelebration(correctInSet) {
   overlay.innerHTML = celebrationHtml;
   popup.querySelector('div').appendChild(overlay.firstElementChild);
 
-  if (correctInSet === 5) {
+  if (firstTryCorrect === 5) {
     createDailyDrillConfetti();
   }
 }
@@ -51737,6 +51747,7 @@ function continueAfterSetCelebration() {
   if (overlay) overlay.remove();
 
   state.correctInCurrentSet = 0;
+  state.firstTryCorrectInSet = 0;
 
   if (state.currentWordIndex >= state.words.length - 1) {
     finishDailyDrill();
@@ -51832,7 +51843,7 @@ function startDailyDrillListening() {
         }
       }
 
-      if (!isCorrect && bestSimilarity >= 0.95) {
+      if (!isCorrect && bestSimilarity >= 0.98) {
         isCorrect = true;
       }
 
@@ -51842,6 +51853,19 @@ function startDailyDrillListening() {
       if (isCorrect) {
         state.correctCount++;
         state.correctInCurrentSet++;
+
+        // Check if this is a first-try correct (word hasn't been attempted before)
+        const isFirstTry = !state.wordAttempted[state.currentWordIndex];
+        if (isFirstTry) {
+          state.firstTryCorrectCount++;
+          state.firstTryCorrectInSet++;
+        }
+        
+        // Mark this word as attempted
+        state.wordAttempted[state.currentWordIndex] = true;
+
+        // Award 3 coins for correct answer (even if not first try)
+        awardCoinsWithPopup(3);
 
         playDailyDrillCorrectSound(state.correctInCurrentSet);
 
@@ -51858,6 +51882,9 @@ function startDailyDrillListening() {
         }
 
       } else {
+        // Mark this word as attempted (they got it wrong)
+        state.wordAttempted[state.currentWordIndex] = true;
+        
         playDrillSound('incorrect');
 
         const listeningText = document.getElementById('dailyDrillListeningText');
@@ -52046,7 +52073,8 @@ async function finishDailyDrill() {
       lastStudyDate: dateKey
     }, { merge: true });
 
-    const percentage = state.words.length > 0 ? Math.round((state.correctCount / state.words.length) * 100) : 0;
+    // Use firstTryCorrectCount for percentage/GIF (strict scoring)
+    const percentage = state.words.length > 0 ? Math.round((state.firstTryCorrectCount / state.words.length) * 100) : 0;
 
     let tierIndex = 0;
     if (percentage <= 50) tierIndex = 0;
@@ -52083,7 +52111,7 @@ async function finishDailyDrill() {
           ${percentage}%
         </div>
         <div style="font-size: 16px; color: #a0aec0; margin-bottom: 20px;">
-          ${state.correctCount}/${state.words.length} words correct
+          ${state.firstTryCorrectCount}/${state.words.length} words correct on first try
         </div>
 
         <!-- Set Results Summary -->
@@ -52201,6 +52229,9 @@ function closeDailyDrillPopup() {
     words: [],
     currentWordIndex: 0,
     correctCount: 0,
+    firstTryCorrectCount: 0,
+    firstTryCorrectInSet: 0,
+    wordAttempted: {},
     totalAttempts: 0,
     recognition: null,
     isListening: false,
