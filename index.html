@@ -51810,6 +51810,7 @@ function startDailyDrillListening() {
       const resultIndex = event.results.length - 1;
       const results = event.results[resultIndex];
       let recognized = results[0].transcript.trim();
+      let recognizedConfidence = results[0].confidence || 0;
 
       const recognizedEl = document.getElementById('dailyDrillRecognizedText');
       if (recognizedEl) recognizedEl.textContent = recognized;
@@ -51824,14 +51825,21 @@ function startDailyDrillListening() {
 
       let isCorrect = false;
       let bestSimilarity = 0;
+      let bestConfidence = 0;
+
+      // Minimum confidence threshold - below this, pronunciation is "unclear"
+      const MIN_CONFIDENCE = 0.85;
 
       for (let i = 0; i < results.length; i++) {
         const alt = results[i].transcript.trim();
+        const altConfidence = results[i].confidence || 0;
         const normalizedAlt = normalizeKoreanForDrillComparison(alt);
 
         if (normalizedAlt === normalizedTarget) {
           recognized = alt;
-          isCorrect = true;
+          recognizedConfidence = altConfidence;
+          bestConfidence = altConfidence;
+          isCorrect = true;  // Text matches - they pass
           bestSimilarity = 1.0;
           break;
         }
@@ -51839,48 +51847,75 @@ function startDailyDrillListening() {
         const similarity = calculateSimilarity(normalizedAlt, normalizedTarget);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
+          bestConfidence = altConfidence;
           recognized = alt;
+          recognizedConfidence = altConfidence;
         }
       }
 
-      // Only exact matches pass - no similarity threshold fallback
-      // isCorrect is already set to true above if normalizedAlt === normalizedTarget
+      // Check if text matched but confidence was too low (unclear pronunciation)
+      const textMatched = bestSimilarity === 1.0;
+      const confidenceTooLow = textMatched && bestConfidence < MIN_CONFIDENCE;
 
 
       state.totalAttempts++;
 
       if (isCorrect) {
+        // Text matched - they pass, but check confidence for scoring
         state.correctCount++;
         state.correctInCurrentSet++;
 
-        // Check if this is a first-try correct (word hasn't been attempted before)
+        // Check if this is a first-try (word hasn't been attempted before)
         const isFirstTry = !state.wordAttempted[state.currentWordIndex];
+        
         if (isFirstTry) {
-          state.firstTryCorrectCount++;
-          state.firstTryCorrectInSet++;
+          if (confidenceTooLow) {
+            // Text matched but unclear pronunciation - count as 0.5 correct for grading
+            state.firstTryCorrectCount += 0.5;
+            state.firstTryCorrectInSet += 0.5;
+          } else {
+            // Clear pronunciation - full credit
+            state.firstTryCorrectCount++;
+            state.firstTryCorrectInSet++;
+          }
         }
         
         // Mark this word as attempted
         state.wordAttempted[state.currentWordIndex] = true;
 
-        // Award 3 coins for correct answer (even if not first try)
+        // Award 3 coins for correct answer (even if pronunciation unclear)
         awardCoinsWithPopup(3);
 
         playDailyDrillCorrectSound(state.correctInCurrentSet);
 
-        showDailyDrillFeedback(true, '✅ Perfect!');
-
         const wordInSet = (state.currentWordIndex % 5) + 1;
 
-        if (wordInSet === 5) {
-          showSetCompletionCelebration(state.correctInCurrentSet);
-        } else {
+        if (confidenceTooLow) {
+          // Show unclear pronunciation feedback, then advance after delay
+          showDailyDrillFeedback(false, `Pronunciation unclear (${Math.round(bestConfidence * 100)}%) - Speak more clearly!`);
+          
           setTimeout(() => {
-            advanceDailyDrill();
-          }, 600);
+            if (wordInSet === 5) {
+              showSetCompletionCelebration(Math.floor(state.firstTryCorrectInSet));
+            } else {
+              advanceDailyDrill();
+            }
+          }, 2000);  // 2 seconds to read the message
+        } else {
+          // Perfect pronunciation
+          showDailyDrillFeedback(true, '✅ Perfect!');
+
+          if (wordInSet === 5) {
+            showSetCompletionCelebration(Math.floor(state.firstTryCorrectInSet));
+          } else {
+            setTimeout(() => {
+              advanceDailyDrill();
+            }, 600);
+          }
         }
 
       } else {
+        // Text didn't match - they must try again
         // Mark this word as attempted (they got it wrong)
         state.wordAttempted[state.currentWordIndex] = true;
         
@@ -51888,6 +51923,7 @@ function startDailyDrillListening() {
 
         const listeningText = document.getElementById('dailyDrillListeningText');
         if (listeningText) listeningText.textContent = 'Try again...';
+        
         showDailyDrillFeedback(false, `You said: "${recognized}" - Try again!`);
 
         setTimeout(() => {
@@ -51896,7 +51932,7 @@ function startDailyDrillListening() {
           if (listeningText) listeningText.textContent = 'Listening... Say the word!';
           const recognizedEl = document.getElementById('dailyDrillRecognizedText');
           if (recognizedEl) recognizedEl.textContent = '';
-        }, 1500);
+        }, 2500);  // 2.5 seconds to read the message before listening again
       }
     };
 
