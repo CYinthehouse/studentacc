@@ -29463,8 +29463,8 @@ async function saveLeitnerCardEdit(cardId) {
   }
   
   try {
-    // Update in Firestore
-    await db.collection('pronunciationLeitner').doc(cardId).update({
+    // Update in Firestore - collection is leitnerProgress
+    await db.collection('leitnerProgress').doc(cardId).update({
       english: english,
       korean: korean,
       editedAt: firebase.firestore.FieldValue.serverTimestamp()
