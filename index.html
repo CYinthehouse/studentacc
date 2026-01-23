@@ -29270,9 +29270,9 @@ function showNextLeitnerCard() {
 
       <!-- Flashcard -->
       <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''} style="position: relative;">
-        ${card.box === 1 && !card.day1Intervals?.first && window.currentDay1Interval !== 'thirtyMin' && window.currentDay1Interval !== 'twoHours' && window.currentDay1Interval !== 'beforeSleep' ? `
+        ${card.box === 1 && !card.day1Intervals?.first && window.currentDay1Interval === 'first' ? `
         <button onclick="event.stopPropagation(); openLeitnerEditModal('${card.id}')" 
-          style="position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; background: #f97316; border: none; border-radius: 6px; color: white; font-size: 14px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;"
+          style="position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; background: #f97316; border: none; border-radius: 10px; color: white; font-size: 24px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);"
           title="Edit card before first practice">✏️</button>
         ` : ''}
         <div class="leitner-flashcard-inner">
