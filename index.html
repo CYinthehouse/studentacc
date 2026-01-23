@@ -51823,45 +51823,26 @@ function startDailyDrillListening() {
       const normalizedRecognized = normalizeKoreanForDrillComparison(recognized);
       const normalizedTarget = normalizeKoreanForDrillComparison(targetText);
 
-      let isCorrect = false;
-      let bestSimilarity = 0;
-      let bestConfidence = 0;
+      console.log(`[Drill Debug] Target: "${targetText}" -> Normalized: "${normalizedTarget}"`);
+      console.log(`[Drill Debug] Said: "${recognized}" -> Normalized: "${normalizedRecognized}"`);
+      console.log(`[Drill Debug] Confidence: ${recognizedConfidence}`);
+      console.log(`[Drill Debug] Exact match: ${normalizedRecognized === normalizedTarget}`);
+
+      // Only check the FIRST (best) result - do NOT loop through alternatives
+      // Google's alternatives often include the "correct" word even when mispronounced
+      const isCorrect = normalizedRecognized === normalizedTarget;
+      const bestConfidence = recognizedConfidence;
 
       // Minimum confidence threshold - below this, pronunciation is "unclear"
       const MIN_CONFIDENCE = 0.85;
-
-      for (let i = 0; i < results.length; i++) {
-        const alt = results[i].transcript.trim();
-        const altConfidence = results[i].confidence || 0;
-        const normalizedAlt = normalizeKoreanForDrillComparison(alt);
-
-        console.log(`[Drill Debug] Target: "${targetText}" -> Normalized: "${normalizedTarget}"`);
-        console.log(`[Drill Debug] Said: "${alt}" -> Normalized: "${normalizedAlt}"`);
-        console.log(`[Drill Debug] Exact match: ${normalizedAlt === normalizedTarget}`);
-
-        if (normalizedAlt === normalizedTarget) {
-          recognized = alt;
-          recognizedConfidence = altConfidence;
-          bestConfidence = altConfidence;
-          isCorrect = true;  // Text matches - they pass
-          bestSimilarity = 1.0;
-          break;
-        }
-
-        const similarity = calculateSimilarity(normalizedAlt, normalizedTarget);
-        if (similarity > bestSimilarity) {
-          bestSimilarity = similarity;
-          bestConfidence = altConfidence;
-          recognized = alt;
-          recognizedConfidence = altConfidence;
-        }
-      }
-
-      console.log(`[Drill Debug] Final isCorrect: ${isCorrect}, bestSimilarity: ${bestSimilarity}`);
-
+      
       // Check if text matched but confidence was too low (unclear pronunciation)
-      const textMatched = bestSimilarity === 1.0;
-      const confidenceTooLow = textMatched && bestConfidence < MIN_CONFIDENCE;
+      const confidenceTooLow = isCorrect && bestConfidence < MIN_CONFIDENCE;
+      
+      // For display, reduce confidence by 10% to show the warning more often
+      const displayConfidence = Math.max(0, bestConfidence - 0.10);
+
+      console.log(`[Drill Debug] Final isCorrect: ${isCorrect}, confidence: ${bestConfidence}`);
 
 
       state.totalAttempts++;
@@ -51898,7 +51879,7 @@ function startDailyDrillListening() {
 
         if (confidenceTooLow) {
           // Show unclear pronunciation feedback, then advance after delay
-          showDailyDrillFeedback(false, `Pronunciation unclear (${Math.round(bestConfidence * 100)}%) - Speak more clearly!`);
+          showDailyDrillFeedback(false, `Pronunciation unclear (${Math.round(displayConfidence * 100)}%) - Speak more clearly!`);
           
           setTimeout(() => {
             if (wordInSet === 5) {
@@ -51925,15 +51906,6 @@ function startDailyDrillListening() {
         // Mark this word as attempted (they got it wrong)
         state.wordAttempted[state.currentWordIndex] = true;
         
-        // STOP listening during feedback to prevent picking up more audio
-        state.shouldContinueListening = false;
-        if (state.recognition) {
-          try {
-            state.recognition.stop();
-          } catch(e) {}
-        }
-        state.isListening = false;
-        
         playDrillSound('incorrect');
 
         const listeningText = document.getElementById('dailyDrillListeningText');
@@ -51947,10 +51919,6 @@ function startDailyDrillListening() {
           if (listeningText) listeningText.textContent = 'Listening... Say the word!';
           const recognizedEl = document.getElementById('dailyDrillRecognizedText');
           if (recognizedEl) recognizedEl.textContent = '';
-          
-          // NOW restart listening after feedback is cleared
-          state.shouldContinueListening = true;
-          startDailyDrillListening();
         }, 2500);  // 2.5 seconds to read the message before listening again
       }
     };
