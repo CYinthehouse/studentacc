@@ -51925,6 +51925,15 @@ function startDailyDrillListening() {
         // Mark this word as attempted (they got it wrong)
         state.wordAttempted[state.currentWordIndex] = true;
         
+        // STOP listening during feedback to prevent picking up more audio
+        state.shouldContinueListening = false;
+        if (state.recognition) {
+          try {
+            state.recognition.stop();
+          } catch(e) {}
+        }
+        state.isListening = false;
+        
         playDrillSound('incorrect');
 
         const listeningText = document.getElementById('dailyDrillListeningText');
@@ -51938,6 +51947,10 @@ function startDailyDrillListening() {
           if (listeningText) listeningText.textContent = 'Listening... Say the word!';
           const recognizedEl = document.getElementById('dailyDrillRecognizedText');
           if (recognizedEl) recognizedEl.textContent = '';
+          
+          // NOW restart listening after feedback is cleared
+          state.shouldContinueListening = true;
+          startDailyDrillListening();
         }, 2500);  // 2.5 seconds to read the message before listening again
       }
     };
