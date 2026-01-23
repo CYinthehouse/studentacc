@@ -51835,6 +51835,10 @@ function startDailyDrillListening() {
         const altConfidence = results[i].confidence || 0;
         const normalizedAlt = normalizeKoreanForDrillComparison(alt);
 
+        console.log(`[Drill Debug] Target: "${targetText}" -> Normalized: "${normalizedTarget}"`);
+        console.log(`[Drill Debug] Said: "${alt}" -> Normalized: "${normalizedAlt}"`);
+        console.log(`[Drill Debug] Exact match: ${normalizedAlt === normalizedTarget}`);
+
         if (normalizedAlt === normalizedTarget) {
           recognized = alt;
           recognizedConfidence = altConfidence;
@@ -51852,6 +51856,8 @@ function startDailyDrillListening() {
           recognizedConfidence = altConfidence;
         }
       }
+
+      console.log(`[Drill Debug] Final isCorrect: ${isCorrect}, bestSimilarity: ${bestSimilarity}`);
 
       // Check if text matched but confidence was too low (unclear pronunciation)
       const textMatched = bestSimilarity === 1.0;
