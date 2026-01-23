@@ -29018,6 +29018,11 @@ function renderLeitnerDailyReview() {
  * Start practicing Day 1 cards - wrapper with disclaimer
  */
 function startDay1Practice() {
+  // Default to 'first' interval if not already set by practiceDay1Interval
+  if (!window.currentDay1Interval) {
+    window.currentDay1Interval = 'first';
+  }
+  
   if (swipeMode.enabled) {
     // Swipe mode doesn't need voice disclaimer
     _startDay1PracticeInternal();
@@ -29270,7 +29275,7 @@ function showNextLeitnerCard() {
 
       <!-- Flashcard -->
       <div class="leitner-flashcard" id="leitnerCard" ${swipeMode.enabled ? 'onclick="flipLeitnerCardManual()"' : ''} style="position: relative;">
-        ${card.box === 1 && !card.day1Intervals?.first && window.currentDay1Interval === 'first' ? `
+        ${card.box === 1 && window.currentDay1Interval === 'first' ? `
         <button onclick="event.stopPropagation(); openLeitnerEditModal('${card.id}')" 
           style="position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; background: #f97316; border: none; border-radius: 10px; color: white; font-size: 24px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);"
           title="Edit card before first practice">✏️</button>
