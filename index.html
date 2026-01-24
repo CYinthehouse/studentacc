@@ -25820,10 +25820,77 @@ function normalizeKoreanForVoice(str) {
     .replace(/\s+/g, '')
     .replace(/[.,!?~～·。'"'""]/g, '')
     
+    // === PAST TENSE SOUND-ALIKE PAIRS ===
+    .replace(/갖다/g, '갔다')  // 갔다 = 갖다
+    .replace(/받다/g, '봤다')  // 봤다 = 받다 (careful - context dependent)
+    .replace(/잡다/g, '잤다')  // 잤다 = 잡다 (careful - context dependent)
+    .replace(/섰다/g, '썼다')  // 썼다 = 섰다
+    .replace(/살다/g, '샀다')  // 샀다 = 살다 (careful)
+    .replace(/켜다/g, '컸다')  // 컸다 = 켜다 (careful)
+    .replace(/따다/g, '땄다')  // 땄다 = 따다
+    .replace(/낳다/g, '났다')  // 났다 = 낳다
+    .replace(/나았다/g, '났다')  // 났다 = 나았다
+    
     // === PRONUNCIATION-BASED EQUIVALENCES (연음, 자음동화, etc.) ===
     
+    // 있다/없다 sounds-like
+    .replace(/있따/g, '있었다').replace(/이따/g, '있다').replace(/이써/g, '있다')
+    .replace(/이써요/g, '있어요')
+    .replace(/업따/g, '없다').replace(/업서요/g, '없어요').replace(/업서/g, '없어')
+    .replace(/업서서/g, '없어서').replace(/업써써/g, '없었어').replace(/업써써요/g, '없었어요')
+    
+    // 먹다 sounds-like
+    .replace(/먹따/g, '먹다').replace(/머거따/g, '먹었다').replace(/머거써/g, '먹었어')
+    .replace(/머거요/g, '먹어요').replace(/머거/g, '먹어').replace(/머거서/g, '먹어서')
+    .replace(/머거도/g, '먹어도').replace(/머그면/g, '먹으면')
+    .replace(/머글게요/g, '먹을게요').replace(/머글래요/g, '먹을래요').replace(/머글거예요/g, '먹을거예요')
+    
+    // 받다 sounds-like
+    .replace(/밭다/g, '받다').replace(/바다따/g, '받았다').replace(/바다써/g, '받았어')
+    .replace(/바다요/g, '받아요').replace(/바다서/g, '받아서').replace(/바다도/g, '받아도')
+    .replace(/바드면/g, '받으면').replace(/바다써요/g, '받았어요')
+    .replace(/바들게요/g, '받을게요').replace(/바들래요/g, '받을래요')
+    
+    // 잡다 sounds-like
+    .replace(/잡따/g, '잡다').replace(/자바따/g, '잡았다').replace(/자바써/g, '잡았어')
+    .replace(/자바요/g, '잡아요').replace(/자바서/g, '잡아서').replace(/자바도/g, '잡아도')
+    .replace(/자브면/g, '잡으면').replace(/자바써요/g, '잡았어요')
+    
+    // 입다 sounds-like
+    .replace(/입따/g, '입다').replace(/이버따/g, '입었다').replace(/이버써/g, '입었어')
+    .replace(/이버요/g, '입어요').replace(/이버서/g, '입어서').replace(/이버도/g, '입어도')
+    .replace(/이브면/g, '입으면').replace(/이버써요/g, '입었어요')
+    
+    // 닫다 sounds-like
+    .replace(/닫따/g, '닫다').replace(/다다따/g, '닫았다').replace(/다다써/g, '닫았어')
+    .replace(/다다요/g, '닫아요').replace(/다다서/g, '닫아서').replace(/다다도/g, '닫아도')
+    
+    // 믿다 sounds-like
+    .replace(/믿따/g, '믿다').replace(/미더따/g, '믿었다').replace(/미더써/g, '믿었어')
+    .replace(/미더요/g, '믿어요').replace(/미더서/g, '믿어서').replace(/미더도/g, '믿어도')
+    
+    // 좋다 sounds-like (ㅎ weakening)
+    .replace(/조타/g, '좋다').replace(/조아요/g, '좋아요').replace(/조아써/g, '좋았어')
+    .replace(/조아서/g, '좋아서').replace(/조으면/g, '좋으면').replace(/조아써요/g, '좋았어요')
+    
+    // 놓다 sounds-like (ㅎ weakening)
+    .replace(/노타/g, '놓다').replace(/노아요/g, '놓아요').replace(/노아써/g, '놓았어')
+    .replace(/노아서/g, '놓아서').replace(/노으면/g, '놓으면').replace(/노아써요/g, '놓았어요')
+    
+    // 같다 sounds-like
+    .replace(/가타요/g, '같아요').replace(/가타써/g, '같았어').replace(/가타서/g, '같아서')
+    .replace(/가타도/g, '같아도').replace(/가트면/g, '같으면').replace(/가타써요/g, '같았어요')
+    
+    // 맞다 sounds-like
+    .replace(/마자요/g, '맞아요').replace(/마자써/g, '맞았어').replace(/마자써요/g, '맞았어요')
+    .replace(/마자서/g, '맞아서').replace(/마자도/g, '맞아도').replace(/마즈면/g, '맞으면')
+    
+    // 낮다 sounds-like
+    .replace(/나자요/g, '낮아요').replace(/나자써/g, '낮았어').replace(/나자써요/g, '낮았어요')
+    .replace(/나자서/g, '낮아서').replace(/나자도/g, '낮아도').replace(/나즈면/g, '낮으면')
+    
     // 앉다 (to sit) - ㄵ cluster
-    .replace(/안자요/g, '앉아요').replace(/안잤어요/g, '앉았어요')
+    .replace(/안자요/g, '앉아요').replace(/안자/g, '앉아').replace(/안잤어요/g, '앉았어요')
     .replace(/안자서/g, '앉아서').replace(/안자도/g, '앉아도').replace(/안자면/g, '앉으면')
     
     // 않다 (not) - ㄵ cluster  
@@ -25832,68 +25899,28 @@ function normalizeKoreanForVoice(str) {
     
     // 많다 (many) - ㄶ cluster
     .replace(/마나요/g, '많아요').replace(/만아요/g, '많아요')
-    .replace(/만아서/g, '많아서').replace(/만으면/g, '많으면').replace(/만아도/g, '많아도')
-    .replace(/만았어요/g, '많았어요')
-    .replace(/마니/g, '많이')
-    .replace(/마는/g, '많은')
+    .replace(/만아서/g, '많아서').replace(/마느면/g, '많으면').replace(/만으면/g, '많으면')
+    .replace(/만아도/g, '많아도').replace(/만았어요/g, '많았어요')
+    .replace(/마니/g, '많이').replace(/마는/g, '많은')
     
     // 읽다 (to read) - ㄺ cluster
-    .replace(/일거요/g, '읽어요').replace(/일거서/g, '읽어서').replace(/일거도/g, '읽어도')
-    .replace(/일그면/g, '읽으면').replace(/일거써요/g, '읽었어요').replace(/일거써/g, '읽었어')
+    .replace(/일거요/g, '읽어요').replace(/일거/g, '읽어').replace(/일거서/g, '읽어서')
+    .replace(/일거도/g, '읽어도').replace(/일그면/g, '읽으면')
+    .replace(/일거써/g, '읽었어').replace(/일거써요/g, '읽었어요')
     .replace(/일글게요/g, '읽을게요').replace(/일글래요/g, '읽을래요').replace(/일글/g, '읽을')
     
-    // 없다 (to not exist) - ㅄ cluster
-    .replace(/업서요/g, '없어요').replace(/업서서/g, '없어서').replace(/업서도/g, '없어도')
-    .replace(/업쓰면/g, '없으면').replace(/업써써요/g, '없었어요')
-    
-    // 있다 (to exist)
-    .replace(/이써요/g, '있어요')
-    
-    // 먹다 (to eat)
-    .replace(/머거요/g, '먹어요').replace(/머거서/g, '먹어서').replace(/머거도/g, '먹어도')
-    .replace(/머그면/g, '먹으면').replace(/머거써요/g, '먹었어요').replace(/머거써/g, '먹었어')
-    .replace(/머글게요/g, '먹을게요').replace(/머글래요/g, '먹을래요').replace(/머글거예요/g, '먹을거예요')
-    
-    // 받다 (to receive)
-    .replace(/바다요/g, '받아요').replace(/바다서/g, '받아서').replace(/바다도/g, '받아도')
-    .replace(/바드면/g, '받으면').replace(/바다써요/g, '받았어요')
-    .replace(/바들게요/g, '받을게요').replace(/바들래요/g, '받을래요')
-    
-    // 입다 (to wear)
-    .replace(/이버요/g, '입어요').replace(/이버서/g, '입어서').replace(/이버도/g, '입어도')
-    .replace(/이브면/g, '입으면').replace(/이버써요/g, '입었어요')
-    
-    // 잡다 (to catch)
-    .replace(/자바요/g, '잡아요').replace(/자바서/g, '잡아서').replace(/자바도/g, '잡아도')
-    .replace(/자브면/g, '잡으면').replace(/자바써요/g, '잡았어요')
-    
-    // 맞다 (to be correct)
-    .replace(/마자요/g, '맞아요').replace(/마자서/g, '맞아서').replace(/마자도/g, '맞아도')
-    .replace(/마즈면/g, '맞으면').replace(/마자써요/g, '맞았어요')
-    
-    // 낮다 (to be low)
-    .replace(/나자요/g, '낮아요').replace(/나자서/g, '낮아서').replace(/나자도/g, '낮아도')
-    .replace(/나즈면/g, '낮으면').replace(/나자써요/g, '낮았어요')
-    
-    // 같다 (to be the same)
-    .replace(/가타요/g, '같아요').replace(/가타서/g, '같아서').replace(/가타도/g, '같아도')
-    .replace(/가트면/g, '같으면').replace(/가타써요/g, '같았어요')
-    
-    // 좋다 (to be good) - ㅎ weakening
-    .replace(/조아요/g, '좋아요').replace(/조아서/g, '좋아서')
-    .replace(/조으면/g, '좋으면').replace(/조아써요/g, '좋았어요')
-    
-    // 놓다 (to put) - ㅎ weakening
-    .replace(/노아요/g, '놓아요').replace(/노아서/g, '놓아서')
-    .replace(/노으면/g, '놓으면').replace(/노아써요/g, '놓았어요')
-    
     // 젊다 (to be young) - ㄻ cluster
-    .replace(/절머요/g, '젊어요').replace(/절머서/g, '젊어서').replace(/절머도/g, '젊어도')
-    .replace(/절므면/g, '젊으면').replace(/절머써요/g, '젊었어요')
+    .replace(/절머요/g, '젊어요').replace(/절머써/g, '젊었어').replace(/절머써요/g, '젊었어요')
+    .replace(/절머서/g, '젊어서').replace(/절머도/g, '젊어도').replace(/절므면/g, '젊으면')
     
-    // 갖다 (to have) - contraction of 가지다
-    .replace(/가저요/g, '갖어요').replace(/갖어요/g, '가져요')
-    .replace(/가졌어요/g, '가져요')
+    // 갖다/가지다 (to have)
+    .replace(/갖어요/g, '가져요').replace(/가저요/g, '가져요')
+    .replace(/가저써요/g, '가졌어요').replace(/가저서/g, '가져서').replace(/가저요/g, '가져요')
+    .replace(/갖아서/g, '가져서')
+    
+    // 신다 (to wear shoes)
+    .replace(/시너요/g, '신어요').replace(/시너써/g, '신었어').replace(/시너써요/g, '신었어요')
+    .replace(/시너서/g, '신어서').replace(/시너도/g, '신어도').replace(/시느면/g, '신으면')
     
     // Other consonant cluster words
     .replace(/발바요/g, '밟아요')  // 밟다
@@ -26347,13 +26374,41 @@ function _startFlashcardRoundInternal() {
   }
 
   if (recognition) {
-    recognition.start();
-    isListening = true;
-    document.getElementById('listeningIndicator').style.display = 'block';
-    document.getElementById('startGameBtn').textContent = '⏸ Pause';
-    document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
-
-    startWordTimer();
+    // Ensure recognition is stopped before starting
+    try {
+      recognition.stop();
+    } catch (e) {}
+    isListening = false;
+    
+    // Longer delay to ensure recognition is fully stopped before restarting
+    setTimeout(() => {
+      try {
+        recognition.start();
+        isListening = true;
+        document.getElementById('listeningIndicator').style.display = 'block';
+        document.getElementById('startGameBtn').textContent = '⏸ Pause';
+        document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
+        startWordTimer();
+      } catch (e) {
+        console.error('Failed to start recognition:', e);
+        // Try again after a longer delay
+        setTimeout(() => {
+          try {
+            recognition.start();
+            isListening = true;
+            document.getElementById('listeningIndicator').style.display = 'block';
+            document.getElementById('startGameBtn').textContent = '⏸ Pause';
+            document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
+            startWordTimer();
+          } catch (e2) {
+            console.error('Recognition failed to start after retry:', e2);
+            // Final fallback - just start the timer anyway so user can click Resume
+            document.getElementById('startGameBtn').textContent = '🎤 Start Speaking';
+            document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
+          }
+        }, 500);
+      }
+    }, 200);
   }
 }
 
@@ -26581,6 +26636,15 @@ function skipWord() {
 function showRoundResults() {
   clearInterval(flashcardTimer);
   clearInterval(autoAdvanceTimer); // Clear any existing auto-advance timer
+  
+  // Stop recognition properly before transitioning
+  if (recognition) {
+    try {
+      recognition.stop();
+    } catch (e) {}
+  }
+  isListening = false;
+  
   document.getElementById('listeningIndicator').style.display = 'none';
 
   const correct = gameResults.filter(r => r.correct).length;
