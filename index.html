@@ -21519,23 +21519,27 @@ function initializeSpeechRecognition() {
         setTimeout(() => {
           flashcardIsProcessingMatch = false;
         }, 500);
-      } else if (normalizedTranscript.length > 0 && similarity < 0.70) {
+      } else if (normalizedTranscript.length > 0 && similarity < 0.70 && timeRemaining > 0) {
         // Wrong answer detected (doesn't match, similarity too low)
+        // Only play if timer hasn't run out yet (timeRemaining > 0)
         // Clear the pause timeout - we'll handle timer ourselves
         clearTimeout(window.flashcardPauseTimerTimeout);
         
-        // Show red text and play wrong sound, but don't mark as incorrect yet
-        // Give them a chance to try again
+        // Play incorrect buzzer sound
+        playDrillSound('incorrect');
+        
+        // Show red text with what they said
         const recognizedTextEl = document.getElementById('recognizedText');
         if (recognizedTextEl) {
           recognizedTextEl.style.color = '#f56565';
+          recognizedTextEl.textContent = `"${transcript}" - Try again!`;
         }
-        playDrillSound('incorrect');
         
-        // Reset color quickly and resume timer
+        // Reset after 0.5 seconds and continue listening (timer keeps counting)
         setTimeout(() => {
-          if (recognizedTextEl && currentWordIndex < currentGameWords.length) {
+          if (recognizedTextEl && currentWordIndex < currentGameWords.length && timeRemaining > 0) {
             recognizedTextEl.style.color = '';
+            recognizedTextEl.textContent = '';
           }
           // Resume timer after wrong answer feedback
           if (isFlashcardGameActive && isListening && currentWordIndex < currentGameWords.length) {
