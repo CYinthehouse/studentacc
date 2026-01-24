@@ -21473,6 +21473,13 @@ function initializeSpeechRecognition() {
 
       const normalizedTranscript = normalizeKoreanForVoice(transcript);
       const koreanWord = normalizeKoreanForVoice(currentWord.korean);
+      
+      // Pause timer 0.5 seconds after speech is detected (prevents timeout during grading)
+      clearTimeout(window.flashcardPauseTimerTimeout);
+      window.flashcardPauseTimerTimeout = setTimeout(() => {
+        clearInterval(flashcardTimer);
+        clearTimeout(flashcardTimerTimeout);
+      }, 500);
 
       // Debug logging
       console.log('Voice recognition:', {
@@ -21486,27 +21493,56 @@ function initializeSpeechRecognition() {
 
       // Check for exact match first (fast) before calculating similarity (slow)
       let isMatch = false;
+      let similarity = 0;
       if (normalizedTranscript === koreanWord) {
         isMatch = true;
       } else {
         // Only calculate similarity if not exact match
-        const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
-        // For interim results, require higher confidence (exact or very close match)
-        // For final results, allow 90% similarity
-        const threshold = latestResult.isFinal ? 0.90 : 0.95;
-        if (similarity >= threshold) {
-          console.log('Similarity match:', similarity, '(threshold:', threshold, ')');
+        similarity = calculateSimilarity(normalizedTranscript, koreanWord);
+        // Allow 90% similarity for match
+        if (similarity >= 0.90) {
+          console.log('Similarity match:', similarity);
           isMatch = true;
         }
       }
 
       if (isMatch) {
+        // Clear the pause timeout and pause immediately on correct answer
+        clearTimeout(window.flashcardPauseTimerTimeout);
+        clearInterval(flashcardTimer);
+        clearTimeout(flashcardTimerTimeout);
+        
         flashcardIsProcessingMatch = true;
         wordCorrect(currentWordIndex);
 
         setTimeout(() => {
           flashcardIsProcessingMatch = false;
         }, 500);
+      } else if (normalizedTranscript.length > 0 && similarity < 0.70) {
+        // Wrong answer detected (doesn't match, similarity too low)
+        // Clear the pause timeout - we'll handle timer ourselves
+        clearTimeout(window.flashcardPauseTimerTimeout);
+        
+        // Show red text and play wrong sound, but don't mark as incorrect yet
+        // Give them a chance to try again
+        const recognizedTextEl = document.getElementById('recognizedText');
+        if (recognizedTextEl) {
+          recognizedTextEl.style.color = '#f56565';
+        }
+        playWalkAwaySound('wrong');
+        
+        // Reset color after a moment and resume timer
+        setTimeout(() => {
+          if (recognizedTextEl && currentWordIndex < currentGameWords.length) {
+            recognizedTextEl.style.color = '';
+          }
+          // Resume timer after wrong answer feedback
+          if (isFlashcardGameActive && isListening && currentWordIndex < currentGameWords.length) {
+            resumeFlashcardTimer();
+          }
+        }, 1000);
+        
+        console.log('Wrong answer detected:', transcript, 'similarity:', similarity);
       }
     }
   };
@@ -26641,6 +26677,26 @@ function startWordTimer() {
       }
     }, 1000);
   }
+}
+
+// Resume timer from where it left off (used when speech is being processed)
+function resumeFlashcardTimer() {
+  // Don't resume if timer already at 0 or game not active
+  if (timeRemaining <= 0 || !isFlashcardGameActive || !isListening) return;
+  
+  clearInterval(flashcardTimer);
+  clearTimeout(flashcardTimerTimeout);
+  
+  // Resume countdown from current timeRemaining
+  flashcardTimer = setInterval(() => {
+    timeRemaining--;
+    document.getElementById('wordTimer').textContent = timeRemaining;
+
+    if (timeRemaining <= 0) {
+      playWalkAwaySound('timeup');
+      wordIncorrect(currentWordIndex);
+    }
+  }, 1000);
 }
 
 function wordCorrect(index) {
