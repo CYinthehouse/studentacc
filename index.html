@@ -21429,6 +21429,7 @@ let currentWordPairs = [];
 let currentSetIndex = 0;
 let currentWordIndex = 0;
 let flashcardTimer = null;
+let flashcardTimerTimeout = null; // Track pending timer start timeout
 let timeRemaining = 7;
 let recognition = null;
 let currentGameWords = [];
@@ -25829,10 +25830,17 @@ function normalizeKoreanForVoice(str) {
     .replace(/잡다/g, '잤다')  // 잤다 = 잡다 (careful - context dependent)
     .replace(/섰다/g, '썼다')  // 썼다 = 섰다
     .replace(/살다/g, '샀다')  // 샀다 = 살다 (careful)
+    .replace(/걷다/g, '컸다').replace(/겄다/g, '컸다')  // 컸다 = 걷다 = 겄다
     .replace(/켜다/g, '컸다')  // 컸다 = 켜다 (careful)
     .replace(/따다/g, '땄다')  // 땄다 = 따다
     .replace(/낳다/g, '났다')  // 났다 = 낳다
     .replace(/나았다/g, '났다')  // 났다 = 나았다
+    
+    // 씻다 variations (sounds-like)
+    .replace(/씯따/g, '씻다').replace(/씻따/g, '씻다')
+    
+    // 갖다 conjugations = 가지다 sounds-like
+    .replace(/갖아요/g, '가자요')
     
     // === PRONUNCIATION-BASED EQUIVALENCES (연음, 자음동화, etc.) ===
     
@@ -26436,6 +26444,12 @@ function _startFlashcardRoundInternal() {
 
 function pauseFlashcardRound() {
   clearInterval(flashcardTimer);
+  clearTimeout(flashcardTimerTimeout);
+  
+  // Stop speech synthesis if speaking
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+  }
   
   // Stop speech recognition
   if (recognition) {
@@ -26472,6 +26486,7 @@ function startWordTimer() {
   const timerDuration = currentFlashcardSet.timerSeconds || 15;
   
   clearInterval(flashcardTimer);
+  clearTimeout(flashcardTimerTimeout);
   
   // Always speak the English word in voice mode (not swipe mode)
   if (!swipeMode.enabled && currentWordIndex < currentGameWords.length) {
@@ -26480,7 +26495,10 @@ function startWordTimer() {
     
     // Wait 1.5 seconds after speaking starts before beginning countdown
     // This gives time for the TTS to finish
-    setTimeout(() => {
+    flashcardTimerTimeout = setTimeout(() => {
+      // Check if game was paused during the delay
+      if (!isListening || !isFlashcardGameActive) return;
+      
       timeRemaining = timerDuration;
       document.getElementById('wordTimer').textContent = timeRemaining;
       
