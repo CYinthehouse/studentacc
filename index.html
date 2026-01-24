@@ -21510,6 +21510,10 @@ function initializeSpeechRecognition() {
   };
 
   recognition.onend = () => {
+    console.log('Recognition ended. isFlashcardGameActive:', isFlashcardGameActive, 'isListening:', isListening);
+    
+    // Only auto-restart if we're actively listening during a game
+    // Don't restart during round transitions (isListening will be false)
     if (isFlashcardGameActive && isListening) {
       setTimeout(() => {
         if (isFlashcardGameActive && isListening) {
@@ -21517,9 +21521,8 @@ function initializeSpeechRecognition() {
             recognition.start();
             console.log('Recognition restarted (continuous mode)');
           } catch (e) {
-            if (isFlashcardGameActive) {
-              showGameInterruptedScreen();
-            }
+            console.error('Failed to restart recognition in onend:', e);
+            // Don't show interrupted screen immediately - might be a transition
           }
         }
       }, 100);
@@ -26143,7 +26146,7 @@ function loadFlashcardRound() {
   currentWordIndex = 0;
   document.getElementById('gameResults').style.display = 'none';
   document.getElementById('recognizedText').textContent = '';
-  document.getElementById('wordTimer').textContent = currentFlashcardSet.timerSeconds;
+  document.getElementById('wordTimer').textContent = currentFlashcardSet.timerSeconds || 15;
 
   const streakIndicator = document.getElementById('streakIndicator');
   if (streakIndicator) {
@@ -26257,6 +26260,11 @@ function skipFlashcardWordCompletely() {
  * Returns true if user has acknowledged within last 24 hours
  */
 function hasSpeechDisclaimerBeenAcknowledged() {
+  // If game is already active, skip disclaimer for subsequent rounds
+  if (isFlashcardGameActive && window.flashcardSessionDisclaimerShown) {
+    return true;
+  }
+  
   const dismissedUntil = localStorage.getItem('speechDisclaimerDismissedUntil');
   if (dismissedUntil) {
     const dismissedTime = parseInt(dismissedUntil);
@@ -26337,6 +26345,9 @@ function acknowledgeSpeechDisclaimer(justOnce) {
   const modal = document.getElementById('speechDisclaimerModal');
   if (modal) modal.remove();
   
+  // Mark that disclaimer was shown this session (for subsequent rounds)
+  window.flashcardSessionDisclaimerShown = true;
+  
   if (!justOnce) {
     // Dismiss for 24 hours
     const dismissUntil = Date.now() + (24 * 60 * 60 * 1000);
@@ -26374,41 +26385,52 @@ function _startFlashcardRoundInternal() {
   }
 
   if (recognition) {
-    // Ensure recognition is stopped before starting
+    // Ensure any previous recognition is fully stopped
     try {
-      recognition.stop();
+      recognition.abort(); // Use abort instead of stop for cleaner shutdown
     } catch (e) {}
     isListening = false;
     
-    // Longer delay to ensure recognition is fully stopped before restarting
+    // Wait for recognition to fully stop before restarting
     setTimeout(() => {
-      try {
-        recognition.start();
-        isListening = true;
-        document.getElementById('listeningIndicator').style.display = 'block';
-        document.getElementById('startGameBtn').textContent = '⏸ Pause';
-        document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
-        startWordTimer();
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-        // Try again after a longer delay
-        setTimeout(() => {
-          try {
-            recognition.start();
-            isListening = true;
-            document.getElementById('listeningIndicator').style.display = 'block';
-            document.getElementById('startGameBtn').textContent = '⏸ Pause';
-            document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
-            startWordTimer();
-          } catch (e2) {
-            console.error('Recognition failed to start after retry:', e2);
-            // Final fallback - just start the timer anyway so user can click Resume
-            document.getElementById('startGameBtn').textContent = '🎤 Start Speaking';
-            document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
-          }
-        }, 500);
-      }
-    }, 200);
+      if (!isFlashcardGameActive) return; // Check if game was exited during delay
+      
+      const startRecognition = () => {
+        try {
+          recognition.start();
+          isListening = true;
+          document.getElementById('listeningIndicator').style.display = 'block';
+          document.getElementById('startGameBtn').textContent = '⏸ Pause';
+          document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
+          startWordTimer();
+          console.log('Recognition started successfully');
+        } catch (e) {
+          console.error('Failed to start recognition:', e);
+          // Try again after a longer delay
+          setTimeout(() => {
+            if (!isFlashcardGameActive) return;
+            try {
+              recognition.start();
+              isListening = true;
+              document.getElementById('listeningIndicator').style.display = 'block';
+              document.getElementById('startGameBtn').textContent = '⏸ Pause';
+              document.getElementById('startGameBtn').onclick = pauseFlashcardRound;
+              startWordTimer();
+              console.log('Recognition started on retry');
+            } catch (e2) {
+              console.error('Recognition failed to start after retry:', e2);
+              // Final fallback - let user manually start
+              document.getElementById('startGameBtn').textContent = '🎤 Start Speaking';
+              document.getElementById('startGameBtn').onclick = resumeFlashcardRound;
+              // Still start the timer so game can continue
+              startWordTimer();
+            }
+          }, 500);
+        }
+      };
+      
+      startRecognition();
+    }, 300); // Increased delay for cleaner restart
   }
 }
 
@@ -26446,23 +26468,47 @@ function resumeFlashcardRound() {
 }
 
 function startWordTimer() {
-  timeRemaining = currentFlashcardSet.timerSeconds;
-  document.getElementById('wordTimer').textContent = timeRemaining;
-
-  if (walkAwayMode.enabled && currentWordIndex < currentGameWords.length) {
-    speakEnglish(currentGameWords[currentWordIndex].english);
-  }
-
+  // Use 15 seconds as default if not set
+  const timerDuration = currentFlashcardSet.timerSeconds || 15;
+  
   clearInterval(flashcardTimer);
-  flashcardTimer = setInterval(() => {
-    timeRemaining--;
-    document.getElementById('wordTimer').textContent = timeRemaining;
+  
+  // Always speak the English word in voice mode (not swipe mode)
+  if (!swipeMode.enabled && currentWordIndex < currentGameWords.length) {
+    // Speak first, then start timer after a delay
+    speakEnglish(currentGameWords[currentWordIndex].english);
+    
+    // Wait 1.5 seconds after speaking starts before beginning countdown
+    // This gives time for the TTS to finish
+    setTimeout(() => {
+      timeRemaining = timerDuration;
+      document.getElementById('wordTimer').textContent = timeRemaining;
+      
+      flashcardTimer = setInterval(() => {
+        timeRemaining--;
+        document.getElementById('wordTimer').textContent = timeRemaining;
 
-    if (timeRemaining <= 0) {
-      playWalkAwaySound('timeup');
-      wordIncorrect(currentWordIndex);
-    }
-  }, 1000);
+        if (timeRemaining <= 0) {
+          playWalkAwaySound('timeup');
+          wordIncorrect(currentWordIndex);
+        }
+      }, 1000);
+    }, 1500); // 1.5 second delay to allow TTS to finish
+  } else {
+    // Swipe mode - no TTS, start timer immediately
+    timeRemaining = timerDuration;
+    document.getElementById('wordTimer').textContent = timeRemaining;
+    
+    flashcardTimer = setInterval(() => {
+      timeRemaining--;
+      document.getElementById('wordTimer').textContent = timeRemaining;
+
+      if (timeRemaining <= 0) {
+        playWalkAwaySound('timeup');
+        wordIncorrect(currentWordIndex);
+      }
+    }, 1000);
+  }
 }
 
 function wordCorrect(index) {
@@ -26953,6 +26999,9 @@ function exitFlashcardGame() {
   try {
     isFlashcardGameActive = false;
     isListening = false;
+    
+    // Reset session disclaimer flag
+    window.flashcardSessionDisclaimerShown = false;
 
     releaseWakeLock();
 
@@ -58454,7 +58503,7 @@ async function startMyCardsFlashcardGame(sourceFolderId) {
       id: `mycards_${sourceFolderId}`,
       title: folderName,
       wordPairs: cards,
-      timerSeconds: 7,
+      timerSeconds: 15,
       isMyCardsSet: true,
       sourceFolderId: sourceFolderId,
       assets: null
