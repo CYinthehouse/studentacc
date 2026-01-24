@@ -21531,7 +21531,7 @@ function initializeSpeechRecognition() {
         }
         playWalkAwaySound('wrong');
         
-        // Reset color after a moment and resume timer
+        // Reset color quickly and resume timer
         setTimeout(() => {
           if (recognizedTextEl && currentWordIndex < currentGameWords.length) {
             recognizedTextEl.style.color = '';
@@ -21540,7 +21540,7 @@ function initializeSpeechRecognition() {
           if (isFlashcardGameActive && isListening && currentWordIndex < currentGameWords.length) {
             resumeFlashcardTimer();
           }
-        }, 1000);
+        }, 500);
         
         console.log('Wrong answer detected:', transcript, 'similarity:', similarity);
       }
@@ -26288,6 +26288,7 @@ function loadFlashcardRound() {
     return `
       <div class="word-item" id="word-${index}" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'}; position: relative;">
         <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+          <button onclick="previewKoreanWord(${index}, event)" class="preview-btn" style="background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; color: #667eea; opacity: 0.7; transition: opacity 0.2s;" title="Hear pronunciation (-1 sec)">🔊</button>
           <span class="word-number" style="font-weight: bold; color: ${isReviewWord ? '#f56565' : '#667eea'}; font-size: 14px;">${index + 1}.${isReviewWord ? '🔄' : ''}</span>
           <span class="word-text" style="font-size: 16px; font-weight: 600; color: #000000;">${word.english}</span>
         </div>
@@ -26312,6 +26313,31 @@ function loadFlashcardRound() {
   }
 
   highlightCurrentWord();
+}
+
+// Preview Korean pronunciation with 1 second penalty
+function previewKoreanWord(index, event) {
+  event.stopPropagation();
+  
+  if (index < currentGameWords.length) {
+    const word = currentGameWords[index];
+    speakKorean(word.korean);
+    
+    // Apply 1 second penalty to timer (only if timer is running)
+    if (timeRemaining > 1) {
+      timeRemaining -= 1;
+      document.getElementById('wordTimer').textContent = timeRemaining;
+    }
+    
+    // Visual feedback on the button
+    const btn = event.target;
+    btn.style.opacity = '1';
+    btn.style.color = '#48bb78';
+    setTimeout(() => {
+      btn.style.opacity = '0.7';
+      btn.style.color = '#667eea';
+    }, 500);
+  }
 }
 
 function shuffleArray(array) {
@@ -26422,14 +26448,7 @@ function hasSpeechDisclaimerBeenAcknowledged() {
   if (isFlashcardGameActive && window.flashcardSessionDisclaimerShown) {
     return true;
   }
-  
-  const dismissedUntil = localStorage.getItem('speechDisclaimerDismissedUntil');
-  if (dismissedUntil) {
-    const dismissedTime = parseInt(dismissedUntil);
-    if (Date.now() < dismissedTime) {
-      return true;
-    }
-  }
+  // Always show disclaimer at start of each game session
   return false;
 }
 
@@ -26472,18 +26491,15 @@ function showSpeechDisclaimer(onProceed) {
         <ul style="margin: 0; padding-left: 20px;">
           <li style="margin-bottom: 8px;">Speaking too slowly or unclear pronunciation may not be marked correct</li>
           <li style="margin-bottom: 8px;">Background noise can interfere with recognition</li>
-          <li>🎧 <strong>Use headphones with a dedicated external microphone</strong> for the best experience</li>
+          <li style="margin-bottom: 8px;">🎧 <strong>Use headphones with a dedicated external microphone</strong> for the best experience</li>
+          <li>🔊 Click the <strong>speaker button</strong> next to any word to hear the Korean pronunciation (-1 second penalty)</li>
         </ul>
       </div>
       
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        <button onclick="acknowledgeSpeechDisclaimer(true)" 
+        <button onclick="acknowledgeSpeechDisclaimer()" 
           style="width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 10px; font-size: 15px; font-weight: 600; color: white; cursor: pointer;">
           ✓ I Understand, Let's Go!
-        </button>
-        <button onclick="acknowledgeSpeechDisclaimer(false)" 
-          style="width: 100%; padding: 12px; background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-weight: 500; color: #718096; cursor: pointer;">
-          Don't show this for 24 hours
         </button>
       </div>
     </div>
@@ -26497,20 +26513,13 @@ function showSpeechDisclaimer(onProceed) {
 
 /**
  * Handle disclaimer acknowledgment
- * @param {boolean} justOnce - If false, dismiss for 24 hours
  */
-function acknowledgeSpeechDisclaimer(justOnce) {
+function acknowledgeSpeechDisclaimer() {
   const modal = document.getElementById('speechDisclaimerModal');
   if (modal) modal.remove();
   
   // Mark that disclaimer was shown this session (for subsequent rounds)
   window.flashcardSessionDisclaimerShown = true;
-  
-  if (!justOnce) {
-    // Dismiss for 24 hours
-    const dismissUntil = Date.now() + (24 * 60 * 60 * 1000);
-    localStorage.setItem('speechDisclaimerDismissedUntil', dismissUntil.toString());
-  }
   
   // Call the stored callback
   if (window.speechDisclaimerCallback) {
@@ -26638,8 +26647,8 @@ function startWordTimer() {
   clearInterval(flashcardTimer);
   clearTimeout(flashcardTimerTimeout);
   
-  // Always speak the English word in voice mode (not swipe mode)
-  if (!swipeMode.enabled && currentWordIndex < currentGameWords.length) {
+  // Only speak English in walk away mode (not standard voice mode)
+  if (walkAwayMode.enabled && currentWordIndex < currentGameWords.length) {
     // Speak first, then start timer after a delay
     speakEnglish(currentGameWords[currentWordIndex].english);
     
@@ -26663,7 +26672,7 @@ function startWordTimer() {
       }, 1000);
     }, 1500); // 1.5 second delay to allow TTS to finish
   } else {
-    // Swipe mode - no TTS, start timer immediately
+    // Standard voice mode or swipe mode - no English TTS, start timer immediately
     timeRemaining = timerDuration;
     document.getElementById('wordTimer').textContent = timeRemaining;
     
@@ -26733,7 +26742,10 @@ function wordCorrect(index) {
   const wordText = wordItem.querySelector('.word-text');
   wordText.innerHTML = `<span style="text-decoration: line-through; color: #718096;">${currentGameWords[index].english}</span> → <span style="color: #48bb78; font-weight: bold;">${currentGameWords[index].korean}</span>`;
 
-  speakKorean(currentGameWords[index].korean);
+  // Only speak Korean in walk away mode
+  if (walkAwayMode.enabled) {
+    speakKorean(currentGameWords[index].korean);
+  }
 
   const streakIndicator = document.getElementById('streakIndicator');
   const streakNumber = document.getElementById('streakNumber');
@@ -26764,7 +26776,12 @@ function wordCorrect(index) {
     if (recognizedTextEl) {
       recognizedTextEl.style.color = '';
     }
-    setTimeout(() => startWordTimer(), 1500);
+    // Only pause for TTS in walk away mode, otherwise start next word immediately
+    if (walkAwayMode.enabled) {
+      setTimeout(() => startWordTimer(), 1500);
+    } else {
+      startWordTimer();
+    }
   } else {
     showRoundResults();
   }
@@ -26775,8 +26792,8 @@ function wordIncorrect(index) {
   clearInterval(flashcardTimer);
   clearTimeout(flashcardTimerTimeout);
 
-  // Play wrong answer sound
-  playWalkAwaySound('wrong');
+  // Play timeout sound (different from wrong answer sound during attempts)
+  playWalkAwaySound('timeup');
 
   // Show transcription in red
   const recognizedTextEl = document.getElementById('recognizedText');
@@ -26801,7 +26818,10 @@ function wordIncorrect(index) {
   const wordText = wordItem.querySelector('.word-text');
   wordText.innerHTML = `<span style="text-decoration: line-through; color: #718096;">${currentGameWords[index].english}</span> → <span style="color: #f56565;">${currentGameWords[index].korean}</span>`;
 
-  speakKorean(currentGameWords[index].korean);
+  // Only speak Korean in walk away mode
+  if (walkAwayMode.enabled) {
+    speakKorean(currentGameWords[index].korean);
+  }
 
   if (currentGameAssets && currentGameAssets.timeoutImage) {
     showPopupImage(
@@ -26835,7 +26855,12 @@ function wordIncorrect(index) {
     if (recognizedTextEl) {
       recognizedTextEl.style.color = '';
     }
-    setTimeout(() => startWordTimer(), 1500);
+    // Only pause for TTS in walk away mode, otherwise start next word immediately
+    if (walkAwayMode.enabled) {
+      setTimeout(() => startWordTimer(), 1500);
+    } else {
+      startWordTimer();
+    }
   } else {
 
 
