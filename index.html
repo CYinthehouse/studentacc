@@ -26289,7 +26289,7 @@ function loadFlashcardRound() {
     return `
       <div class="word-item" id="word-${index}" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: ${isReviewWord ? '#fff5f5' : 'white'}; border-radius: 8px; border: 2px solid ${isReviewWord ? '#fc8181' : '#e2e8f0'}; position: relative;">
         <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-          <button onclick="previewKoreanWord(${index}, event)" class="preview-btn" style="background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; color: #667eea; opacity: 0.7; transition: opacity 0.2s;" title="Hear pronunciation (-1 sec)">🔊</button>
+          <button onclick="previewKoreanWord(${index}, event)" class="preview-btn" style="background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; color: #667eea; opacity: 0.7; transition: opacity 0.2s;" title="Hear pronunciation (-5 sec)">🔊</button>
           <span class="word-number" style="font-weight: bold; color: ${isReviewWord ? '#f56565' : '#667eea'}; font-size: 14px;">${index + 1}.${isReviewWord ? '🔄' : ''}</span>
           <span class="word-text" style="font-size: 16px; font-weight: 600; color: #000000;">${word.english}</span>
         </div>
@@ -26343,9 +26343,11 @@ function previewKoreanWord(index, event) {
     utterance.rate = 0.9;
     
     utterance.onend = () => {
-      // Apply 1 second penalty
-      if (timeRemaining > 1) {
-        timeRemaining -= 1;
+      // Apply 5 second penalty
+      if (timeRemaining > 5) {
+        timeRemaining -= 5;
+      } else {
+        timeRemaining = 1; // Don't go below 1
       }
       document.getElementById('wordTimer').textContent = timeRemaining;
       
@@ -26547,7 +26549,7 @@ function showSpeechDisclaimer(onProceed) {
           <li style="margin-bottom: 8px;">Speaking too slowly or unclear pronunciation may not be marked correct</li>
           <li style="margin-bottom: 8px;">Background noise can interfere with recognition</li>
           <li style="margin-bottom: 8px;">🎧 <strong>Use headphones with a dedicated external microphone</strong> for the best experience</li>
-          <li>🔊 Click the <strong>speaker button</strong> next to any word to hear the Korean pronunciation (-1 second penalty)</li>
+          <li>🔊 Click the <strong>speaker button</strong> next to any word to hear the Korean pronunciation (-5 second penalty)</li>
         </ul>
       </div>
       
@@ -26811,7 +26813,7 @@ function wordCorrect(index) {
 
   if (currentGameAssets) {
 
-    if (currentSetCorrectCount <= 4 && currentGameAssets.progressImage) {
+    if (currentSetCorrectCount <= 5 && currentGameAssets.progressImage) {
       showPopupImage(
         currentGameAssets.progressImage,
         currentGameAssets.progressSounds[currentSetCorrectCount - 1] || null,
@@ -26838,7 +26840,8 @@ function wordCorrect(index) {
       startWordTimer();
     }
   } else {
-    showRoundResults();
+    // Delay showing results to allow the 5th correct popup image/sound to display
+    setTimeout(() => showRoundResults(), 1500);
   }
 }
 
