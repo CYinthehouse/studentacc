@@ -21468,11 +21468,6 @@ function initializeSpeechRecognition() {
 
     document.getElementById('recognizedText').textContent = transcript;
 
-    if (!latestResult.isFinal) {
-      return;
-    }
-
-
     if (currentWordIndex < currentGameWords.length) {
       const currentWord = currentGameWords[currentWordIndex];
 
@@ -21485,7 +21480,8 @@ function initializeSpeechRecognition() {
         normalized: normalizedTranscript,
         target: currentWord.korean,
         targetNormalized: koreanWord,
-        exactMatch: normalizedTranscript === koreanWord
+        exactMatch: normalizedTranscript === koreanWord,
+        isFinal: latestResult.isFinal
       });
 
       // Check for exact match first (fast) before calculating similarity (slow)
@@ -21495,8 +21491,11 @@ function initializeSpeechRecognition() {
       } else {
         // Only calculate similarity if not exact match
         const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
-        console.log('Similarity:', similarity);
-        if (similarity >= 0.90) {
+        // For interim results, require higher confidence (exact or very close match)
+        // For final results, allow 90% similarity
+        const threshold = latestResult.isFinal ? 0.90 : 0.95;
+        if (similarity >= threshold) {
+          console.log('Similarity match:', similarity, '(threshold:', threshold, ')');
           isMatch = true;
         }
       }
@@ -26645,8 +26644,18 @@ function startWordTimer() {
 }
 
 function wordCorrect(index) {
+  // Stop the timer completely during grading
   clearInterval(flashcardTimer);
-
+  clearTimeout(flashcardTimerTimeout);
+  
+  // Show transcription in green
+  const recognizedTextEl = document.getElementById('recognizedText');
+  if (recognizedTextEl) {
+    recognizedTextEl.style.color = '#48bb78';
+  }
+  
+  // Show checkmark on timer to indicate grading
+  document.getElementById('wordTimer').textContent = '✓';
 
   playWalkAwaySound('correct');
 
@@ -26695,6 +26704,10 @@ function wordCorrect(index) {
   if (currentWordIndex < currentGameWords.length) {
     highlightCurrentWord();
     document.getElementById('recognizedText').textContent = '';
+    // Reset text color back to default for next word
+    if (recognizedTextEl) {
+      recognizedTextEl.style.color = '';
+    }
     setTimeout(() => startWordTimer(), 1500);
   } else {
     showRoundResults();
@@ -26702,7 +26715,21 @@ function wordCorrect(index) {
 }
 
 function wordIncorrect(index) {
+  // Stop the timer completely during grading
   clearInterval(flashcardTimer);
+  clearTimeout(flashcardTimerTimeout);
+
+  // Play wrong answer sound
+  playWalkAwaySound('wrong');
+
+  // Show transcription in red
+  const recognizedTextEl = document.getElementById('recognizedText');
+  if (recognizedTextEl) {
+    recognizedTextEl.style.color = '#f56565';
+  }
+  
+  // Show X on timer to indicate grading
+  document.getElementById('wordTimer').textContent = '✗';
 
   totalGameWords++;
 
@@ -26748,6 +26775,10 @@ function wordIncorrect(index) {
   if (currentWordIndex < currentGameWords.length) {
     highlightCurrentWord();
     document.getElementById('recognizedText').textContent = '';
+    // Reset text color back to default for next word
+    if (recognizedTextEl) {
+      recognizedTextEl.style.color = '';
+    }
     setTimeout(() => startWordTimer(), 1500);
   } else {
 
