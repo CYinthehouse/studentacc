@@ -21461,6 +21461,7 @@ function initializeSpeechRecognition() {
 
   recognition.onresult = (event) => {
     if (flashcardIsProcessingMatch) return;
+    if (window.flashcardPreviewInProgress) return; // Ignore during TTS preview
 
     const latestResultIndex = event.results.length - 1;
     const latestResult = event.results[latestResultIndex];
@@ -26321,13 +26322,67 @@ function previewKoreanWord(index, event) {
   
   if (index < currentGameWords.length) {
     const word = currentGameWords[index];
-    speakKorean(word.korean);
     
-    // Apply 1 second penalty to timer (only if timer is running)
-    if (timeRemaining > 1) {
-      timeRemaining -= 1;
-      document.getElementById('wordTimer').textContent = timeRemaining;
+    // Pause timer and stop grading during preview
+    clearInterval(flashcardTimer);
+    clearTimeout(flashcardTimerTimeout);
+    clearTimeout(window.flashcardPauseTimerTimeout);
+    
+    // Temporarily disable recognition to prevent mic picking up TTS
+    window.flashcardPreviewInProgress = true;
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {}
     }
+    isListening = false;
+    
+    // Speak the Korean word
+    const utterance = new SpeechSynthesisUtterance(word.korean);
+    utterance.lang = 'ko-KR';
+    utterance.rate = 0.9;
+    
+    utterance.onend = () => {
+      // Apply 1 second penalty
+      if (timeRemaining > 1) {
+        timeRemaining -= 1;
+      }
+      document.getElementById('wordTimer').textContent = timeRemaining;
+      
+      // Re-enable recognition and resume timer after a short delay
+      setTimeout(() => {
+        window.flashcardPreviewInProgress = false;
+        
+        if (isFlashcardGameActive && !swipeMode.enabled) {
+          // Restart recognition
+          if (recognition) {
+            try {
+              recognition.start();
+              isListening = true;
+            } catch (e) {}
+          }
+          
+          // Resume timer from where it left off
+          resumeFlashcardTimer();
+        }
+      }, 300); // Small delay to ensure TTS audio has fully stopped
+    };
+    
+    utterance.onerror = () => {
+      // On error, still resume
+      window.flashcardPreviewInProgress = false;
+      if (isFlashcardGameActive && !swipeMode.enabled) {
+        if (recognition) {
+          try {
+            recognition.start();
+            isListening = true;
+          } catch (e) {}
+        }
+        resumeFlashcardTimer();
+      }
+    };
+    
+    speechSynthesis.speak(utterance);
     
     // Visual feedback on the button
     const btn = event.target;
