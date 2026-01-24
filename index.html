@@ -21479,6 +21479,15 @@ function initializeSpeechRecognition() {
       const normalizedTranscript = normalizeKoreanForVoice(transcript);
       const koreanWord = normalizeKoreanForVoice(currentWord.korean);
 
+      // Debug logging
+      console.log('Voice recognition:', {
+        raw: transcript,
+        normalized: normalizedTranscript,
+        target: currentWord.korean,
+        targetNormalized: koreanWord,
+        exactMatch: normalizedTranscript === koreanWord
+      });
+
       // Check for exact match first (fast) before calculating similarity (slow)
       let isMatch = false;
       if (normalizedTranscript === koreanWord) {
@@ -21486,6 +21495,7 @@ function initializeSpeechRecognition() {
       } else {
         // Only calculate similarity if not exact match
         const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
+        console.log('Similarity:', similarity);
         if (similarity >= 0.90) {
           isMatch = true;
         }
@@ -21530,6 +21540,27 @@ function initializeSpeechRecognition() {
     }
   };
 }
+
+// Handle tab visibility changes - restart recognition when returning to tab
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // User returned to the tab
+    if (isFlashcardGameActive && isListening && recognition) {
+      console.log('Tab became visible - restarting recognition');
+      setTimeout(() => {
+        if (isFlashcardGameActive && isListening) {
+          try {
+            recognition.start();
+            console.log('Recognition restarted after tab switch');
+          } catch (e) {
+            // Recognition might already be running
+            console.log('Recognition restart attempt:', e.message);
+          }
+        }
+      }, 300);
+    }
+  }
+});
 
 
 let uploadedFiles = {};
@@ -25832,6 +25863,7 @@ function normalizeKoreanForVoice(str) {
     .replace(/살다/g, '샀다')  // 샀다 = 살다 (careful)
     .replace(/걷다/g, '컸다').replace(/겄다/g, '컸다')  // 컸다 = 걷다 = 겄다
     .replace(/켜다/g, '컸다')  // 컸다 = 켜다 (careful)
+    .replace(/커따/g, '컸다').replace(/걷따/g, '컸다')  // sounds-like variations
     .replace(/따다/g, '땄다')  // 땄다 = 따다
     .replace(/낳다/g, '났다')  // 났다 = 낳다
     .replace(/나았다/g, '났다')  // 났다 = 나았다
@@ -25839,111 +25871,194 @@ function normalizeKoreanForVoice(str) {
     // 씻다 variations (sounds-like)
     .replace(/씯따/g, '씻다').replace(/씻따/g, '씻다')
     
-    // 갖다 conjugations = 가지다 sounds-like
-    .replace(/갖아요/g, '가자요')
+    // 갖다 conjugations = 가지다 sounds-like (both normalize to 가자요)
+    .replace(/갖아요/g, '가자요').replace(/가저요/g, '가자요').replace(/가져요/g, '가자요')
     
     // === PRONUNCIATION-BASED EQUIVALENCES (연음, 자음동화, etc.) ===
+    // ALL equivalent forms normalize to the SAME canonical form (sounds-like form)
     
-    // 있다/없다 sounds-like
-    .replace(/있따/g, '있었다').replace(/이따/g, '있다').replace(/이써/g, '있다')
-    .replace(/이써요/g, '있어요')
-    .replace(/업따/g, '없다').replace(/업서요/g, '없어요').replace(/업서/g, '없어')
-    .replace(/업서서/g, '없어서').replace(/업써써/g, '없었어').replace(/업써써요/g, '없었어요')
+    // 있다/없다 equivalences → sounds-like forms
+    .replace(/있따/g, '있었다')
+    .replace(/이따/g, '있다').replace(/이써/g, '있어')
+    .replace(/있어요/g, '이써요')  // 있어요 = 이써요 → 이써요
+    .replace(/업따/g, '없다')
+    .replace(/없어요/g, '업서요')  // 없어요 = 업서요 → 업서요
+    .replace(/없어/g, '업서')  // 없어 = 업서 → 업서
+    .replace(/없어서/g, '업서서')
+    .replace(/없었어/g, '업써써')
+    .replace(/없었어요/g, '업써써요')
     
-    // 먹다 sounds-like
-    .replace(/먹따/g, '먹다').replace(/머거따/g, '먹었다').replace(/머거써/g, '먹었어')
-    .replace(/머거요/g, '먹어요').replace(/머거/g, '먹어').replace(/머거서/g, '먹어서')
-    .replace(/머거도/g, '먹어도').replace(/머그면/g, '먹으면')
-    .replace(/머글게요/g, '먹을게요').replace(/머글래요/g, '먹을래요').replace(/머글거예요/g, '먹을거예요')
+    // 먹다 equivalences → sounds-like forms
+    .replace(/먹따/g, '먹다')
+    .replace(/먹었다/g, '머거따')
+    .replace(/먹었어/g, '머거써')
+    .replace(/먹어요/g, '머거요')
+    .replace(/먹어(?!요)/g, '머거')
+    .replace(/먹어서/g, '머거서')
+    .replace(/먹어도/g, '머거도')
+    .replace(/먹으면/g, '머그면')
+    .replace(/먹을게요/g, '머글게요')
+    .replace(/먹을래요/g, '머글래요')
+    .replace(/먹을거예요/g, '머글거예요')
     
-    // 받다 sounds-like
-    .replace(/밭다/g, '받다').replace(/바다따/g, '받았다').replace(/바다써/g, '받았어')
-    .replace(/바다요/g, '받아요').replace(/바다서/g, '받아서').replace(/바다도/g, '받아도')
-    .replace(/바드면/g, '받으면').replace(/바다써요/g, '받았어요')
-    .replace(/바들게요/g, '받을게요').replace(/바들래요/g, '받을래요')
+    // 받다 equivalences → sounds-like forms
+    .replace(/밭다/g, '받다')
+    .replace(/받았다/g, '바다따')
+    .replace(/받았어(?!요)/g, '바다써')
+    .replace(/받아요/g, '바다요')
+    .replace(/받아서/g, '바다서')
+    .replace(/받아도/g, '바다도')
+    .replace(/받으면/g, '바드면')
+    .replace(/받았어요/g, '바다써요')
+    .replace(/받을게요/g, '바들게요')
+    .replace(/받을래요/g, '바들래요')
     
-    // 잡다 sounds-like
-    .replace(/잡따/g, '잡다').replace(/자바따/g, '잡았다').replace(/자바써/g, '잡았어')
-    .replace(/자바요/g, '잡아요').replace(/자바서/g, '잡아서').replace(/자바도/g, '잡아도')
-    .replace(/자브면/g, '잡으면').replace(/자바써요/g, '잡았어요')
+    // 잡다 equivalences → sounds-like forms
+    .replace(/잡따/g, '잡다')
+    .replace(/잡았다/g, '자바따')
+    .replace(/잡았어(?!요)/g, '자바써')
+    .replace(/잡아요/g, '자바요')
+    .replace(/잡아서/g, '자바서')
+    .replace(/잡아도/g, '자바도')
+    .replace(/잡으면/g, '자브면')
+    .replace(/잡았어요/g, '자바써요')
     
-    // 입다 sounds-like
-    .replace(/입따/g, '입다').replace(/이버따/g, '입었다').replace(/이버써/g, '입었어')
-    .replace(/이버요/g, '입어요').replace(/이버서/g, '입어서').replace(/이버도/g, '입어도')
-    .replace(/이브면/g, '입으면').replace(/이버써요/g, '입었어요')
+    // 입다 equivalences → sounds-like forms
+    .replace(/입따/g, '입다')
+    .replace(/입었다/g, '이버따')
+    .replace(/입었어(?!요)/g, '이버써')
+    .replace(/입어요/g, '이버요')
+    .replace(/입어서/g, '이버서')
+    .replace(/입어도/g, '이버도')
+    .replace(/입으면/g, '이브면')
+    .replace(/입었어요/g, '이버써요')
     
-    // 닫다 sounds-like
-    .replace(/닫따/g, '닫다').replace(/다다따/g, '닫았다').replace(/다다써/g, '닫았어')
-    .replace(/다다요/g, '닫아요').replace(/다다서/g, '닫아서').replace(/다다도/g, '닫아도')
+    // 닫다 equivalences → sounds-like forms
+    .replace(/닫따/g, '닫다')
+    .replace(/닫았다/g, '다다따')
+    .replace(/닫았어(?!요)/g, '다다써')
+    .replace(/닫아요/g, '다다요')
+    .replace(/닫아서/g, '다다서')
+    .replace(/닫아도/g, '다다도')
     
-    // 믿다 sounds-like
-    .replace(/믿따/g, '믿다').replace(/미더따/g, '믿었다').replace(/미더써/g, '믿었어')
-    .replace(/미더요/g, '믿어요').replace(/미더서/g, '믿어서').replace(/미더도/g, '믿어도')
+    // 믿다 equivalences → sounds-like forms
+    .replace(/믿따/g, '믿다')
+    .replace(/믿었다/g, '미더따')
+    .replace(/믿었어(?!요)/g, '미더써')
+    .replace(/믿어요/g, '미더요')
+    .replace(/믿어서/g, '미더서')
+    .replace(/믿어도/g, '미더도')
     
-    // 좋다 sounds-like (ㅎ weakening)
-    .replace(/조타/g, '좋다').replace(/조아요/g, '좋아요').replace(/조아써/g, '좋았어')
-    .replace(/조아서/g, '좋아서').replace(/조으면/g, '좋으면').replace(/조아써요/g, '좋았어요')
+    // 좋다 equivalences (ㅎ weakening) → sounds-like forms
+    .replace(/좋다/g, '조타')
+    .replace(/좋아요/g, '조아요')
+    .replace(/좋았어(?!요)/g, '조아써')
+    .replace(/좋아서/g, '조아서')
+    .replace(/좋으면/g, '조으면')
+    .replace(/좋았어요/g, '조아써요')
     
-    // 놓다 sounds-like (ㅎ weakening)
-    .replace(/노타/g, '놓다').replace(/노아요/g, '놓아요').replace(/노아써/g, '놓았어')
-    .replace(/노아서/g, '놓아서').replace(/노으면/g, '놓으면').replace(/노아써요/g, '놓았어요')
+    // 놓다 equivalences (ㅎ weakening) → sounds-like forms
+    .replace(/놓다/g, '노타')
+    .replace(/놓아요/g, '노아요')
+    .replace(/놓았어(?!요)/g, '노아써')
+    .replace(/놓아서/g, '노아서')
+    .replace(/놓으면/g, '노으면')
+    .replace(/놓았어요/g, '노아써요')
     
-    // 같다 sounds-like
-    .replace(/가타요/g, '같아요').replace(/가타써/g, '같았어').replace(/가타서/g, '같아서')
-    .replace(/가타도/g, '같아도').replace(/가트면/g, '같으면').replace(/가타써요/g, '같았어요')
+    // 같다 equivalences → sounds-like forms
+    .replace(/같아요/g, '가타요')
+    .replace(/같았어(?!요)/g, '가타써')
+    .replace(/같아서/g, '가타서')
+    .replace(/같아도/g, '가타도')
+    .replace(/같으면/g, '가트면')
+    .replace(/같았어요/g, '가타써요')
     
-    // 맞다 sounds-like
-    .replace(/마자요/g, '맞아요').replace(/마자써/g, '맞았어').replace(/마자써요/g, '맞았어요')
-    .replace(/마자서/g, '맞아서').replace(/마자도/g, '맞아도').replace(/마즈면/g, '맞으면')
+    // 맞다 equivalences → sounds-like forms
+    .replace(/맞아요/g, '마자요')
+    .replace(/맞았어(?!요)/g, '마자써')
+    .replace(/맞았어요/g, '마자써요')
+    .replace(/맞아서/g, '마자서')
+    .replace(/맞아도/g, '마자도')
+    .replace(/맞으면/g, '마즈면')
     
-    // 낮다 sounds-like
-    .replace(/나자요/g, '낮아요').replace(/나자써/g, '낮았어').replace(/나자써요/g, '낮았어요')
-    .replace(/나자서/g, '낮아서').replace(/나자도/g, '낮아도').replace(/나즈면/g, '낮으면')
+    // 낮다 equivalences → sounds-like forms
+    .replace(/낮아요/g, '나자요')
+    .replace(/낮았어(?!요)/g, '나자써')
+    .replace(/낮았어요/g, '나자써요')
+    .replace(/낮아서/g, '나자서')
+    .replace(/낮아도/g, '나자도')
+    .replace(/낮으면/g, '나즈면')
     
-    // 앉다 (to sit) - ㄵ cluster
-    .replace(/안자요/g, '앉아요').replace(/안자/g, '앉아').replace(/안잤어요/g, '앉았어요')
-    .replace(/안자서/g, '앉아서').replace(/안자도/g, '앉아도').replace(/안자면/g, '앉으면')
+    // 앉다 (to sit) - ㄵ cluster → sounds-like forms
+    .replace(/앉아요/g, '안자요')
+    .replace(/앉아(?!요|서|도)/g, '안자')
+    .replace(/앉았어요/g, '안잤어요')
+    .replace(/앉아서/g, '안자서')
+    .replace(/앉아도/g, '안자도')
+    .replace(/앉으면/g, '안자면')
     
-    // 않다 (not) - ㄵ cluster  
-    .replace(/안아요/g, '않아요').replace(/안았어요/g, '않았어요').replace(/안았어/g, '않았어')
-    .replace(/안아서/g, '않아서').replace(/안아도/g, '않아도').replace(/안으면/g, '않으면')
+    // 않다 (not) - ㄵ cluster → sounds-like forms
+    .replace(/않아요/g, '안아요')
+    .replace(/않았어요/g, '안았어요')
+    .replace(/않았어(?!요)/g, '안았어')
+    .replace(/않아서/g, '안아서')
+    .replace(/않아도/g, '안아도')
+    .replace(/않으면/g, '안으면')
     
-    // 많다 (many) - ㄶ cluster
-    .replace(/마나요/g, '많아요').replace(/만아요/g, '많아요')
-    .replace(/만아서/g, '많아서').replace(/마느면/g, '많으면').replace(/만으면/g, '많으면')
-    .replace(/만아도/g, '많아도').replace(/만았어요/g, '많았어요')
-    .replace(/마니/g, '많이').replace(/마는/g, '많은')
+    // 많다 (many) - ㄶ cluster → sounds-like forms
+    .replace(/많아요/g, '마나요').replace(/만아요/g, '마나요')
+    .replace(/많아서/g, '만아서')
+    .replace(/많으면/g, '마느면').replace(/만으면/g, '마느면')
+    .replace(/많아도/g, '만아도')
+    .replace(/많았어요/g, '만았어요')
+    .replace(/많이/g, '마니')
+    .replace(/많은/g, '마는')
     
-    // 읽다 (to read) - ㄺ cluster
-    .replace(/일거요/g, '읽어요').replace(/일거/g, '읽어').replace(/일거서/g, '읽어서')
-    .replace(/일거도/g, '읽어도').replace(/일그면/g, '읽으면')
-    .replace(/일거써/g, '읽었어').replace(/일거써요/g, '읽었어요')
-    .replace(/일글게요/g, '읽을게요').replace(/일글래요/g, '읽을래요').replace(/일글/g, '읽을')
+    // 읽다 (to read) - ㄺ cluster → sounds-like forms
+    .replace(/읽어요/g, '일거요')
+    .replace(/읽어(?!요|서|도)/g, '일거')
+    .replace(/읽어서/g, '일거서')
+    .replace(/읽어도/g, '일거도')
+    .replace(/읽으면/g, '일그면')
+    .replace(/읽었어(?!요)/g, '일거써')
+    .replace(/읽었어요/g, '일거써요')
+    .replace(/읽을게요/g, '일글게요')
+    .replace(/읽을래요/g, '일글래요')
+    .replace(/읽을/g, '일글')
     
-    // 젊다 (to be young) - ㄻ cluster
-    .replace(/절머요/g, '젊어요').replace(/절머써/g, '젊었어').replace(/절머써요/g, '젊었어요')
-    .replace(/절머서/g, '젊어서').replace(/절머도/g, '젊어도').replace(/절므면/g, '젊으면')
+    // 젊다 (to be young) - ㄻ cluster → sounds-like forms
+    .replace(/젊어요/g, '절머요')
+    .replace(/젊었어(?!요)/g, '절머써')
+    .replace(/젊었어요/g, '절머써요')
+    .replace(/젊어서/g, '절머서')
+    .replace(/젊어도/g, '절머도')
+    .replace(/젊으면/g, '절므면')
     
-    // 갖다/가지다 (to have)
-    .replace(/갖어요/g, '가져요').replace(/가저요/g, '가져요')
-    .replace(/가저써요/g, '가졌어요').replace(/가저서/g, '가져서').replace(/가저요/g, '가져요')
-    .replace(/갖아서/g, '가져서')
+    // 갖다/가지다 equivalences → sounds-like forms
+    .replace(/갖어요/g, '가저요').replace(/가져요/g, '가저요')
+    .replace(/가졌어요/g, '가저써요')
+    .replace(/가져서/g, '가저서')
+    .replace(/갖아서/g, '가저서')
     
-    // 신다 (to wear shoes)
-    .replace(/시너요/g, '신어요').replace(/시너써/g, '신었어').replace(/시너써요/g, '신었어요')
-    .replace(/시너서/g, '신어서').replace(/시너도/g, '신어도').replace(/시느면/g, '신으면')
+    // 신다 (to wear shoes) → sounds-like forms
+    .replace(/신어요/g, '시너요')
+    .replace(/신었어(?!요)/g, '시너써')
+    .replace(/신었어요/g, '시너써요')
+    .replace(/신어서/g, '시너서')
+    .replace(/신어도/g, '시너도')
+    .replace(/신으면/g, '시느면')
     
-    // Other consonant cluster words
-    .replace(/발바요/g, '밟아요')  // 밟다
-    .replace(/널버요/g, '넓어요')  // 넓다
-    .replace(/짤바요/g, '짧아요')  // 짧다
-    .replace(/을퍼요/g, '읊어요')  // 읊다
-    .replace(/할타요/g, '핥아요')  // 핥다
-    .replace(/갑씨/g, '값이').replace(/갑시/g, '값이')  // 값
-    .replace(/목씨/g, '몫이').replace(/목시/g, '몫이')  // 몫
-    .replace(/살미/g, '삶이')  // 삶
-    .replace(/다라요/g, '닳아요').replace(/달아요/g, '닳아요')  // 닳다
-    .replace(/끄러요/g, '끓어요').replace(/끌어요/g, '끓어요')  // 끓다
+    // Other consonant cluster words → sounds-like forms
+    .replace(/밟아요/g, '발바요')
+    .replace(/넓어요/g, '널버요')
+    .replace(/짧아요/g, '짤바요')
+    .replace(/읊어요/g, '을퍼요')
+    .replace(/핥아요/g, '할타요')
+    .replace(/값이/g, '갑씨').replace(/갑시/g, '갑씨')
+    .replace(/몫이/g, '목씨').replace(/목시/g, '목씨')
+    .replace(/삶이/g, '살미')
+    .replace(/닳아요/g, '다라요').replace(/달아요/g, '다라요')
+    .replace(/끓어요/g, '끄러요').replace(/끌어요/g, '끄러요')
     
     // === VERB CONTRACTION EQUIVALENCES ===
     // 주다 contractions: 줘 ↔ 저/조
