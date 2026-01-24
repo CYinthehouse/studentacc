@@ -21530,7 +21530,7 @@ function initializeSpeechRecognition() {
         if (recognizedTextEl) {
           recognizedTextEl.style.color = '#f56565';
         }
-        playWalkAwaySound('wrong');
+        playDrillSound('incorrect');
         
         // Reset color quickly and resume timer
         setTimeout(() => {
@@ -26814,11 +26814,14 @@ function wordCorrect(index) {
   if (currentGameAssets) {
 
     if (currentSetCorrectCount <= 5 && currentGameAssets.progressImage) {
-      showPopupImage(
-        currentGameAssets.progressImage,
-        currentGameAssets.progressSounds[currentSetCorrectCount - 1] || null,
-        500
-      );
+      // Delay progress sound slightly so it doesn't overlap with correct sound
+      setTimeout(() => {
+        showPopupImage(
+          currentGameAssets.progressImage,
+          currentGameAssets.progressSounds[currentSetCorrectCount - 1] || null,
+          500
+        );
+      }, 300);
     }
   } else {
   }
@@ -26841,7 +26844,7 @@ function wordCorrect(index) {
     }
   } else {
     // Delay showing results to allow the 5th correct popup image/sound to display
-    setTimeout(() => showRoundResults(), 1500);
+    setTimeout(() => showRoundResults(), 800);
   }
 }
 
@@ -26876,10 +26879,8 @@ function wordIncorrect(index) {
   const wordText = wordItem.querySelector('.word-text');
   wordText.innerHTML = `<span style="text-decoration: line-through; color: #718096;">${currentGameWords[index].english}</span> → <span style="color: #f56565;">${currentGameWords[index].korean}</span>`;
 
-  // Only speak Korean in walk away mode
-  if (walkAwayMode.enabled) {
-    speakKorean(currentGameWords[index].korean);
-  }
+  // Always speak Korean on incorrect answer so they hear the correct pronunciation
+  speakKorean(currentGameWords[index].korean);
 
   if (currentGameAssets && currentGameAssets.timeoutImage) {
     showPopupImage(
@@ -26913,16 +26914,11 @@ function wordIncorrect(index) {
     if (recognizedTextEl) {
       recognizedTextEl.style.color = '';
     }
-    // Only pause for TTS in walk away mode, otherwise start next word immediately
-    if (walkAwayMode.enabled) {
-      setTimeout(() => startWordTimer(), 1500);
-    } else {
-      startWordTimer();
-    }
+    // Always pause for TTS on incorrect (we always speak Korean for wrong answers)
+    setTimeout(() => startWordTimer(), 1500);
   } else {
-
-
-    showRoundResults();
+    // Delay showing results to allow the TTS to finish
+    setTimeout(() => showRoundResults(), 800);
   }
 }
 
@@ -55075,7 +55071,12 @@ async function loadWalkAwaySounds() {
  * Play a Walk Away Mode sound
  */
 function playWalkAwaySound(type) {
-  if (!walkAwayMode.enabled) return;
+  // Always play correct/wrong/timeup sounds in any voice mode (not just walk away)
+  const alwaysPlayTypes = ['correct', 'wrong', 'timeup'];
+  
+  if (!walkAwayMode.enabled && !alwaysPlayTypes.includes(type)) {
+    return;
+  }
 
   const audio = walkAwayMode.audioElements[type];
   if (audio) {
