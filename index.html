@@ -60,22 +60,21 @@ body.login-page {
 }
 
 .auth-logo {
-  max-width: 280px;
-  margin: 0 auto 20px;
+  max-width: 320px;
+  width: 100%;
+  margin: 0 auto 30px;
   display: block;
 }
 
+/* On mobile, constrain logo width to match buttons */
+@media (max-width: 480px) {
+  .auth-logo {
+    max-width: 260px;
+  }
+}
+
 .auth-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 28px;
-  color: white;
-  text-shadow:
-    -3px -3px 0 #41c0ff,
-    3px -3px 0 #41c0ff,
-    -3px 3px 0 #41c0ff,
-    3px 3px 0 #41c0ff,
-    0 0 20px rgba(65, 192, 255, 0.5);
-  margin-bottom: 40px;
+  display: none; /* Hide text title since logo includes it */
 }
 
 /* Auth views with fade transitions */
@@ -12188,14 +12187,15 @@ body.light-mode .teamwork-respond-state h4 {
   justify-content: center;
 }
 
-.mobile-app-header-logo { height: 50px; width: auto; }
+.mobile-app-header-logo { 
+  height: auto; 
+  width: auto;
+  max-height: 35px;
+  max-width: 120px;
+}
 
 .mobile-app-header-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 14px;
-  color: white;
-  text-shadow: -2px -2px 0 #41c0ff, 2px -2px 0 #41c0ff, -2px 2px 0 #41c0ff, 2px 2px 0 #41c0ff;
-  margin-left: 10px;
+  display: none; /* Hide text title since logo includes it */
 }
 
 /* ----- MOBILE PROFILE OVERLAY ----- */
@@ -13716,7 +13716,8 @@ body.light-mode .mobile-badge-name {
 <body>
 
 <div class="mobile-app-header" id="mobileAppHeader">
-  <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/logo555.png?v=1757969221" alt="KoreaLand" class="mobile-app-header-logo">
+  <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/logo555.png?v=1757969221" alt="KoreaLand" class="mobile-app-header-icon" style="height: 30px; width: auto; margin-right: 8px;">
+  <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/korealand_logo.png?v=1769368792" alt="KoreaLand" class="mobile-app-header-logo">
   <span class="mobile-app-header-title">KoreaLand</span>
 </div>
 
@@ -14003,7 +14004,8 @@ body.light-mode .mobile-badge-name {
 
   <div id="authContainer" class="auth-container">
 
-    <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/logo555.png?v=1757969221" alt="KoreaLand Logo" class="auth-logo">
+    <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/logo555.png?v=1757969221" alt="KoreaLand Logo" class="auth-logo-icon" style="max-width: 120px; margin: 0 auto 15px; display: block;">
+    <img src="https://cdn.shopify.com/s/files/1/0674/6747/7282/files/korealand_logo.png?v=1769368792" alt="KoreaLand Logo" class="auth-logo">
     <div class="auth-title">KoreaLand</div>
 
     <div id="authMainView" class="auth-view active">
@@ -15268,11 +15270,11 @@ body.light-mode .mobile-badge-name {
 
           <div id="leaderboard-streak" class="leaderboard-section">
             <div class="leaderboard-card">
-              <div class="leaderboard-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #ea580c, #c2410c);">
                 <div class="icon">🔥</div>
                 <div>
-                  <h3>Current Streaks</h3>
-                  <p>Students with the longest active daily streaks</p>
+                  <h3 style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">Current Streaks</h3>
+                  <p style="color: rgba(255,255,255,0.9);">Students with the longest active daily streaks</p>
                 </div>
               </div>
               <ul class="leaderboard-list" id="leaderboard-current-streak">
@@ -15281,11 +15283,11 @@ body.light-mode .mobile-badge-name {
             </div>
 
             <div class="leaderboard-card">
-              <div class="leaderboard-header" style="background: linear-gradient(135deg, #eab308, #ca8a04);">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #ca8a04, #a16207);">
                 <div class="icon">🏆</div>
                 <div>
-                  <h3>All-Time Best Streaks</h3>
-                  <p>Students who achieved the longest streaks ever</p>
+                  <h3 style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">All-Time Best Streaks</h3>
+                  <p style="color: rgba(255,255,255,0.9);">Students who achieved the longest streaks ever</p>
                 </div>
               </div>
               <ul class="leaderboard-list" id="leaderboard-best-streak">
@@ -17685,11 +17687,11 @@ body.light-mode .mobile-badge-name {
 
           <div id="student-leaderboard-streak" class="leaderboard-section">
             <div class="leaderboard-card">
-              <div class="leaderboard-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #ea580c, #c2410c);">
                 <div class="icon">🔥</div>
                 <div>
-                  <h3>Current Streaks</h3>
-                  <p>Students with the longest active daily streaks</p>
+                  <h3 style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">Current Streaks</h3>
+                  <p style="color: rgba(255,255,255,0.9);">Students with the longest active daily streaks</p>
                 </div>
               </div>
               <ul class="leaderboard-list" id="student-leaderboard-current-streak">
@@ -17698,11 +17700,11 @@ body.light-mode .mobile-badge-name {
             </div>
 
             <div class="leaderboard-card">
-              <div class="leaderboard-header" style="background: linear-gradient(135deg, #eab308, #ca8a04);">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #ca8a04, #a16207);">
                 <div class="icon">🏆</div>
                 <div>
-                  <h3>All-Time Best Streaks</h3>
-                  <p>Students who achieved the longest streaks ever</p>
+                  <h3 style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">All-Time Best Streaks</h3>
+                  <p style="color: rgba(255,255,255,0.9);">Students who achieved the longest streaks ever</p>
                 </div>
               </div>
               <ul class="leaderboard-list" id="student-leaderboard-best-streak">
@@ -43324,32 +43326,29 @@ function displayTestLeaderboards(submissions, users) {
  * Display streak leaderboards (current streaks and all-time best)
  */
 function displayStreakLeaderboards(stats, users) {
-  // Current Streaks - sorted by current streak
+  // Current Streaks - sorted by current streak (limit to 15)
   const currentStreakSorted = [...stats]
     .filter(s => s.currentStreak > 0)
     .sort((a, b) => {
       if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
       return (b.longestStreak || 0) - (a.longestStreak || 0);
     })
-    .slice(0, 30);
+    .slice(0, 15);
 
-  const currentStreakHtml = generateLeaderboardList(currentStreakSorted, users, (item) => ({
-    score: item.currentStreak,
-    label: item.currentStreak === 1 ? 'day' : 'days',
-    detail: `🏆 Best: ${item.longestStreak || item.currentStreak} days`
-  }));
+  // Custom HTML generation for current streaks with glow effect for 7+ days
+  const currentStreakHtml = generateStreakLeaderboardList(currentStreakSorted, users, true);
 
   updateLeaderboardList('leaderboard-current-streak', currentStreakHtml);
   updateLeaderboardList('student-leaderboard-current-streak', currentStreakHtml);
 
-  // All-Time Best Streaks - sorted by longest streak ever
+  // All-Time Best Streaks - sorted by longest streak ever (limit to 15)
   const bestStreakSorted = [...stats]
     .filter(s => (s.longestStreak || 0) > 0)
     .sort((a, b) => {
       if ((b.longestStreak || 0) !== (a.longestStreak || 0)) return (b.longestStreak || 0) - (a.longestStreak || 0);
       return (b.currentStreak || 0) - (a.currentStreak || 0);
     })
-    .slice(0, 30);
+    .slice(0, 15);
 
   const bestStreakHtml = generateLeaderboardList(bestStreakSorted, users, (item) => ({
     score: item.longestStreak || 0,
@@ -43359,6 +43358,64 @@ function displayStreakLeaderboards(stats, users) {
 
   updateLeaderboardList('leaderboard-best-streak', bestStreakHtml);
   updateLeaderboardList('student-leaderboard-best-streak', bestStreakHtml);
+}
+
+/**
+ * Generate streak leaderboard list with glow effect for 7+ day streaks
+ */
+function generateStreakLeaderboardList(items, users, isCurrentStreak = false) {
+  if (items.length === 0) {
+    return '<li class="leaderboard-empty"><div class="icon">📭</div><p>No data yet</p></li>';
+  }
+
+  return items.map((item, index) => {
+    let displayName = 'Unknown';
+    let avatarHtml = '';
+
+    const user = users[item.id] || {};
+    const email = user.email || item.studentEmail || item.email || item.id || 'Unknown';
+    displayName = email.split('@')[0];
+
+    if (user.avatarUrl) {
+      avatarHtml = `<div class="leaderboard-avatar"><img src="${user.avatarUrl}" alt=""></div>`;
+    } else if (user.avatarEmoji) {
+      avatarHtml = `<div class="leaderboard-avatar">${user.avatarEmoji}</div>`;
+    } else {
+      const initials = displayName.substring(0, 2).toUpperCase();
+      avatarHtml = `<div class="leaderboard-avatar">${initials}</div>`;
+    }
+
+    const streak = isCurrentStreak ? item.currentStreak : (item.longestStreak || 0);
+    const label = streak === 1 ? 'day' : 'days';
+    const detail = isCurrentStreak 
+      ? `🏆 Best: ${item.longestStreak || item.currentStreak} days`
+      : `🔥 Current: ${item.currentStreak || 0} days`;
+
+    let rankClass = 'normal';
+    if (index === 0) rankClass = 'gold';
+    else if (index === 1) rankClass = 'silver';
+    else if (index === 2) rankClass = 'bronze';
+
+    // Add glow effect for 7+ day current streaks
+    const glowStyle = (isCurrentStreak && streak >= 7) 
+      ? 'background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), inset 0 0 8px rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);'
+      : '';
+
+    return `
+      <li class="leaderboard-item" style="${glowStyle}">
+        <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
+        ${avatarHtml}
+        <div class="leaderboard-info">
+          <div class="leaderboard-name">${displayName}</div>
+          <div class="leaderboard-detail">${detail}</div>
+        </div>
+        <div class="leaderboard-score">
+          <div class="value">${streak}</div>
+          <div class="label">${label}</div>
+        </div>
+      </li>
+    `;
+  }).join('');
 }
 
 /**
