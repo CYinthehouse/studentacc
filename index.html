@@ -21462,6 +21462,9 @@ function initializeSpeechRecognition() {
   recognition.onresult = (event) => {
     if (flashcardIsProcessingMatch) return;
     if (window.flashcardPreviewInProgress) return; // Ignore during TTS preview
+    
+    // Ignore results from previous words (stale results)
+    if (window.flashcardRecognitionWordIndex !== currentWordIndex) return;
 
     const latestResultIndex = event.results.length - 1;
     const latestResult = event.results[latestResultIndex];
@@ -26715,6 +26718,10 @@ function startWordTimer() {
   
   clearInterval(flashcardTimer);
   clearTimeout(flashcardTimerTimeout);
+  
+  // Track which word we're on for recognition (to ignore stale results)
+  window.flashcardRecognitionWordIndex = currentWordIndex;
+  window.flashcardWrongFeedbackActive = false;
   
   // Only speak English in walk away mode (not standard voice mode)
   if (walkAwayMode.enabled && currentWordIndex < currentGameWords.length) {
