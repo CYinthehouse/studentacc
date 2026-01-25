@@ -21522,8 +21522,8 @@ function initializeSpeechRecognition() {
         setTimeout(() => {
           flashcardIsProcessingMatch = false;
         }, 500);
-      } else if (normalizedTranscript.length > 0 && similarity < 0.70 && timeRemaining > 0 && !window.flashcardWrongFeedbackActive && !flashcardIsProcessingMatch) {
-        // Wrong answer detected (doesn't match, similarity too low)
+      } else if (latestResult.isFinal && normalizedTranscript.length > 0 && similarity < 0.70 && timeRemaining > 0 && !window.flashcardWrongFeedbackActive && !flashcardIsProcessingMatch) {
+        // Wrong answer detected (final result, doesn't match, similarity too low)
         // Only play if timer hasn't run out yet (timeRemaining > 0)
         // Only play if not already showing wrong feedback and not processing a correct match
         // Clear the pause timeout - we'll handle timer ourselves
