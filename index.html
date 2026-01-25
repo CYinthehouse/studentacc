@@ -15140,6 +15140,7 @@ body.light-mode .mobile-badge-name {
             <button class="leaderboard-tab active" onclick="switchLeaderboardTab('flashcard')">📚 Flashcard</button>
             <button class="leaderboard-tab" onclick="switchLeaderboardTab('pronunciation')">🎤 Pronunciation</button>
             <button class="leaderboard-tab" onclick="switchLeaderboardTab('test')">📝 Test</button>
+            <button class="leaderboard-tab" onclick="switchLeaderboardTab('streak')">🔥 Streaks</button>
           </div>
 
           <div id="leaderboard-flashcard" class="leaderboard-section active">
@@ -15260,6 +15261,34 @@ body.light-mode .mobile-badge-name {
                 </div>
               </div>
               <ul class="leaderboard-list" id="leaderboard-test-improvement">
+                <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
+              </ul>
+            </div>
+          </div>
+
+          <div id="leaderboard-streak" class="leaderboard-section">
+            <div class="leaderboard-card">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+                <div class="icon">🔥</div>
+                <div>
+                  <h3>Current Streaks</h3>
+                  <p>Students with the longest active daily streaks</p>
+                </div>
+              </div>
+              <ul class="leaderboard-list" id="leaderboard-current-streak">
+                <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
+              </ul>
+            </div>
+
+            <div class="leaderboard-card">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #eab308, #ca8a04);">
+                <div class="icon">🏆</div>
+                <div>
+                  <h3>All-Time Best Streaks</h3>
+                  <p>Students who achieved the longest streaks ever</p>
+                </div>
+              </div>
+              <ul class="leaderboard-list" id="leaderboard-best-streak">
                 <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
               </ul>
             </div>
@@ -17593,6 +17622,7 @@ body.light-mode .mobile-badge-name {
             <button class="leaderboard-tab active" onclick="switchLeaderboardTab('flashcard', 'student')">📚 Flashcard</button>
             <button class="leaderboard-tab" onclick="switchLeaderboardTab('pronunciation', 'student')">🎤 Pronunciation</button>
             <button class="leaderboard-tab" onclick="switchLeaderboardTab('test', 'student')">📝 Test</button>
+            <button class="leaderboard-tab" onclick="switchLeaderboardTab('streak', 'student')">🔥 Streaks</button>
           </div>
 
           <div id="student-leaderboard-flashcard" class="leaderboard-section active">
@@ -17648,6 +17678,34 @@ body.light-mode .mobile-badge-name {
                 </div>
               </div>
               <ul class="leaderboard-list" id="student-leaderboard-test-scores">
+                <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
+              </ul>
+            </div>
+          </div>
+
+          <div id="student-leaderboard-streak" class="leaderboard-section">
+            <div class="leaderboard-card">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+                <div class="icon">🔥</div>
+                <div>
+                  <h3>Current Streaks</h3>
+                  <p>Students with the longest active daily streaks</p>
+                </div>
+              </div>
+              <ul class="leaderboard-list" id="student-leaderboard-current-streak">
+                <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
+              </ul>
+            </div>
+
+            <div class="leaderboard-card">
+              <div class="leaderboard-header" style="background: linear-gradient(135deg, #eab308, #ca8a04);">
+                <div class="icon">🏆</div>
+                <div>
+                  <h3>All-Time Best Streaks</h3>
+                  <p>Students who achieved the longest streaks ever</p>
+                </div>
+              </div>
+              <ul class="leaderboard-list" id="student-leaderboard-best-streak">
                 <li class="leaderboard-empty"><div class="icon">⏳</div>Loading...</li>
               </ul>
             </div>
@@ -26784,6 +26842,20 @@ function resumeFlashcardTimer() {
   }, 1000);
 }
 
+// Restart recognition fresh for a new word (clears any pending stale results)
+function restartRecognitionForNewWord() {
+  if (!recognition || !isFlashcardGameActive) return;
+  
+  try {
+    recognition.start();
+    isListening = true;
+    document.getElementById('listeningIndicator').style.display = 'block';
+  } catch (e) {
+    // If already started, that's fine
+    console.log('Recognition restart:', e.message);
+  }
+}
+
 function wordCorrect(index) {
   // Stop the timer completely during grading
   clearInterval(flashcardTimer);
@@ -26855,10 +26927,22 @@ function wordCorrect(index) {
     if (recognizedTextEl) {
       recognizedTextEl.style.color = '';
     }
+    
+    // Abort recognition to clear any pending results from previous word
+    if (recognition) {
+      try {
+        recognition.abort();
+      } catch (e) {}
+    }
+    
     // Only pause for TTS in walk away mode, otherwise start next word immediately
     if (walkAwayMode.enabled) {
-      setTimeout(() => startWordTimer(), 1500);
+      setTimeout(() => {
+        restartRecognitionForNewWord();
+        startWordTimer();
+      }, 1500);
     } else {
+      restartRecognitionForNewWord();
       startWordTimer();
     }
   } else {
@@ -26933,8 +27017,19 @@ function wordIncorrect(index) {
     if (recognizedTextEl) {
       recognizedTextEl.style.color = '';
     }
+    
+    // Abort recognition to clear any pending results from previous word
+    if (recognition) {
+      try {
+        recognition.abort();
+      } catch (e) {}
+    }
+    
     // Always pause for TTS on incorrect (we always speak Korean for wrong answers)
-    setTimeout(() => startWordTimer(), 1500);
+    setTimeout(() => {
+      restartRecognitionForNewWord();
+      startWordTimer();
+    }, 1500);
   } else {
     // Delay showing results to allow the TTS to finish
     setTimeout(() => showRoundResults(), 800);
@@ -42912,6 +43007,7 @@ async function loadLeaderboardData() {
     displayFlashcardOverallLeaderboard(leitnerStats, users, masteryByStudent);
     displayPronunciationLeaderboards(pronSubmissions, users);
     displayTestLeaderboards(testSubmissions, users);
+    displayStreakLeaderboards(leitnerStats, users);
     displayCombinedOverallLeaderboard(leitnerStats, pronSubmissions, users, masteryByStudent);
 
   } catch (error) {
@@ -43222,6 +43318,47 @@ function displayTestLeaderboards(submissions, users) {
   }), true);
 
   updateLeaderboardList('leaderboard-test-improvement', improvementHtml);
+}
+
+/**
+ * Display streak leaderboards (current streaks and all-time best)
+ */
+function displayStreakLeaderboards(stats, users) {
+  // Current Streaks - sorted by current streak
+  const currentStreakSorted = [...stats]
+    .filter(s => s.currentStreak > 0)
+    .sort((a, b) => {
+      if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
+      return (b.longestStreak || 0) - (a.longestStreak || 0);
+    })
+    .slice(0, 30);
+
+  const currentStreakHtml = generateLeaderboardList(currentStreakSorted, users, (item) => ({
+    score: item.currentStreak,
+    label: item.currentStreak === 1 ? 'day' : 'days',
+    detail: `🏆 Best: ${item.longestStreak || item.currentStreak} days`
+  }));
+
+  updateLeaderboardList('leaderboard-current-streak', currentStreakHtml);
+  updateLeaderboardList('student-leaderboard-current-streak', currentStreakHtml);
+
+  // All-Time Best Streaks - sorted by longest streak ever
+  const bestStreakSorted = [...stats]
+    .filter(s => (s.longestStreak || 0) > 0)
+    .sort((a, b) => {
+      if ((b.longestStreak || 0) !== (a.longestStreak || 0)) return (b.longestStreak || 0) - (a.longestStreak || 0);
+      return (b.currentStreak || 0) - (a.currentStreak || 0);
+    })
+    .slice(0, 30);
+
+  const bestStreakHtml = generateLeaderboardList(bestStreakSorted, users, (item) => ({
+    score: item.longestStreak || 0,
+    label: (item.longestStreak || 0) === 1 ? 'day' : 'days',
+    detail: `🔥 Current: ${item.currentStreak || 0} days`
+  }));
+
+  updateLeaderboardList('leaderboard-best-streak', bestStreakHtml);
+  updateLeaderboardList('student-leaderboard-best-streak', bestStreakHtml);
 }
 
 /**
