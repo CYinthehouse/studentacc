@@ -4078,10 +4078,11 @@ body.light-mode .main-content-area .form-group label {
 /* Mobile: enable scrolling for flashcard game */
 @media (max-width: 768px) {
   .junbi-overlay {
-    overflow-y: auto !important;
+    overflow-y: scroll !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     align-items: flex-start !important;
+    justify-content: flex-start !important;
   }
 }
 
@@ -4103,7 +4104,12 @@ body.light-mode .main-content-area .form-group label {
   .junbi-container {
     width: 100%;
     padding: 8px;
+    padding-bottom: 150px !important;
     max-width: 100%;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100vh;
+    overflow: visible !important;
   }
 }
 
@@ -12527,20 +12533,21 @@ body.light-mode .mobile-badge-name {
   #junbiPage.junbi-overlay[style*="display:flex"],
   #junbiPage.junbi-overlay {
     padding: 0 !important;
-    padding-bottom: 100px !important;
     box-sizing: border-box !important;
-    overflow-y: auto !important;
+    overflow-y: scroll !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
   }
 
   #junbiPage .junbi-container {
     padding: 15px 10px !important;
     padding-top: 60px !important;
-    padding-bottom: 30px !important;
+    padding-bottom: 180px !important;
     height: auto !important;
     max-height: none !important;
-    min-height: auto !important;
+    min-height: 100vh !important;
     overflow: visible !important;
     display: flex !important;
     flex-direction: column !important;
