@@ -4075,6 +4075,16 @@ body.light-mode .main-content-area .form-group label {
   overflow: hidden;
 }
 
+/* Mobile: enable scrolling for flashcard game */
+@media (max-width: 768px) {
+  .junbi-overlay {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    align-items: flex-start !important;
+  }
+}
+
 .junbi-container {
   width: 95%;
   max-width: 600px;
@@ -12514,17 +12524,20 @@ body.light-mode .mobile-badge-name {
   /* Junbi page mobile - simple scrollable layout */
   /* Note: display is controlled by JS, don't override here */
   #junbiPage.junbi-overlay[style*="display: flex"],
-  #junbiPage.junbi-overlay[style*="display:flex"] {
+  #junbiPage.junbi-overlay[style*="display:flex"],
+  #junbiPage.junbi-overlay {
     padding: 0 !important;
-    padding-bottom: 80px !important;
+    padding-bottom: 100px !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   #junbiPage .junbi-container {
     padding: 15px 10px !important;
     padding-top: 60px !important;
+    padding-bottom: 30px !important;
     height: auto !important;
     max-height: none !important;
     min-height: auto !important;
