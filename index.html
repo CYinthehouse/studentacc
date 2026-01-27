@@ -12538,13 +12538,13 @@ body.light-mode .mobile-badge-name {
     box-sizing: border-box !important;
     overflow: hidden !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
 
   #junbiPage .junbi-container {
     padding: 15px 10px !important;
-    padding-top: 60px !important;
-    padding-bottom: 20px !important;
+    padding-top: 50px !important;
+    padding-bottom: 130px !important;
     height: 100% !important;
     max-height: 100vh !important;
     min-height: auto !important;
@@ -12634,11 +12634,18 @@ body.light-mode .mobile-badge-name {
   }
 
   #junbiPage .junbi-controls {
-    margin-top: 10px !important;
-    margin-bottom: 15px !important;
+    position: fixed !important;
+    bottom: 70px !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    padding: 10px 15px !important;
+    background: linear-gradient(to top, rgba(212, 196, 168, 1) 0%, rgba(212, 196, 168, 0.95) 100%) !important;
     flex-direction: row !important;
     gap: 10px !important;
     width: 100% !important;
+    box-sizing: border-box !important;
+    z-index: 10000 !important;
   }
 
   #junbiPage .junbi-btn {
@@ -26734,10 +26741,12 @@ function showSpeechDisclaimer(onProceed) {
     justify-content: center;
     z-index: 10002;
     padding: 20px;
+    padding-bottom: 80px;
+    box-sizing: border-box;
   `;
   
   modal.innerHTML = `
-    <div style="background: white; border-radius: 16px; padding: 25px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+    <div style="background: white; border-radius: 16px; padding: 25px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto;">
       <div style="text-align: center; margin-bottom: 20px;">
         <div style="font-size: 50px; margin-bottom: 10px;">🎤</div>
         <h3 style="margin: 0; color: #1a202c; font-size: 20px;">Voice Recognition Notice</h3>
