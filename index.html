@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-visual">
 <title>Korean TA Evaluation System - Complete</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -27,6 +27,7 @@ body {
   background: url('https://cdn.shopify.com/s/files/1/0674/6747/7282/files/sky.png?v=1750990355') repeat;
   background-size: auto;
   min-height: 100vh;
+  min-height: 100dvh;
   color: #333;
   overflow-x: hidden;
 }
@@ -12045,8 +12046,6 @@ body.light-mode .teamwork-respond-state h4 {
   left: 0;
   right: 0;
   height: 70px;
-  min-height: 70px;
-  max-height: 70px;
   background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
   border-top: 3px solid #41c0ff;
   z-index: 99999;
@@ -12054,11 +12053,6 @@ body.light-mode .teamwork-respond-state h4 {
   padding-bottom: env(safe-area-inset-bottom, 0);
   justify-content: space-around;
   align-items: center;
-  flex-shrink: 0;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 .mobile-nav-item {
