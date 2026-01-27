@@ -25790,7 +25790,9 @@ function showJunbiPage() {
         const encodedWd = encodeURIComponent(JSON.stringify(wordDataObj));
         return `<span class="clickable-korean-word" 
           data-word="${encodedWd}"
-          onclick="event.stopPropagation(); showWordHover(event, this)"
+          onclick="handleWordClick(event, this)"
+          onmouseenter="handleWordHover(event, this)"
+          onmouseleave="hideWordHover()"
           style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; display: inline-block;"
           onmouseover="this.style.background='rgba(102,126,234,0.2)'"
           onmouseout="this.style.background=''">${wd.word}</span>`;
@@ -25809,7 +25811,9 @@ function showJunbiPage() {
       const encodedWordData = encodeURIComponent(JSON.stringify(wordData));
       koreanCellHtml = `<span class="clickable-korean-word" 
         data-word="${encodedWordData}"
-        onclick="event.stopPropagation(); showWordHover(event, this)"
+        onclick="handleWordClick(event, this)"
+        onmouseenter="handleWordHover(event, this)"
+        onmouseleave="hideWordHover()"
         style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;"
         onmouseover="this.style.background='rgba(102,126,234,0.2)'"
         onmouseout="this.style.background=''">${koreanCell}</span>`;
@@ -57788,6 +57792,32 @@ const FLASHCARD_CATEGORIES = {
   slang: { name: 'Slang & Informal', icon: '😎', color: '#fc8181' },
   other: { name: 'Other', icon: '📦', color: '#a0aec0' }
 };
+
+/**
+ * Check if device is touch/mobile
+ */
+function isTouchDevice() {
+  return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 768);
+}
+
+/**
+ * Handle word click - only show tooltip on mobile/touch devices
+ */
+function handleWordClick(event, element) {
+  event.stopPropagation();
+  if (isTouchDevice()) {
+    showWordHover(event, element);
+  }
+}
+
+/**
+ * Handle word hover - only show tooltip on desktop (non-touch)
+ */
+function handleWordHover(event, element) {
+  if (!isTouchDevice()) {
+    showWordHover(event, element);
+  }
+}
 
 /**
  * Show word hover tooltip with definition and grammar forms
