@@ -4075,9 +4075,9 @@ body.light-mode .main-content-area .form-group label {
   overflow: hidden;
 }
 
-/* Mobile: enable scrolling for flashcard game */
+/* Mobile: enable scrolling ONLY for flashcard game interface (not junbi prep page) */
 @media (max-width: 768px) {
-  .junbi-overlay {
+  #flashcardGameInterface.junbi-overlay {
     overflow-y: scroll !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
@@ -4104,8 +4104,11 @@ body.light-mode .main-content-area .form-group label {
   .junbi-container {
     width: 100%;
     padding: 8px;
-    padding-bottom: 150px !important;
     max-width: 100%;
+  }
+  
+  #flashcardGameInterface .junbi-container {
+    padding-bottom: 150px !important;
     height: auto !important;
     max-height: none !important;
     min-height: 100vh;
@@ -12527,11 +12530,35 @@ body.light-mode .mobile-badge-name {
 
   /* ===== FLASHCARD GAME MOBILE FIXES ===== */
 
-  /* Junbi page mobile - simple scrollable layout */
-  /* Note: display is controlled by JS, don't override here */
+  /* Junbi page mobile - compact layout, no scrolling needed */
   #junbiPage.junbi-overlay[style*="display: flex"],
   #junbiPage.junbi-overlay[style*="display:flex"],
   #junbiPage.junbi-overlay {
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #junbiPage .junbi-container {
+    padding: 15px 10px !important;
+    padding-top: 60px !important;
+    padding-bottom: 20px !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    min-height: auto !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Flashcard GAME interface mobile - scrollable for browser UI bars */
+  #flashcardGameInterface.junbi-overlay[style*="display: flex"],
+  #flashcardGameInterface.junbi-overlay[style*="display:flex"],
+  #flashcardGameInterface.junbi-overlay {
     padding: 0 !important;
     box-sizing: border-box !important;
     overflow-y: scroll !important;
@@ -12541,7 +12568,7 @@ body.light-mode .mobile-badge-name {
     justify-content: flex-start !important;
   }
 
-  #junbiPage .junbi-container {
+  #flashcardGameInterface .junbi-container {
     padding: 15px 10px !important;
     padding-top: 60px !important;
     padding-bottom: 180px !important;
@@ -26432,12 +26459,8 @@ function previewKoreanWord(index, event) {
     }
     isListening = false;
     
-    // Speak the Korean word
-    const utterance = new SpeechSynthesisUtterance(word.korean);
-    utterance.lang = 'ko-KR';
-    utterance.rate = 0.9;
-    
-    utterance.onend = () => {
+    // Use the proper speakKorean function with callback
+    speakKoreanWithCallback(word.korean, () => {
       // Apply 5 second penalty
       if (timeRemaining > 5) {
         timeRemaining -= 5;
@@ -26463,33 +26486,115 @@ function previewKoreanWord(index, event) {
           resumeFlashcardTimer();
         }
       }, 300); // Small delay to ensure TTS audio has fully stopped
-    };
-    
-    utterance.onerror = () => {
-      // On error, still resume
-      window.flashcardPreviewInProgress = false;
-      if (isFlashcardGameActive && !swipeMode.enabled) {
-        if (recognition) {
-          try {
-            recognition.start();
-            isListening = true;
-          } catch (e) {}
-        }
-        resumeFlashcardTimer();
-      }
-    };
-    
-    speechSynthesis.speak(utterance);
+    });
     
     // Visual feedback on the button
-    const btn = event.target;
-    btn.style.opacity = '1';
-    btn.style.color = '#48bb78';
-    setTimeout(() => {
-      btn.style.opacity = '0.7';
-      btn.style.color = '#667eea';
-    }, 500);
+    const btn = event.target.closest('button');
+    if (btn) {
+      btn.style.color = '#48bb78';
+      setTimeout(() => {
+        btn.style.color = '#667eea';
+      }, 500);
+    }
   }
+}
+
+// Speak Korean with callback when done (for preview button)
+async function speakKoreanWithCallback(text, onEnd) {
+  if (!text) {
+    if (onEnd) onEnd();
+    return;
+  }
+
+  if (currentTTSAudio) {
+    currentTTSAudio.pause();
+    currentTTSAudio = null;
+  }
+
+  try {
+    const response = await fetch('https://us-central1-korean-tts-proxy.cloudfunctions.net/synthesizeSpeech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        voiceName: 'ko-KR-Wavenet-A',
+        speakingRate: 0.9
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('TTS API error');
+    }
+
+    const data = await response.json();
+    if (!data.audioContent) throw new Error('No audio content returned');
+
+    // Play the audio with callback
+    const binary = atob(data.audioContent);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const blob = new Blob([bytes], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+
+    currentTTSAudio = new Audio(url);
+    
+    currentTTSAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentTTSAudio = null;
+      if (onEnd) onEnd();
+    };
+    
+    currentTTSAudio.onerror = () => {
+      URL.revokeObjectURL(url);
+      currentTTSAudio = null;
+      if (onEnd) onEnd();
+    };
+    
+    currentTTSAudio.play().catch(() => {
+      if (onEnd) onEnd();
+    });
+
+  } catch (err) {
+    // Fallback to browser speech synthesis with proper Korean voice
+    speakKoreanFallbackWithCallback(text, onEnd);
+  }
+}
+
+// Fallback using browser speech synthesis with proper Korean voice selection
+function speakKoreanFallbackWithCallback(text, onEnd) {
+  if (!window.speechSynthesis) {
+    if (onEnd) onEnd();
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ko-KR';
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  // Get voices and find Korean voice
+  const voices = window.speechSynthesis.getVoices();
+  const koreanVoice = voices.find(v => v.lang.startsWith('ko'));
+  if (koreanVoice) {
+    utterance.voice = koreanVoice;
+  }
+
+  utterance.onend = () => {
+    if (onEnd) onEnd();
+  };
+  
+  utterance.onerror = () => {
+    if (onEnd) onEnd();
+  };
+
+  window.speechSynthesis.speak(utterance);
 }
 
 function shuffleArray(array) {
