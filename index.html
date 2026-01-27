@@ -25772,12 +25772,29 @@ function showJunbiPage() {
     let koreanCell = word.korean;
 
     let englishCell = word.english;
+    
+    // Create word data for tooltip
+    const wordData = {
+      word: word.korean,
+      definition: word.english,
+      partOfSpeech: word.partOfSpeech || 'word',
+      exampleSentence: word.exampleSentence || '',
+      grammarForms: word.grammarForms || {},
+      sourceSetId: currentFlashcardSet.id,
+      sourceSetTitle: currentFlashcardSet.title
+    };
+    const encodedWordData = encodeURIComponent(JSON.stringify(wordData));
 
     return `
     <tr>
       <td style="color: #718096; font-weight: 500;">${index + 1}</td>
       <td class="english-col">${englishCell}</td>
-      <td class="korean-col" id="koreanWord-${index}">${koreanCell}</td>
+      <td class="korean-col" id="koreanWord-${index}" 
+          data-word="${encodedWordData}"
+          onclick="showWordHover(event, this)"
+          style="cursor: pointer; transition: background 0.2s;"
+          onmouseover="this.style.background='rgba(102,126,234,0.1)'"
+          onmouseout="this.style.background=''">${koreanCell}</td>
     </tr>
   `}).join('');
 
@@ -57772,12 +57789,16 @@ function showWordHover(event, element) {
     };
 
     let html = `
-      <div style="margin-bottom: 10px;">
-        <span style="font-size: 20px; font-weight: bold; color: #667eea;">${wordData.word}</span>
-        <span style="background: #e9d8fd; color: #6b46c1; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px;">${wordData.partOfSpeech || 'word'}</span>
-      </div>
-      <div style="color: #2d3748; margin-bottom: 10px;">
-        <strong>Definition:</strong> ${wordData.definition}
+      <div style="position: relative;">
+        <button onclick="event.stopPropagation(); document.getElementById('wordHoverTooltip').style.display='none';" 
+          style="position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; background: #f56565; border: 2px solid white; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">✕</button>
+        <div style="margin-bottom: 10px;">
+          <span style="font-size: 20px; font-weight: bold; color: #667eea;">${wordData.word}</span>
+          <span style="background: #e9d8fd; color: #6b46c1; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px;">${wordData.partOfSpeech || 'word'}</span>
+        </div>
+        <div style="color: #2d3748; margin-bottom: 10px;">
+          <strong>Definition:</strong> ${wordData.definition}
+        </div>
       </div>
     `;
 
