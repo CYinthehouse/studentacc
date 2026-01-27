@@ -58065,7 +58065,8 @@ async function importWordFromHover() {
 
     window.currentHoverWord = null;
 
-    showToast(`✅ "${wordData.word}" added to ${folderName}!`);
+    // Pass the same id to dismiss the loading toast and show success
+    showToast(`✅ "${wordData.word}" added to ${folderName}!`, { id: wordId });
 
     if (myFlashcardsData) {
       loadMyFlashcards();
