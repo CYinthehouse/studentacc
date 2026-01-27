@@ -25773,28 +25773,53 @@ function showJunbiPage() {
 
     let englishCell = word.english;
     
-    // Create word data for tooltip
-    const wordData = {
-      word: word.korean,
-      definition: word.english,
-      partOfSpeech: word.partOfSpeech || 'word',
-      exampleSentence: word.exampleSentence || '',
-      grammarForms: word.grammarForms || {},
-      sourceSetId: currentFlashcardSet.id,
-      sourceSetTitle: currentFlashcardSet.title
-    };
-    const encodedWordData = encodeURIComponent(JSON.stringify(wordData));
+    // Render Korean cell with individual clickable words if aiData exists
+    let koreanCellHtml = koreanCell;
+    if (word.aiData && word.aiData.wordData && Array.isArray(word.aiData.wordData) && word.aiData.wordData.length > 0) {
+      // Render each word as a clickable span
+      koreanCellHtml = word.aiData.wordData.map((wd, wdIndex) => {
+        const wordDataObj = {
+          word: wd.word,
+          definition: wd.definition || word.english,
+          partOfSpeech: wd.partOfSpeech || 'word',
+          exampleSentence: wd.exampleSentence || '',
+          grammarForms: wd.grammarForms || {},
+          sourceSetId: currentFlashcardSet.id,
+          sourceSetTitle: currentFlashcardSet.title
+        };
+        const encodedWd = encodeURIComponent(JSON.stringify(wordDataObj));
+        return `<span class="clickable-korean-word" 
+          data-word="${encodedWd}"
+          onclick="event.stopPropagation(); showWordHover(event, this)"
+          style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; display: inline-block;"
+          onmouseover="this.style.background='rgba(102,126,234,0.2)'"
+          onmouseout="this.style.background=''">${wd.word}</span>`;
+      }).join(' ');
+    } else {
+      // Fallback: make the whole phrase clickable with basic data
+      const wordData = {
+        word: word.korean,
+        definition: word.english,
+        partOfSpeech: word.partOfSpeech || 'word',
+        exampleSentence: word.exampleSentence || '',
+        grammarForms: word.grammarForms || {},
+        sourceSetId: currentFlashcardSet.id,
+        sourceSetTitle: currentFlashcardSet.title
+      };
+      const encodedWordData = encodeURIComponent(JSON.stringify(wordData));
+      koreanCellHtml = `<span class="clickable-korean-word" 
+        data-word="${encodedWordData}"
+        onclick="event.stopPropagation(); showWordHover(event, this)"
+        style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;"
+        onmouseover="this.style.background='rgba(102,126,234,0.2)'"
+        onmouseout="this.style.background=''">${koreanCell}</span>`;
+    }
 
     return `
     <tr>
       <td style="color: #718096; font-weight: 500;">${index + 1}</td>
       <td class="english-col">${englishCell}</td>
-      <td class="korean-col" id="koreanWord-${index}" 
-          data-word="${encodedWordData}"
-          onclick="showWordHover(event, this)"
-          style="cursor: pointer; transition: background 0.2s;"
-          onmouseover="this.style.background='rgba(102,126,234,0.1)'"
-          onmouseout="this.style.background=''">${koreanCell}</td>
+      <td class="korean-col" id="koreanWord-${index}">${koreanCellHtml}</td>
     </tr>
   `}).join('');
 
