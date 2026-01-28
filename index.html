@@ -2560,7 +2560,7 @@ body.light-mode .main-content-area .form-group label {
 
 .leitner-box-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 15px;
   margin-bottom: 30px;
 }
@@ -2568,13 +2568,17 @@ body.light-mode .main-content-area .form-group label {
 .leitner-box-card {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 15px;
   text-align: center;
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   border-top: 4px solid;
   cursor: pointer;
   transition: all 0.3s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 160px;
 }
 
 .leitner-box-card:hover {
@@ -2594,13 +2598,15 @@ body.light-mode .main-content-area .form-group label {
 .leitner-box-card .box-label {
   font-size: 14px;
   color: #718096;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  min-height: 20px;
 }
 
 .leitner-box-card .box-count {
   font-size: 32px;
   font-weight: bold;
   color: #2d3748;
+  margin-bottom: 5px;
 }
 
 .leitner-box-card .box-due {
@@ -2608,6 +2614,12 @@ body.light-mode .main-content-area .form-group label {
   color: var(--box-day1);
   margin-top: 5px;
   font-weight: 600;
+}
+
+.leitner-box-card .btn {
+  margin-top: auto;
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 .leitner-due-indicator {
@@ -21578,6 +21590,32 @@ function initializeSpeechRecognition() {
   window.flashcardLastInterimTime = null;
   window.flashcardLastInterimTranscript = '';
   window.flashcardInterimTimeout = null;
+  window.flashcardSilenceTimeout = null;
+
+  // Start silence detection - shows message if no speech for 3 seconds
+  function startFlashcardSilenceDetection() {
+    clearTimeout(window.flashcardSilenceTimeout);
+    window.flashcardSilenceTimeout = setTimeout(() => {
+      if (isFlashcardGameActive && isListening && timeRemaining > 0 && !flashcardIsProcessingMatch && !window.flashcardWrongFeedbackActive) {
+        const recognizedTextEl = document.getElementById('recognizedText');
+        if (recognizedTextEl && (!recognizedTextEl.textContent || recognizedTextEl.textContent.trim() === '')) {
+          recognizedTextEl.style.color = '#a0aec0';
+          recognizedTextEl.textContent = '🎤 No speech detected - try again';
+          // Clear after 2 seconds and restart silence detection
+          setTimeout(() => {
+            if (recognizedTextEl && recognizedTextEl.textContent === '🎤 No speech detected - try again' && !flashcardIsProcessingMatch) {
+              recognizedTextEl.textContent = '';
+              recognizedTextEl.style.color = '';
+              startFlashcardSilenceDetection();
+            }
+          }, 2000);
+        }
+      }
+    }, 3000);
+  }
+  
+  // Expose for use when starting rounds
+  window.startFlashcardSilenceDetection = startFlashcardSilenceDetection;
 
   recognition.onresult = (event) => {
     if (flashcardIsProcessingMatch) return;
@@ -21585,6 +21623,9 @@ function initializeSpeechRecognition() {
     
     // Ignore results from previous words (stale results)
     if (window.flashcardRecognitionWordIndex !== currentWordIndex) return;
+    
+    // Reset silence detection since we got speech
+    clearTimeout(window.flashcardSilenceTimeout);
 
     const latestResultIndex = event.results.length - 1;
     const latestResult = event.results[latestResultIndex];
@@ -21611,16 +21652,16 @@ function initializeSpeechRecognition() {
       window.flashcardLastInterimTranscript = transcript;
       
       window.flashcardInterimTimeout = setTimeout(() => {
-        // If we still have the same interim result after 3 seconds, treat it as final
+        // If we still have the same interim result after 1.2 seconds, treat it as final
         if (window.flashcardLastInterimTranscript && 
             window.flashcardLastInterimTranscript === transcript && 
             !flashcardIsProcessingMatch && 
             !window.flashcardWrongFeedbackActive &&
             timeRemaining > 0) {
-          console.log('Forcing final result after 3s timeout:', transcript);
+          console.log('Forcing final result after 1.2s timeout:', transcript);
           processFlashcardFinalResult(transcript, recognizedTextEl);
         }
-      }, 3000);
+      }, 1200);
       
       return; // Don't process interim results further
     } else if (!window.flashcardWrongFeedbackActive) {
@@ -27030,10 +27071,16 @@ function startWordTimer() {
   
   clearInterval(flashcardTimer);
   clearTimeout(flashcardTimerTimeout);
+  clearTimeout(window.flashcardSilenceTimeout);
   
   // Track which word we're on for recognition (to ignore stale results)
   window.flashcardRecognitionWordIndex = currentWordIndex;
   window.flashcardWrongFeedbackActive = false;
+  
+  // Start silence detection (only in voice modes, not swipe)
+  if (!swipeMode.enabled && window.startFlashcardSilenceDetection) {
+    window.startFlashcardSilenceDetection();
+  }
   
   // Only speak English in walk away mode (not standard voice mode)
   if (walkAwayMode.enabled && currentWordIndex < currentGameWords.length) {
@@ -27730,6 +27777,8 @@ let isMasteryListening = false;
 let masteryCorrectCount = 0;
 let masteryTotalCount = 0;
 let masteryIsProcessingMatch = false;
+let masteryWrongFeedbackActive = false;
+let masteryTimeRemaining = 7;
 
 /**
  * Add a word to the student's mastery deck
@@ -28268,9 +28317,37 @@ function initializeMasterySpeechRecognition() {
   window.masteryLastInterimTime = null;
   window.masteryLastInterimTranscript = '';
   window.masteryInterimTimeout = null;
+  window.masterySilenceTimeout = null;
+  
+  // Start silence detection - shows message if no speech for 3 seconds
+  function startMasterySilenceDetection() {
+    clearTimeout(window.masterySilenceTimeout);
+    window.masterySilenceTimeout = setTimeout(() => {
+      if (isMasteryListening && !masteryIsProcessingMatch) {
+        const recognizedTextEl = document.getElementById('masteryRecognizedText');
+        if (recognizedTextEl && (!recognizedTextEl.textContent || recognizedTextEl.textContent.trim() === '' || recognizedTextEl.textContent === '-')) {
+          recognizedTextEl.style.color = '#a0aec0';
+          recognizedTextEl.textContent = '🎤 No speech detected - try again';
+          // Clear after 2 seconds and restart silence detection
+          setTimeout(() => {
+            if (recognizedTextEl && recognizedTextEl.textContent === '🎤 No speech detected - try again' && !masteryIsProcessingMatch && isMasteryListening) {
+              recognizedTextEl.textContent = '';
+              recognizedTextEl.style.color = '';
+              startMasterySilenceDetection();
+            }
+          }, 2000);
+        }
+      }
+    }, 3000);
+  }
+  
+  window.startMasterySilenceDetection = startMasterySilenceDetection;
 
   masteryRecognition.onresult = (event) => {
     if (masteryIsProcessingMatch) return;
+    
+    // Reset silence detection since we got speech
+    clearTimeout(window.masterySilenceTimeout);
 
     const latestResultIndex = event.results.length - 1;
     const latestResult = event.results[latestResultIndex];
@@ -28296,15 +28373,15 @@ function initializeMasterySpeechRecognition() {
       window.masteryLastInterimTranscript = transcript;
       
       window.masteryInterimTimeout = setTimeout(() => {
-        // If we still have the same interim result after 3 seconds, treat it as final
+        // If we still have the same interim result after 1.2 seconds, treat it as final
         if (window.masteryLastInterimTranscript && 
             window.masteryLastInterimTranscript === transcript && 
             !masteryIsProcessingMatch &&
             isMasteryListening) {
-          console.log('Mastery: Forcing final result after 3s timeout:', transcript);
+          console.log('Mastery: Forcing final result after 1.2s timeout:', transcript);
           processMasteryFinalResult(transcript, recognizedTextEl);
         }
-      }, 3000);
+      }, 1200);
       
       return;
     }
@@ -28318,6 +28395,7 @@ function initializeMasterySpeechRecognition() {
   // Helper function to process final results (either real or forced)
   window.processMasteryFinalResult = function(transcript, recognizedTextEl) {
     if (masteryIsProcessingMatch) return;
+    if (masteryWrongFeedbackActive) return;
     if (masteryWordIndex >= currentMasteryWords.length) return;
     
     // Show in default color
@@ -28335,23 +28413,32 @@ function initializeMasterySpeechRecognition() {
 
     if (similarity >= 0.90) {
       masteryIsProcessingMatch = true;
+      masteryWrongFeedbackActive = false;
       masteryWordCorrect(masteryWordIndex);
 
       setTimeout(() => {
         masteryIsProcessingMatch = false;
       }, 500);
-    } else if (normalizedTranscript.length > 0 && similarity < 0.70) {
-      // Wrong answer - show feedback
+    } else if (normalizedTranscript.length > 0 && similarity < 0.70 && masteryTimeRemaining > 0) {
+      // Wrong answer - show feedback but don't mark incorrect (unlimited tries until timer)
+      masteryWrongFeedbackActive = true;
+      
+      // Play incorrect buzzer sound
+      playDrillSound('incorrect');
+      
       if (recognizedTextEl) {
         recognizedTextEl.style.color = '#f56565';
         recognizedTextEl.textContent = `"${transcript}" - Try again!`;
-        setTimeout(() => {
-          if (recognizedTextEl && !masteryIsProcessingMatch && isMasteryListening) {
-            recognizedTextEl.style.color = '';
-            recognizedTextEl.textContent = '';
-          }
-        }, 1000);
       }
+      
+      // Clear feedback after 0.5 seconds and continue listening
+      setTimeout(() => {
+        masteryWrongFeedbackActive = false;
+        if (recognizedTextEl && !masteryIsProcessingMatch && isMasteryListening && masteryTimeRemaining > 0) {
+          recognizedTextEl.style.color = '';
+          recognizedTextEl.textContent = '';
+        }
+      }, 500);
     }
   };
 
@@ -28484,15 +28571,24 @@ function pauseMasteryRound() {
 }
 
 function startMasteryTimer() {
-  let timeLeft = 7;
-  document.getElementById('masteryWordTimer').textContent = timeLeft;
+  masteryTimeRemaining = 7;
+  masteryWrongFeedbackActive = false;
+  document.getElementById('masteryWordTimer').textContent = masteryTimeRemaining;
+  
+  // Start silence detection
+  clearTimeout(window.masterySilenceTimeout);
+  if (window.startMasterySilenceDetection) {
+    window.startMasterySilenceDetection();
+  }
 
   masteryTimer = setInterval(() => {
-    timeLeft--;
-    document.getElementById('masteryWordTimer').textContent = timeLeft;
+    masteryTimeRemaining--;
+    document.getElementById('masteryWordTimer').textContent = masteryTimeRemaining;
 
-    if (timeLeft <= 0) {
+    if (masteryTimeRemaining <= 0) {
       clearInterval(masteryTimer);
+      clearTimeout(window.masterySilenceTimeout);
+      playWalkAwaySound('timeup');
       masteryWordIncorrect(masteryWordIndex);
     }
   }, 1000);
@@ -30006,8 +30102,9 @@ function renderLeitnerDailyReview() {
       <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">
         Cards advance through boxes as you review them correctly. Wrong answers reset to Day 1.
       </p>
-      <div class="leitner-box-grid">
-        ${[1,2,3,4,5,6,7,8].map(boxNum => {
+      <!-- First row: Day 1-5 -->
+      <div class="leitner-box-grid" style="grid-template-columns: repeat(5, 1fr);">
+        ${[1,2,3,4,5].map(boxNum => {
           const boxCards = leitnerCards.filter(c => c.box === boxNum);
           const count = boxCards.length;
           const dueCount = leitnerDueCards.filter(c => c.box === boxNum).length;
@@ -30044,6 +30141,7 @@ function renderLeitnerDailyReview() {
           }
 
           const canPractice = isDay1 ? count > 0 : (dueCount > 0 && !isMastery);
+          const practiceBtn = canPractice ? `<button class="btn btn-primary" style="margin-top: auto; padding: 8px 16px; font-size: 12px;" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${isDay1 ? count : dueCount + ' due'})</button>` : '';
           
           return `
             <div class="leitner-box-card ${LEITNER_BOX_CLASSES[boxNum]}"
@@ -30052,11 +30150,67 @@ function renderLeitnerDailyReview() {
               ${dueCount > 0 && !isMastery ? `<div class="leitner-due-indicator ${boxNum === 7 ? 'shake' : ''}">!</div>` : ''}
               <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
               <div class="box-count">${count}</div>
-              ${isDay1 && count > 0 ? `<div style="font-size: 11px; color: #667eea; margin-top: 5px;">Practice anytime</div>` : ''}
+              ${isDay1 && count > 0 ? `<div style="font-size: 11px; color: #667eea;">Practice anytime</div>` : ''}
               ${!isDay1 && !isMastery && dueCount > 0 ? `<div class="box-due">${dueCount} due</div>` : ''}
-              ${!isDay1 && !isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">Not due yet</div>` : ''}
+              ${!isDay1 && !isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0;">Not due yet</div>` : ''}
               ${dueDateText}
-              ${isMastery ? `<div style="font-size: 11px; color: #9f7aea; margin-top: 5px;">Completed!</div>` : ''}
+              ${practiceBtn}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <!-- Second row: Weekly, Monthly, Mastery -->
+      <div class="leitner-box-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 0;">
+        ${[6,7,8].map(boxNum => {
+          const boxCards = leitnerCards.filter(c => c.box === boxNum);
+          const count = boxCards.length;
+          const dueCount = leitnerDueCards.filter(c => c.box === boxNum).length;
+          const isMastery = boxNum === 8;
+
+          let dueDateText = '';
+          if (!isMastery && count > 0 && dueCount === 0) {
+            const notDueCards = boxCards.filter(c => {
+              const isDue = leitnerDueCards.some(dc => dc.id === c.id);
+              return !isDue && c.nextReviewDate;
+            });
+            if (notDueCards.length > 0) {
+              const dates = notDueCards.map(c => {
+                return c.nextReviewDate?.toDate ? c.nextReviewDate.toDate() : new Date(c.nextReviewDate);
+              }).sort((a, b) => a - b);
+              const nextDate = dates[0];
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const tomorrow = new Date(today);
+              tomorrow.setDate(tomorrow.getDate() + 1);
+
+              let dateStr;
+              if (nextDate.toDateString() === today.toDateString()) {
+                dateStr = 'Today';
+              } else if (nextDate.toDateString() === tomorrow.toDateString()) {
+                dateStr = 'Tomorrow';
+              } else {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                dateStr = monthNames[nextDate.getMonth()] + ' ' + nextDate.getDate();
+              }
+              dueDateText = '<div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">📅 Due: ' + dateStr + '</div>';
+            }
+          }
+
+          const canPractice = dueCount > 0 && !isMastery;
+          const practiceBtn = canPractice ? `<button class="btn btn-primary" style="margin-top: auto; padding: 8px 16px; font-size: 12px;" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${dueCount} due)</button>` : '';
+          
+          return `
+            <div class="leitner-box-card ${LEITNER_BOX_CLASSES[boxNum]}"
+                 ${canPractice ? `onclick="startBoxPractice(${boxNum})"` : ''}
+                 style="cursor: ${canPractice ? 'pointer' : 'default'}; ${!canPractice && !isMastery && count > 0 ? 'opacity: 0.8;' : ''}">
+              ${dueCount > 0 && !isMastery ? `<div class="leitner-due-indicator ${boxNum === 7 ? 'shake' : ''}">!</div>` : ''}
+              <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
+              <div class="box-count">${count}</div>
+              ${!isMastery && dueCount > 0 ? `<div class="box-due">${dueCount} due</div>` : ''}
+              ${!isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0;">Not due yet</div>` : ''}
+              ${dueDateText}
+              ${isMastery ? `<div style="font-size: 11px; color: #9f7aea;">Completed!</div>` : ''}
+              ${practiceBtn}
             </div>
           `;
         }).join('')}
@@ -30575,6 +30729,12 @@ let leitnerSecondChanceUsed = false; // Track if second chance was used for curr
 function startLeitnerTimer() {
   leitnerTimeRemaining = 10;
   updateLeitnerTimerDisplay();
+  
+  // Start silence detection
+  clearTimeout(window.leitnerSilenceTimeout);
+  if (window.startLeitnerSilenceDetection) {
+    window.startLeitnerSilenceDetection();
+  }
 
   leitnerTimer = setInterval(() => {
     leitnerTimeRemaining -= 0.1;
@@ -30582,6 +30742,7 @@ function startLeitnerTimer() {
 
     if (leitnerTimeRemaining <= 0) {
       stopLeitnerTimer();
+      clearTimeout(window.leitnerSilenceTimeout);
       leitnerTimeUp();
     }
   }, 100);
@@ -30727,9 +30888,37 @@ function startLeitnerRecognition(targetKorean) {
     // Track interim results for timeout forcing
     window.leitnerLastInterimTranscript = '';
     window.leitnerInterimTimeout = null;
+    window.leitnerSilenceTimeout = null;
+    
+    // Start silence detection - shows message if no speech for 3 seconds
+    function startLeitnerSilenceDetection() {
+      clearTimeout(window.leitnerSilenceTimeout);
+      window.leitnerSilenceTimeout = setTimeout(() => {
+        if (leitnerIsListening && !leitnerIsProcessingMatch && leitnerTimeRemaining > 0) {
+          const recognizedEl = document.getElementById('leitnerRecognizedText');
+          if (recognizedEl && (!recognizedEl.textContent || recognizedEl.textContent.trim() === '')) {
+            recognizedEl.style.color = '#a0aec0';
+            recognizedEl.textContent = '🎤 No speech detected - try again';
+            // Clear after 2 seconds and restart silence detection
+            setTimeout(() => {
+              if (recognizedEl && recognizedEl.textContent === '🎤 No speech detected - try again' && !leitnerIsProcessingMatch && leitnerIsListening) {
+                recognizedEl.textContent = '';
+                recognizedEl.style.color = '';
+                startLeitnerSilenceDetection();
+              }
+            }, 2000);
+          }
+        }
+      }, 3000);
+    }
+    
+    window.startLeitnerSilenceDetection = startLeitnerSilenceDetection;
 
     leitnerRecognition.onresult = (event) => {
       if (leitnerIsProcessingMatch) return;
+      
+      // Reset silence detection since we got speech
+      clearTimeout(window.leitnerSilenceTimeout);
 
       const latestResultIndex = event.results.length - 1;
       const latestResult = event.results[latestResultIndex];
@@ -30752,7 +30941,7 @@ function startLeitnerRecognition(targetKorean) {
           recognizedEl.textContent = transcript;
         }
         
-        // Track interim result and set timeout to force final after 3 seconds
+        // Track interim result and set timeout to force final after 1.2 seconds
         window.leitnerLastInterimTranscript = transcript;
         
         window.leitnerInterimTimeout = setTimeout(() => {
@@ -30761,10 +30950,10 @@ function startLeitnerRecognition(targetKorean) {
               !leitnerIsProcessingMatch &&
               leitnerIsListening &&
               leitnerTimeRemaining > 0) {
-            console.log('Leitner: Forcing final result after 3s timeout:', transcript);
+            console.log('Leitner: Forcing final result after 1.2s timeout:', transcript);
             processLeitnerFinalResult(transcript);
           }
-        }, 3000);
+        }, 1200);
         
         return;
       }
