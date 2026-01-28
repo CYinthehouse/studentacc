@@ -22,12 +22,19 @@
   box-sizing: border-box;
 }
 
+html {
+  /* iOS Chrome/Safari fix - stable viewport */
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', Roboto, Arial, sans-serif;
   background: url('https://cdn.shopify.com/s/files/1/0674/6747/7282/files/sky.png?v=1750990355') repeat;
   background-size: auto;
   min-height: 100vh;
   min-height: 100dvh;
+  min-height: -webkit-fill-available;
   color: #333;
   overflow-x: hidden;
 }
@@ -12104,6 +12111,10 @@ body.light-mode .teamwork-respond-state h4 {
   padding-bottom: env(safe-area-inset-bottom, 0);
   justify-content: space-around;
   align-items: center;
+  /* iOS Chrome fix - prevent movement when browser chrome hides/shows */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 .mobile-nav-item {
@@ -12524,6 +12535,21 @@ body.light-mode .mobile-badge-name {
   /* Show bottom nav when logged in */
   body.mobile-logged-in .mobile-bottom-nav {
     display: flex !important;
+  }
+  
+  /* iOS Chrome/Safari fix - prevent nav bar shift when browser chrome hides */
+  body.mobile-logged-in {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  body.mobile-logged-in .main-content-area,
+  body.mobile-logged-in #studentDashboard {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Hide desktop elements */
