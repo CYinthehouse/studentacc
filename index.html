@@ -12111,10 +12111,11 @@ body.light-mode .teamwork-respond-state h4 {
   padding-bottom: env(safe-area-inset-bottom, 0);
   justify-content: space-around;
   align-items: center;
-  /* iOS Chrome fix - prevent movement when browser chrome hides/shows */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
+  /* Chrome iOS fix - force GPU layer and prevent reflow */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .mobile-nav-item {
@@ -12537,17 +12538,18 @@ body.light-mode .mobile-badge-name {
     display: flex !important;
   }
   
-  /* iOS Chrome/Safari fix - prevent nav bar shift when browser chrome hides */
-  body.mobile-logged-in {
+  /* Chrome iOS specific fix - applied via JS when Chrome iOS detected */
+  body.chrome-ios.mobile-logged-in {
+    overflow: hidden;
     position: fixed;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    height: var(--chrome-ios-vh, 100vh);
   }
   
-  body.mobile-logged-in .main-content-area,
-  body.mobile-logged-in #studentDashboard {
-    height: 100%;
+  body.chrome-ios.mobile-logged-in .dashboard,
+  body.chrome-ios.mobile-logged-in #studentDashboard,
+  body.chrome-ios.mobile-logged-in #teacherDashboard {
+    height: var(--chrome-ios-vh, 100vh);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -18809,6 +18811,29 @@ let analyticsData = {
 };
 
 window.addEventListener('DOMContentLoaded', function() {
+
+  // Chrome iOS fix - set fixed viewport height to prevent nav bar jumping
+  function setChromeIOSViewportFix() {
+    const isChromeiOS = /CriOS/.test(navigator.userAgent);
+    if (isChromeiOS) {
+      // Add class to body for CSS targeting
+      document.body.classList.add('chrome-ios');
+      
+      // Set a CSS variable with the initial window height
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--chrome-ios-vh', `${vh}px`);
+    }
+  }
+  
+  setChromeIOSViewportFix();
+  
+  // Only update on orientation change, not on scroll
+  window.addEventListener('orientationchange', function() {
+    setTimeout(function() {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--chrome-ios-vh', `${vh}px`);
+    }, 200);
+  });
 
   loadSwipeModePreference();
 
