@@ -2562,7 +2562,7 @@ body.light-mode .main-content-area .form-group label {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 15px;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
 }
 
 .leitner-box-card {
@@ -2578,7 +2578,8 @@ body.light-mode .main-content-area .form-group label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 160px;
+  min-height: 200px;
+  height: 100%;
 }
 
 .leitner-box-card:hover {
@@ -2595,31 +2596,46 @@ body.light-mode .main-content-area .form-group label {
 .leitner-box-card.monthly { border-top-color: var(--box-monthly); }
 .leitner-box-card.mastery { border-top-color: var(--box-mastery); }
 
+.leitner-box-card .box-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  min-height: 45px;
+}
+
 .leitner-box-card .box-label {
   font-size: 14px;
   color: #718096;
-  margin-bottom: 8px;
-  min-height: 20px;
+  font-weight: 500;
 }
 
 .leitner-box-card .box-count {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: bold;
   color: #2d3748;
-  margin-bottom: 5px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.leitner-box-card .box-status {
+  font-size: 12px;
+  min-height: 20px;
+  margin-bottom: 8px;
 }
 
 .leitner-box-card .box-due {
   font-size: 12px;
   color: var(--box-day1);
-  margin-top: 5px;
   font-weight: 600;
 }
 
 .leitner-box-card .btn {
   margin-top: auto;
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .leitner-due-indicator {
@@ -27405,6 +27421,10 @@ function showRoundResults() {
   }
   isListening = false;
   
+  // Remove sound enable prompt when game ends
+  const soundPrompt = document.getElementById('soundEnablePrompt');
+  if (soundPrompt) soundPrompt.remove();
+  
   document.getElementById('listeningIndicator').style.display = 'none';
 
   const correct = gameResults.filter(r => r.correct).length;
@@ -27718,6 +27738,10 @@ function exitFlashcardGame() {
     window.flashcardSessionDisclaimerShown = false;
 
     releaseWakeLock();
+
+    // Remove sound enable prompt if present
+    const soundPrompt = document.getElementById('soundEnablePrompt');
+    if (soundPrompt) soundPrompt.remove();
 
     const interruptedOverlay = document.getElementById('gameInterruptedOverlay');
     if (interruptedOverlay) {
@@ -28571,7 +28595,7 @@ function pauseMasteryRound() {
 }
 
 function startMasteryTimer() {
-  masteryTimeRemaining = 7;
+  masteryTimeRemaining = 15;
   masteryWrongFeedbackActive = false;
   document.getElementById('masteryWordTimer').textContent = masteryTimeRemaining;
   
@@ -30141,18 +30165,28 @@ function renderLeitnerDailyReview() {
           }
 
           const canPractice = isDay1 ? count > 0 : (dueCount > 0 && !isMastery);
-          const practiceBtn = canPractice ? `<button class="btn btn-primary" style="margin-top: auto; padding: 8px 16px; font-size: 12px;" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${isDay1 ? count : dueCount + ' due'})</button>` : '';
+          const practiceBtn = canPractice ? `<button class="btn btn-primary" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${isDay1 ? count : dueCount + ' due'})</button>` : '';
+          
+          // Build status text
+          let statusText = '';
+          if (isDay1 && count > 0) {
+            statusText = '<span style="color: #667eea;">Practice anytime!</span>';
+          } else if (!isDay1 && dueCount > 0) {
+            statusText = `<span class="box-due">${dueCount} due</span>`;
+          } else if (!isDay1 && count > 0 && dueCount === 0) {
+            statusText = '<span style="color: #a0aec0;">Not due yet</span>';
+          }
           
           return `
             <div class="leitner-box-card ${LEITNER_BOX_CLASSES[boxNum]}"
                  ${canPractice ? `onclick="startBoxPractice(${boxNum})"` : ''}
-                 style="cursor: ${canPractice ? 'pointer' : 'default'}; ${!canPractice && !isMastery && count > 0 ? 'opacity: 0.8;' : ''}">
-              ${dueCount > 0 && !isMastery ? `<div class="leitner-due-indicator ${boxNum === 7 ? 'shake' : ''}">!</div>` : ''}
-              <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
+                 style="cursor: ${canPractice ? 'pointer' : 'default'}; ${!canPractice && count > 0 ? 'opacity: 0.8;' : ''}">
+              ${dueCount > 0 ? `<div class="leitner-due-indicator">!</div>` : ''}
+              <div class="box-header">
+                <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
+              </div>
               <div class="box-count">${count}</div>
-              ${isDay1 && count > 0 ? `<div style="font-size: 11px; color: #667eea;">Practice anytime</div>` : ''}
-              ${!isDay1 && !isMastery && dueCount > 0 ? `<div class="box-due">${dueCount} due</div>` : ''}
-              ${!isDay1 && !isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0;">Not due yet</div>` : ''}
+              <div class="box-status">${statusText}</div>
               ${dueDateText}
               ${practiceBtn}
             </div>
@@ -30197,19 +30231,29 @@ function renderLeitnerDailyReview() {
           }
 
           const canPractice = dueCount > 0 && !isMastery;
-          const practiceBtn = canPractice ? `<button class="btn btn-primary" style="margin-top: auto; padding: 8px 16px; font-size: 12px;" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${dueCount} due)</button>` : '';
+          const practiceBtn = canPractice ? `<button class="btn btn-primary" onclick="event.stopPropagation(); startBoxPractice(${boxNum})">Practice (${dueCount} due)</button>` : '';
+          
+          // Build status text
+          let statusText = '';
+          if (isMastery) {
+            statusText = '<span style="color: #9f7aea;">Completed!</span>';
+          } else if (dueCount > 0) {
+            statusText = `<span class="box-due">${dueCount} due</span>`;
+          } else if (count > 0 && dueCount === 0) {
+            statusText = '<span style="color: #a0aec0;">Not due yet</span>';
+          }
           
           return `
             <div class="leitner-box-card ${LEITNER_BOX_CLASSES[boxNum]}"
                  ${canPractice ? `onclick="startBoxPractice(${boxNum})"` : ''}
                  style="cursor: ${canPractice ? 'pointer' : 'default'}; ${!canPractice && !isMastery && count > 0 ? 'opacity: 0.8;' : ''}">
               ${dueCount > 0 && !isMastery ? `<div class="leitner-due-indicator ${boxNum === 7 ? 'shake' : ''}">!</div>` : ''}
-              <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
+              <div class="box-header">
+                <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
+              </div>
               <div class="box-count">${count}</div>
-              ${!isMastery && dueCount > 0 ? `<div class="box-due">${dueCount} due</div>` : ''}
-              ${!isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0;">Not due yet</div>` : ''}
+              <div class="box-status">${statusText}</div>
               ${dueDateText}
-              ${isMastery ? `<div style="font-size: 11px; color: #9f7aea;">Completed!</div>` : ''}
               ${practiceBtn}
             </div>
           `;
@@ -43653,7 +43697,7 @@ function displayPracticeStreakLeaderboard(stats, users) {
       if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
       return b.longestStreak - a.longestStreak;
     })
-    .slice(0, 30);
+    .slice(0, 15);
 
   const listHtml = generateLeaderboardList(sorted, users, (item) => ({
     score: item.currentStreak,
@@ -43696,7 +43740,7 @@ function displayWordsMasteredLeaderboard(stats, users, masteryByStudent = {}) {
 
   const sorted = combinedStats
     .sort((a, b) => b.totalMastered - a.totalMastered)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const listHtml = generateLeaderboardList(sorted, users, (item) => ({
     score: item.totalMastered,
@@ -43724,7 +43768,7 @@ function displayFlashcardImprovementLeaderboard(stats, users, masteryByStudent =
   const sorted = withImprovement
     .filter(s => s.improvementScore > 0)
     .sort((a, b) => b.improvementScore - a.improvementScore)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const listHtml = generateLeaderboardList(sorted, users, (item) => ({
     score: item.improvementScore,
@@ -43752,7 +43796,7 @@ function displayFlashcardOverallLeaderboard(stats, users, masteryByStudent = {})
   const sorted = withOverall
     .filter(s => s.overallScore > 0)
     .sort((a, b) => b.overallScore - a.overallScore)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const listHtml = generateLeaderboardList(sorted, users, (item) => ({
     score: item.overallScore,
@@ -43831,7 +43875,7 @@ function displayPronunciationLeaderboards(submissions, users) {
   const sortedAccuracy = [...studentAverages]
     .filter(s => s.avgScore > 0)
     .sort((a, b) => b.avgScore - a.avgScore)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const accuracyHtml = generateLeaderboardList(sortedAccuracy, users, (item) => ({
     score: item.avgScore,
@@ -43845,7 +43889,7 @@ function displayPronunciationLeaderboards(submissions, users) {
   const sortedImprovement = [...studentAverages]
     .filter(s => s.totalSubmissions >= 2)
     .sort((a, b) => b.improvement - a.improvement)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const improvementHtml = generateLeaderboardList(sortedImprovement, users, (item) => ({
     score: item.improvement > 0 ? `+${item.improvement}` : item.improvement,
@@ -43924,7 +43968,7 @@ function displayTestLeaderboards(submissions, users) {
   const sortedScores = [...studentAverages]
     .filter(s => s.avgScore > 0)
     .sort((a, b) => b.avgScore - a.avgScore)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const scoresHtml = generateLeaderboardList(sortedScores, users, (item) => ({
     score: item.avgScore,
@@ -43938,7 +43982,7 @@ function displayTestLeaderboards(submissions, users) {
   const sortedImprovement = [...studentAverages]
     .filter(s => s.totalSubmissions >= 2)
     .sort((a, b) => b.improvement - a.improvement)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const improvementHtml = generateLeaderboardList(sortedImprovement, users, (item) => ({
     score: item.improvement > 0 ? `+${item.improvement}` : item.improvement,
@@ -44119,7 +44163,7 @@ function displayCombinedOverallLeaderboard(leitnerStats, pronunciationSubmission
   const sorted = combined
     .filter(s => s.combinedScore > 0)
     .sort((a, b) => b.combinedScore - a.combinedScore)
-    .slice(0, 30);
+    .slice(0, 15);
 
   const listHtml = generateLeaderboardList(sorted, users, (item) => ({
     score: item.combinedScore,
@@ -62771,6 +62815,18 @@ function handleGrammarWalkAwayContinue() {
 
   window.mobileNavTo = function(tabId) {
     closeMobileGamesMenu(); closeMobileHomeMenu(); closeMobileProfile();
+    
+    // End any active flashcard game when navigating away
+    if (typeof isFlashcardGameActive !== 'undefined' && isFlashcardGameActive) {
+      if (typeof exitFlashcardGame === 'function') {
+        exitFlashcardGame();
+      }
+    }
+    
+    // Remove sound enable prompt
+    var soundPrompt = document.getElementById('soundEnablePrompt');
+    if (soundPrompt) soundPrompt.remove();
+    
     if (typeof switchTab === 'function') switchTab(tabId);
     updateMobileNavActive(tabId);
     if (tabId === 'mobileHome') {
