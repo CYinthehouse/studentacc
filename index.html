@@ -3988,27 +3988,28 @@ body.light-mode .main-content-area .form-group label {
 
 .streak-indicator {
   position: fixed;
-  top: 100px;
-  right: 20px;
-  background: white;
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: transparent;
   z-index: 1000;
-  min-width: 150px;
   text-align: center;
 }
 
 .streak-number {
-  font-size: 36px;
-  font-weight: bold;
-  color: #48bb78;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 28px;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #41c0ff,
+    2px -2px 0 #41c0ff,
+    -2px 2px 0 #41c0ff,
+    2px 2px 0 #41c0ff,
+    0 0 10px rgba(65, 192, 255, 0.5);
 }
 
 .streak-label {
-  font-size: 14px;
-  color: #718096;
-  margin-top: 5px;
+  display: none;
 }
 
 .word-item.correct-animation {
@@ -17429,9 +17430,8 @@ body.light-mode .mobile-badge-name {
 
           <img id="gameCharacterOverlay" class="junbi-character" src="" alt="" style="display: none;">
 
-          <div class="streak-indicator hidden" id="streakIndicator" style="position: absolute; top: 10px; left: 10px; z-index: 100;">
-            <div class="streak-number" id="streakNumber" style="font-size: 18px;">0</div>
-            <div class="streak-label" style="font-size: 10px;">Streak</div>
+          <div class="streak-indicator hidden" id="streakIndicator">
+            <div class="streak-number" id="streakNumber">0</div>
           </div>
 
           <div class="junbi-container" style="max-width: 500px; justify-content: flex-start; padding-top: 50px;">
