@@ -5843,7 +5843,7 @@ div[style*="background: #f7fafc"] h4 {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   gap: 15px;
   width: 100%;
-  max-height: calc(100vh - 300px);
+  max-height: 500px;
   overflow-y: auto;
 }
 
@@ -13856,9 +13856,8 @@ body.light-mode .mobile-badge-name {
   <div class="mobile-games-menu-title">🏠 MENU</div>
   <div class="mobile-games-menu-item" onclick="mobileNavTo('mobileHome'); closeMobileHomeMenu();"><span class="menu-icon">🏠</span><span class="menu-text">Home</span></div>
   <div class="mobile-games-menu-item" onclick="mobileNavTo('dailyActivity'); closeMobileHomeMenu();"><span class="menu-icon">📅</span><span class="menu-text">Daily Activity</span></div>
-  <div class="mobile-games-menu-item" onclick="mobileNavTo('grammarDrills'); closeMobileHomeMenu();"><span class="menu-icon">📝</span><span class="menu-text">Grammar Drill</span></div>
-  <div class="mobile-games-menu-item" onclick="mobileNavTo('pronunciationDrills'); closeMobileHomeMenu();"><span class="menu-icon">🎤</span><span class="menu-text">Pronunciation</span></div>
-  <div class="mobile-games-menu-item" onclick="mobileNavTo('grammarDrill'); closeMobileHomeMenu();"><span class="menu-icon">📖</span><span class="menu-text">Grammar Evaluation</span></div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('flashcardGames'); closeMobileHomeMenu();"><span class="menu-icon">🎮</span><span class="menu-text">Flashcard Games</span></div>
+  <div class="mobile-games-menu-item" onclick="mobileNavTo('leitnerBoxes'); closeMobileHomeMenu();"><span class="menu-icon">📦</span><span class="menu-text">Calendar Review</span></div>
 </div>
 
 <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileGamesMenu()"></div>
@@ -16264,39 +16263,7 @@ body.light-mode .mobile-badge-name {
             </div>
           </div>
 
-          <div class="sidebar-section">
-            <button class="sidebar-dropdown-header" onclick="toggleDropdown(this)">
-              <span>📋 Grammar Evaluation</span>
-              <span class="dropdown-icon">▼</span>
-            </button>
-            <div class="sidebar-dropdown-content">
-              <button class="sidebar-item" onclick="switchTab('grammarDrill')">📖 Grammar Evaluation <span id="grammarLeitnerBadge" class="leitner-due-badge" style="display: none;">0</span></button>
-              <button class="sidebar-item" onclick="switchTab('analytics')">📊 Analytics</button>
-            </div>
-          </div>
-
-          <div class="sidebar-section">
-            <button class="sidebar-dropdown-header" onclick="toggleDropdown(this)">
-              <span>🎤 Pronunciation Evaluation</span>
-              <span class="dropdown-icon">▼</span>
-            </button>
-            <div class="sidebar-dropdown-content">
-              <button class="sidebar-item" onclick="switchTab('pronunciationDrills')">🎤 Pronunciation Drills <span id="pronDrillsBadge" class="leitner-due-badge" style="display: none;">0</span></button>
-              <button class="sidebar-item" onclick="switchTab('analytics2')">📊 Analytics</button>
-            </div>
-          </div>
-
-          <div class="sidebar-section">
-            <button class="sidebar-dropdown-header" onclick="toggleDropdown(this)">
-              <span>📝 Grammar Drill</span>
-              <span class="dropdown-icon">▼</span>
-            </button>
-            <div class="sidebar-dropdown-content">
-              <button class="sidebar-item" onclick="switchTab('availableGrammarTests')">📋 Available Tests <span id="availableGrammarTestsBadge" class="leitner-due-badge" style="display: none; background: #f59e0b;">0</span></button>
-              <button class="sidebar-item" onclick="switchTab('grammarDrills')">📝 Grammar Drill <span id="grammarDrillsBadge" class="leitner-due-badge" style="display: none;">0</span></button>
-              <button class="sidebar-item" onclick="switchTab('grammarAnalytics')">📊 Grammar Analytics</button>
-            </div>
-          </div>
+          <!-- Hidden from student sidebar - Grammar Evaluation, Pronunciation Evaluation, Grammar Drill -->
         </div>
 
         <div class="main-content-area">
@@ -16989,31 +16956,22 @@ body.light-mode .mobile-badge-name {
               <div style="color: #81e6d9; font-size: 20px;">→</div>
             </button>
 
-            <button onclick="mobileNavTo('grammarDrills')" style="display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15)); border: 2px solid rgba(102, 126, 234, 0.4); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; text-align: left;">
-              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">📝</div>
+            <button onclick="mobileNavTo('flashcardGames')" style="display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15)); border: 2px solid rgba(102, 126, 234, 0.4); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; text-align: left;">
+              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">🎮</div>
               <div style="flex: 1;">
-                <div style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Grammar Drill</div>
-                <div style="color: #b794f4; font-size: 12px;">Test your Korean grammar knowledge</div>
+                <div style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Flashcard Games</div>
+                <div style="color: #b794f4; font-size: 12px;">Practice vocabulary with fun games</div>
               </div>
               <div style="color: #b794f4; font-size: 20px;">→</div>
             </button>
 
-            <button onclick="mobileNavTo('pronunciationDrills')" style="display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(135deg, rgba(237, 137, 54, 0.2), rgba(221, 107, 32, 0.15)); border: 2px solid rgba(237, 137, 54, 0.4); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; text-align: left;">
-              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ed8936, #dd6b20); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">🎤</div>
+            <button onclick="mobileNavTo('leitnerBoxes')" style="display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(135deg, rgba(237, 137, 54, 0.2), rgba(221, 107, 32, 0.15)); border: 2px solid rgba(237, 137, 54, 0.4); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; text-align: left;">
+              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ed8936, #dd6b20); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">📦</div>
               <div style="flex: 1;">
-                <div style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Pronunciation Drill</div>
-                <div style="color: #fbd38d; font-size: 12px;">Practice your Korean pronunciation</div>
+                <div style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Calendar Review</div>
+                <div style="color: #fbd38d; font-size: 12px;">Review your spaced repetition flashcards</div>
               </div>
               <div style="color: #fbd38d; font-size: 20px;">→</div>
-            </button>
-
-            <button onclick="mobileNavTo('grammarDrill')" style="display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(135deg, rgba(72, 187, 120, 0.2), rgba(56, 161, 105, 0.15)); border: 2px solid rgba(72, 187, 120, 0.4); border-radius: 16px; cursor: pointer; transition: all 0.3s ease; text-align: left;">
-              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #48bb78, #38a169); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">📖</div>
-              <div style="flex: 1;">
-                <div style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Grammar Evaluation</div>
-                <div style="color: #9ae6b4; font-size: 12px;">Practice grammar with interactive exercises</div>
-              </div>
-              <div style="color: #9ae6b4; font-size: 20px;">→</div>
             </button>
 
           </div>
@@ -17976,7 +17934,7 @@ body.light-mode .mobile-badge-name {
               </select>
             </div>
 
-            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; max-height: calc(100vh - 300px); overflow-y: auto; width: 100%;">
+            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; max-height: 500px; overflow-y: auto; width: 100%;">
               <div style="text-align: center; padding: 60px 20px; color: #a0aec0; grid-column: 1 / -1;">
                 <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
                 <p>No cards yet. Create your first flashcard!</p>
