@@ -3278,6 +3278,18 @@ body.light-mode .main-content-area .form-group label {
   .leitner-flashcard-inner {
     height: 240px;
   }
+  
+  .leitner-review-buttons {
+    flex-direction: column !important;
+    gap: 15px !important;
+    width: 100%;
+    padding: 0 20px;
+  }
+  
+  .leitner-review-buttons button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
 }
 
 /* ============= LEADERBOARD STYLES ============= */
@@ -17927,7 +17939,7 @@ body.light-mode .mobile-badge-name {
             </div>
           </div>
 
-          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; min-width: 0;">
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
               <div>
@@ -17951,7 +17963,7 @@ body.light-mode .mobile-badge-name {
               </select>
             </div>
 
-            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-height: 500px; overflow-y: auto;">
+            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; max-height: 600px; overflow-y: auto; width: 100%;">
               <div style="text-align: center; padding: 60px 20px; color: #a0aec0; grid-column: 1 / -1;">
                 <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
                 <p>No cards yet. Create your first flashcard!</p>
@@ -21021,6 +21033,8 @@ async function loadSubmissions() {
       if (!studentGroups[studentId]) {
         studentGroups[studentId] = {
           email: studentEmail,
+          username: studentEmail.split('@')[0] || 'student',
+          displayName: '',
           submissions: []
         };
       }
@@ -21031,6 +21045,28 @@ async function loadSubmissions() {
         test: testsMap[submission.testId]
       });
     });
+    
+    // Fetch display names for all students
+    const studentIds = Object.keys(studentGroups);
+    if (studentIds.length > 0) {
+      try {
+        const usersSnapshot = await db.collection('users').where('__name__', 'in', studentIds.slice(0, 10)).get();
+        usersSnapshot.forEach(doc => {
+          if (studentGroups[doc.id]) {
+            studentGroups[doc.id].displayName = doc.data().displayName || '';
+          }
+        });
+        // Handle more than 10 students
+        if (studentIds.length > 10) {
+          const usersSnapshot2 = await db.collection('users').where('__name__', 'in', studentIds.slice(10, 20)).get();
+          usersSnapshot2.forEach(doc => {
+            if (studentGroups[doc.id]) {
+              studentGroups[doc.id].displayName = doc.data().displayName || '';
+            }
+          });
+        }
+      } catch (e) { console.log('Error fetching user display names:', e); }
+    }
 
     window.studentFolderData = studentGroups;
 
@@ -21073,7 +21109,9 @@ async function loadSubmissions() {
         return bTime - aTime;
       });
 
-      const displayName = group.email.split('@')[0];
+      const username = group.username || group.email.split('@')[0];
+      const displayName = group.displayName || '';
+      const nameToShow = displayName ? `${displayName} (${username})` : username;
 
       const studentFolder = document.createElement('div');
       studentFolder.className = `student-folder ${needsGrading ? 'needs-grading' : 'all-graded'}`;
@@ -21084,7 +21122,7 @@ async function loadSubmissions() {
       studentFolder.innerHTML = `
         <div class="student-folder-header">
           <div class="folder-icon">${needsGrading ? '📂' : '📁'}</div>
-          <div class="student-name">${displayName}</div>
+          <div class="student-name">${nameToShow}</div>
           <div class="student-stats">
             ${pendingCount > 0 ? `<span class="stat-badge stat-pending">⏳${pendingCount}</span>` : ''}
             <span class="stat-badge stat-graded">✓${gradedCount}</span>
@@ -21109,11 +21147,15 @@ function openStudentFolderModal(studentId) {
 
   const pendingCount = group.submissions.filter(s => s.data.status === 'submitted').length;
   const gradedCount = group.submissions.filter(s => s.data.status === 'graded').length;
+  
+  const username = group.username || group.email.split('@')[0];
+  const displayName = group.displayName || '';
+  const nameToShow = displayName ? `${displayName} (${username})` : username;
 
   modal.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
       <div>
-        <h3 style="margin: 0; color: #2d3748;">📁 ${group.email}</h3>
+        <h3 style="margin: 0; color: #2d3748;">📁 ${nameToShow}</h3>
         <div style="margin-top: 8px; display: flex; gap: 10px;">
           ${pendingCount > 0 ? `<span style="background: #fef5e7; color: #d68910; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">⏳ ${pendingCount} Pending</span>` : ''}
           <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">✅ ${gradedCount} Graded</span>
@@ -24504,7 +24546,9 @@ function loadStudentAccessList() {
         </thead>
         <tbody>
           ${filtered.map(student => {
-            const name = student.displayName || student.email?.split('@')[0] || 'Student';
+            const username = student.email?.split('@')[0] || 'student';
+            const displayName = student.displayName || '';
+            const nameToShow = displayName ? `${displayName} (${username})` : username;
             const foldersAssigned = adminFoldersCache.filter(f => f.studentIds?.includes(student.id)).length;
             const setsAvailable = adminFoldersCache
               .filter(f => f.studentIds?.includes(student.id))
@@ -24514,10 +24558,9 @@ function loadStudentAccessList() {
               <tr>
                 <td>
                   <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="afd-student-avatar">${name.charAt(0).toUpperCase()}</div>
+                    <div class="afd-student-avatar">${(displayName || username).charAt(0).toUpperCase()}</div>
                     <div>
-                      <div style="font-weight: 600;">${name}</div>
-                      <div style="font-size: 11px; color: #718096;">${student.email || ''}</div>
+                      <div style="font-weight: 600;">${nameToShow}</div>
                     </div>
                   </div>
                 </td>
@@ -24545,7 +24588,9 @@ function showStudentFolderDetail(studentId) {
   const student = allStudentsCache.find(s => s.id === studentId);
   if (!student) return;
 
-  const name = student.displayName || student.email?.split('@')[0] || 'Student';
+  const username = student.email?.split('@')[0] || 'student';
+  const displayName = student.displayName || '';
+  const nameToShow = displayName ? `${displayName} (${username})` : username;
   const assignedFolders = adminFoldersCache.filter(f => f.studentIds?.includes(studentId));
   const missingFolders = adminFoldersCache.filter(f => !f.studentIds?.includes(studentId) && f.autoAssignFuture !== false);
 
@@ -24553,7 +24598,7 @@ function showStudentFolderDetail(studentId) {
   if (!body) return;
 
   body.innerHTML = `
-    <h4 style="margin: 0 0 15px; color: #2d3748;">Folders for ${name}</h4>
+    <h4 style="margin: 0 0 15px; color: #2d3748;">Folders for ${nameToShow}</h4>
     <div style="margin-bottom: 20px;">
       <h5 style="color: #065f46; margin-bottom: 10px;">✅ Assigned Folders (${assignedFolders.length})</h5>
       ${assignedFolders.length === 0 ? '<p style="color: #718096;">No folders assigned</p>' :
@@ -24869,7 +24914,9 @@ async function loadStudentCheckboxes(preChecked = []) {
     container.innerHTML = '';
     studentsSnap.forEach(doc => {
       const student = doc.data();
-      const name = student.displayName || student.email?.split('@')[0] || 'Student';
+      const username = student.email?.split('@')[0] || 'student';
+      const displayName = student.displayName || '';
+      const nameToShow = displayName ? `${displayName} (${username})` : username;
       const isChecked = preChecked.includes(doc.id);
 
       const label = document.createElement('label');
@@ -24878,8 +24925,7 @@ async function loadStudentCheckboxes(preChecked = []) {
       label.onmouseout = () => label.style.background = 'transparent';
       label.innerHTML = `
         <input type="checkbox" class="student-checkbox" value="${doc.id}" ${isChecked ? 'checked' : ''}>
-        <span>${name}</span>
-        <span style="color: #a0aec0; font-size: 11px;">(${student.email || ''})</span>
+        <span>${nameToShow}</span>
       `;
       container.appendChild(label);
     });
@@ -30442,12 +30488,14 @@ function startScheduledReview() {
         </p>
       </div>
 
-      <button class="btn" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px; background: #f56565;">
-        🎯 Start Review
-      </button>
-      <button class="btn" onclick="exitLeitnerReview()" style="margin-left: 10px; padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
-        Cancel
-      </button>
+      <div class="leitner-review-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="btn" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px; background: #f56565;">
+          🎯 Start Review
+        </button>
+        <button class="btn" onclick="exitLeitnerReview()" style="padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
+          Cancel
+        </button>
+      </div>
     </div>
 
     <div id="leitnerReviewInterface" style="display: none;"></div>
@@ -32127,12 +32175,14 @@ function _startBoxSpecificReviewInternal(boxNum, dueCards) {
         </p>
       </div>
 
-      <button class="btn btn-secondary" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px;">
-        🎯 Start Review
-      </button>
-      <button class="btn" onclick="exitLeitnerReview()" style="margin-left: 10px; padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
-        Cancel
-      </button>
+      <div class="leitner-review-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="btn btn-secondary" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px;">
+          🎯 Start Review
+        </button>
+        <button class="btn" onclick="exitLeitnerReview()" style="padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
+          Cancel
+        </button>
+      </div>
     </div>
 
     <div id="leitnerReviewInterface" style="display: none;"></div>
@@ -34851,11 +34901,34 @@ async function loadSubmissions2() {
       if (!studentGroups[studentId]) {
         studentGroups[studentId] = {
           email: studentEmail,
+          username: studentEmail.split('@')[0] || 'student',
+          displayName: '',
           submissions: []
         };
       }
       studentGroups[studentId].submissions.push(item);
     });
+    
+    // Fetch display names for all students
+    const studentIds = Object.keys(studentGroups);
+    if (studentIds.length > 0) {
+      try {
+        const usersSnapshot = await db.collection('users').where('__name__', 'in', studentIds.slice(0, 10)).get();
+        usersSnapshot.forEach(doc => {
+          if (studentGroups[doc.id]) {
+            studentGroups[doc.id].displayName = doc.data().displayName || '';
+          }
+        });
+        if (studentIds.length > 10) {
+          const usersSnapshot2 = await db.collection('users').where('__name__', 'in', studentIds.slice(10, 20)).get();
+          usersSnapshot2.forEach(doc => {
+            if (studentGroups[doc.id]) {
+              studentGroups[doc.id].displayName = doc.data().displayName || '';
+            }
+          });
+        }
+      } catch (e) { console.log('Error fetching user display names:', e); }
+    }
 
     window.studentFolderData2 = studentGroups;
 
@@ -34898,7 +34971,9 @@ async function loadSubmissions2() {
         return bTime - aTime;
       });
 
-      const displayName = group.email.split('@')[0];
+      const username = group.username || group.email.split('@')[0];
+      const displayName = group.displayName || '';
+      const nameToShow = displayName ? `${displayName} (${username})` : username;
 
       const studentFolder = document.createElement('div');
       studentFolder.className = `student-folder ${needsGrading ? 'needs-grading' : 'all-graded'}`;
@@ -34909,7 +34984,7 @@ async function loadSubmissions2() {
       studentFolder.innerHTML = `
         <div class="student-folder-header">
           <div class="folder-icon">${needsGrading ? '📂' : '📁'}</div>
-          <div class="student-name">${displayName}</div>
+          <div class="student-name">${nameToShow}</div>
           <div class="student-stats">
             ${pendingCount > 0 ? `<span class="stat-badge stat-pending">⏳${pendingCount}</span>` : ''}
             <span class="stat-badge stat-graded">✓${gradedCount}</span>
@@ -34934,11 +35009,15 @@ function openStudentFolderModal2(studentId) {
 
   const pendingCount = group.submissions.filter(s => s.data.status === 'pending').length;
   const gradedCount = group.submissions.filter(s => s.data.status === 'graded').length;
+  
+  const username = group.username || group.email.split('@')[0];
+  const displayName = group.displayName || '';
+  const nameToShow = displayName ? `${displayName} (${username})` : username;
 
   modal.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
       <div>
-        <h3 style="margin: 0; color: #2d3748;">📁 ${group.email}</h3>
+        <h3 style="margin: 0; color: #2d3748;">📁 ${nameToShow}</h3>
         <div style="margin-top: 8px; display: flex; gap: 10px;">
           ${pendingCount > 0 ? `<span style="background: #fef5e7; color: #d68910; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">⏳ ${pendingCount} Pending</span>` : ''}
           <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">✅ ${gradedCount} Graded</span>
@@ -37538,7 +37617,9 @@ async function loadDrillTracking() {
       return {
         studentId,
         email: student.email,
-        name: student.displayName || student.email?.split('@')[0] || 'Unknown',
+        username: student.email?.split('@')[0] || 'student',
+        displayName: student.displayName || '',
+        name: student.displayName ? `${student.displayName} (${student.email?.split('@')[0] || 'student'})` : (student.email?.split('@')[0] || 'Unknown'),
         activeDrills: activeDrills.length,
         completedDrills: completedDrills.length,
         level1Drills: level1Active.length,
@@ -37643,7 +37724,6 @@ function renderDrillTrackingDashboard(studentStats, today) {
                     ${student.level2Unlocked ? '<span style="background: #9f7aea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px;">Level 2</span>' : ''}
                     ${student.streak >= 3 ? `<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 10px; font-size: 11px;">🔥 ${student.streak} day streak</span>` : ''}
                   </div>
-                  <div style="color: #718096; font-size: 14px;">${student.email}</div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
@@ -44041,11 +44121,16 @@ function generateStreakLeaderboardList(items, users, isCurrentStreak = false) {
 
   return items.map((item, index) => {
     let displayName = 'Unknown';
+    let username = '';
     let avatarHtml = '';
 
     const user = users[item.id] || {};
     const email = user.email || item.studentEmail || item.email || item.id || 'Unknown';
-    displayName = email.split('@')[0];
+    username = email.split('@')[0];
+    displayName = user.displayName || username;
+    
+    // Format: "Display Name (username)" or just "username" if no display name
+    const fullDisplayName = user.displayName ? `${displayName} (${username})` : username;
 
     if (user.avatarUrl) {
       avatarHtml = `<div class="leaderboard-avatar"><img src="${user.avatarUrl}" alt=""></div>`;
@@ -44077,7 +44162,7 @@ function generateStreakLeaderboardList(items, users, isCurrentStreak = false) {
         <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
         ${avatarHtml}
         <div class="leaderboard-info">
-          <div class="leaderboard-name">${displayName}</div>
+          <div class="leaderboard-name">${fullDisplayName}</div>
           <div class="leaderboard-detail">${detail}</div>
         </div>
         <div class="leaderboard-score">
@@ -44185,16 +44270,22 @@ function generateLeaderboardList(items, users, getScoreData, useEmail = false) {
 
   return items.map((item, index) => {
     let displayName = 'Unknown';
+    let username = '';
     let avatarHtml = '';
 
     const user = users[item.id] || {};
 
     if (useEmail && item.email) {
-      displayName = item.email.split('@')[0];
+      username = item.email.split('@')[0];
+      displayName = user.displayName || username;
     } else {
       const email = user.email || item.studentEmail || item.email || item.id || 'Unknown';
-      displayName = email.split('@')[0];
+      username = email.split('@')[0];
+      displayName = user.displayName || username;
     }
+    
+    // Format: "Display Name (username)" or just "username" if no display name
+    const fullDisplayName = user.displayName ? `${displayName} (${username})` : username;
 
     if (user.avatarUrl) {
       avatarHtml = `<div class="leaderboard-avatar"><img src="${user.avatarUrl}" alt=""></div>`;
@@ -44217,7 +44308,7 @@ function generateLeaderboardList(items, users, getScoreData, useEmail = false) {
         <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
         ${avatarHtml}
         <div class="leaderboard-info">
-          <div class="leaderboard-name">${displayName}</div>
+          <div class="leaderboard-name">${fullDisplayName}</div>
           <div class="leaderboard-detail">${scoreData.detail}</div>
         </div>
         <div class="leaderboard-score">
@@ -44751,15 +44842,24 @@ async function openStudentProfileModal(studentId) {
     } catch(e) { console.log('Error fetching stats:', e); }
 
     // Update UI with fetched data
-    const displayName = userData.displayName || profileData.displayName || userData.email?.split('@')[0] || 'Student';
-    document.getElementById('modalProfileName').textContent = displayName;
+    const displayName = userData.displayName || profileData.displayName || '';
+    const username = userData.email?.split('@')[0] || 'student';
+    const nameToShow = displayName || username;
+    
+    // Show display name, with username below in smaller font
+    const nameEl = document.getElementById('modalProfileName');
+    if (displayName) {
+      nameEl.innerHTML = `${displayName}<div style="font-size: 14px; color: #718096; font-weight: normal; margin-top: 4px;">(${username})</div>`;
+    } else {
+      nameEl.textContent = username;
+    }
 
     const avatarEl = document.getElementById('modalProfileAvatar');
     const avatarUrl = userData.avatarUrl || userData.photoUrl || userData.photoURL || profileData.avatarUrl;
     if (avatarUrl) {
-      avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover;">`;
+      avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${nameToShow}" style="width: 100%; height: 100%; object-fit: cover;">`;
     } else {
-      const initials = displayName.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+      const initials = nameToShow.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
       avatarEl.innerHTML = `<span style="font-size: 36px;">${initials || '👤'}</span>`;
     }
 
