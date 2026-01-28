@@ -5843,9 +5843,6 @@ div[style*="background: #f7fafc"] h4 {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   gap: 15px;
   width: 100%;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
 }
 
 /* Marketplace Tabs */
@@ -17873,9 +17870,9 @@ body.light-mode .mobile-badge-name {
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 25px; align-items: stretch;">
+        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 25px; height: 700px;">
 
-          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
               <h3 style="margin: 0; font-size: 16px; color: #1a202c;">📁 My Folders</h3>
               <button onclick="openCreateFolderModal()" class="btn" style="padding: 6px 12px; font-size: 12px;">+ New</button>
@@ -17911,7 +17908,7 @@ body.light-mode .mobile-badge-name {
             </div>
           </div>
 
-          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; min-width: 0; display: flex; flex-direction: column;">
+          <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; min-width: 0; overflow-y: auto;">
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
               <div>
@@ -17935,7 +17932,7 @@ body.light-mode .mobile-badge-name {
               </select>
             </div>
 
-            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; flex: 1; overflow-y: auto; width: 100%; min-height: 0;">
+            <div id="myCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; width: 100%;">
               <div style="text-align: center; padding: 60px 20px; color: #a0aec0; grid-column: 1 / -1;">
                 <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
                 <p>No cards yet. Create your first flashcard!</p>
