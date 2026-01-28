@@ -21574,6 +21574,11 @@ function initializeSpeechRecognition() {
   recognition.continuous = true;
   recognition.interimResults = true;
 
+  // Track interim results for timeout forcing
+  window.flashcardLastInterimTime = null;
+  window.flashcardLastInterimTranscript = '';
+  window.flashcardInterimTimeout = null;
+
   recognition.onresult = (event) => {
     if (flashcardIsProcessingMatch) return;
     if (window.flashcardPreviewInProgress) return; // Ignore during TTS preview
@@ -21587,6 +21592,12 @@ function initializeSpeechRecognition() {
 
     const recognizedTextEl = document.getElementById('recognizedText');
     
+    // Clear any existing interim timeout
+    if (window.flashcardInterimTimeout) {
+      clearTimeout(window.flashcardInterimTimeout);
+      window.flashcardInterimTimeout = null;
+    }
+    
     // Show interim results in red, final results in default color
     if (!latestResult.isFinal && !window.flashcardWrongFeedbackActive) {
       // Interim result - show in red
@@ -21594,105 +21605,151 @@ function initializeSpeechRecognition() {
         recognizedTextEl.style.color = '#f56565';
         recognizedTextEl.textContent = transcript;
       }
+      
+      // Track interim result and set timeout to force final after 3 seconds
+      window.flashcardLastInterimTime = Date.now();
+      window.flashcardLastInterimTranscript = transcript;
+      
+      window.flashcardInterimTimeout = setTimeout(() => {
+        // If we still have the same interim result after 3 seconds, treat it as final
+        if (window.flashcardLastInterimTranscript && 
+            window.flashcardLastInterimTranscript === transcript && 
+            !flashcardIsProcessingMatch && 
+            !window.flashcardWrongFeedbackActive &&
+            timeRemaining > 0) {
+          console.log('Forcing final result after 3s timeout:', transcript);
+          processFlashcardFinalResult(transcript, recognizedTextEl);
+        }
+      }, 3000);
+      
+      return; // Don't process interim results further
     } else if (!window.flashcardWrongFeedbackActive) {
       // Final result - show in default color (will be updated below if wrong/correct)
       if (recognizedTextEl) {
         recognizedTextEl.style.color = '#2d3748';
         recognizedTextEl.textContent = transcript;
       }
+      
+      // Clear interim tracking
+      window.flashcardLastInterimTime = null;
+      window.flashcardLastInterimTranscript = '';
     }
 
-    if (currentWordIndex < currentGameWords.length) {
-      const currentWord = currentGameWords[currentWordIndex];
+    // Process the final result
+    processFlashcardFinalResult(transcript, recognizedTextEl);
+  };
+  
+  // Helper function to process final results (either real or forced)
+  window.processFlashcardFinalResult = function(transcript, recognizedTextEl) {
+    if (flashcardIsProcessingMatch) return;
+    if (window.flashcardWrongFeedbackActive) return;
+    if (currentWordIndex >= currentGameWords.length) return;
+    
+    const currentWord = currentGameWords[currentWordIndex];
 
-      const normalizedTranscript = normalizeKoreanForVoice(transcript);
-      const koreanWord = normalizeKoreanForVoice(currentWord.korean);
-      
-      // Pause timer 0.5 seconds after speech is detected (prevents timeout during grading)
-      clearTimeout(window.flashcardPauseTimerTimeout);
-      window.flashcardPauseTimerTimeout = setTimeout(() => {
-        clearInterval(flashcardTimer);
-        clearTimeout(flashcardTimerTimeout);
-      }, 500);
+    const normalizedTranscript = normalizeKoreanForVoice(transcript);
+    const koreanWord = normalizeKoreanForVoice(currentWord.korean);
+    
+    // Pause timer 0.5 seconds after speech is detected (prevents timeout during grading)
+    clearTimeout(window.flashcardPauseTimerTimeout);
+    window.flashcardPauseTimerTimeout = setTimeout(() => {
+      clearInterval(flashcardTimer);
+      clearTimeout(flashcardTimerTimeout);
+    }, 500);
 
-      // Debug logging
-      console.log('Voice recognition:', {
-        raw: transcript,
-        normalized: normalizedTranscript,
-        target: currentWord.korean,
-        targetNormalized: koreanWord,
-        exactMatch: normalizedTranscript === koreanWord,
-        isFinal: latestResult.isFinal
-      });
+    // Debug logging
+    console.log('Voice recognition:', {
+      raw: transcript,
+      normalized: normalizedTranscript,
+      target: currentWord.korean,
+      targetNormalized: koreanWord,
+      exactMatch: normalizedTranscript === koreanWord
+    });
 
-      // Check for exact match first (fast) before calculating similarity (slow)
-      let isMatch = false;
-      let similarity = 0;
-      if (normalizedTranscript === koreanWord) {
+    // Check for exact match first (fast) before calculating similarity (slow)
+    let isMatch = false;
+    let similarity = 0;
+    if (normalizedTranscript === koreanWord) {
+      isMatch = true;
+    } else {
+      // Only calculate similarity if not exact match
+      similarity = calculateSimilarity(normalizedTranscript, koreanWord);
+      // Allow 90% similarity for match
+      if (similarity >= 0.90) {
+        console.log('Similarity match:', similarity);
         isMatch = true;
-      } else {
-        // Only calculate similarity if not exact match
-        similarity = calculateSimilarity(normalizedTranscript, koreanWord);
-        // Allow 90% similarity for match
-        if (similarity >= 0.90) {
-          console.log('Similarity match:', similarity);
-          isMatch = true;
-        }
       }
+    }
 
-      if (isMatch) {
-        // Clear the pause timeout and pause immediately on correct answer
-        clearTimeout(window.flashcardPauseTimerTimeout);
-        clearInterval(flashcardTimer);
-        clearTimeout(flashcardTimerTimeout);
-        
-        // Reset wrong feedback flag
+    if (isMatch) {
+      // Clear the pause timeout and pause immediately on correct answer
+      clearTimeout(window.flashcardPauseTimerTimeout);
+      clearInterval(flashcardTimer);
+      clearTimeout(flashcardTimerTimeout);
+      
+      // Reset wrong feedback flag
+      window.flashcardWrongFeedbackActive = false;
+      
+      flashcardIsProcessingMatch = true;
+      wordCorrect(currentWordIndex);
+
+      setTimeout(() => {
+        flashcardIsProcessingMatch = false;
+      }, 500);
+    } else if (normalizedTranscript.length > 0 && similarity < 0.70 && timeRemaining > 0 && !window.flashcardWrongFeedbackActive && !flashcardIsProcessingMatch) {
+      // Wrong answer detected (final result, doesn't match, similarity too low)
+      // Only play if timer hasn't run out yet (timeRemaining > 0)
+      // Only play if not already showing wrong feedback and not processing a correct match
+      // Clear the pause timeout - we'll handle timer ourselves
+      clearTimeout(window.flashcardPauseTimerTimeout);
+      
+      // Set flag to prevent spamming
+      window.flashcardWrongFeedbackActive = true;
+      
+      // Play incorrect buzzer sound
+      playDrillSound('incorrect');
+      
+      // Show red text with what they said + Try again
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#f56565';
+        recognizedTextEl.textContent = `"${transcript}" - Try again!`;
+      }
+      
+      // Reset after 0.5 seconds and continue listening (timer keeps counting)
+      setTimeout(() => {
         window.flashcardWrongFeedbackActive = false;
-        
-        flashcardIsProcessingMatch = true;
-        wordCorrect(currentWordIndex);
-
-        setTimeout(() => {
-          flashcardIsProcessingMatch = false;
-        }, 500);
-      } else if (latestResult.isFinal && normalizedTranscript.length > 0 && similarity < 0.70 && timeRemaining > 0 && !window.flashcardWrongFeedbackActive && !flashcardIsProcessingMatch) {
-        // Wrong answer detected (final result, doesn't match, similarity too low)
-        // Only play if timer hasn't run out yet (timeRemaining > 0)
-        // Only play if not already showing wrong feedback and not processing a correct match
-        // Clear the pause timeout - we'll handle timer ourselves
-        clearTimeout(window.flashcardPauseTimerTimeout);
-        
-        // Set flag to prevent spamming
-        window.flashcardWrongFeedbackActive = true;
-        
-        // Play incorrect buzzer sound
-        playDrillSound('incorrect');
-        
-        // Show red text with what they said + Try again
-        if (recognizedTextEl) {
-          recognizedTextEl.style.color = '#f56565';
-          recognizedTextEl.textContent = `"${transcript}" - Try again!`;
+        if (recognizedTextEl && currentWordIndex < currentGameWords.length && timeRemaining > 0 && !flashcardIsProcessingMatch) {
+          recognizedTextEl.style.color = '';
+          recognizedTextEl.textContent = '';
         }
-        
-        // Reset after 0.5 seconds and continue listening (timer keeps counting)
-        setTimeout(() => {
-          window.flashcardWrongFeedbackActive = false;
-          if (recognizedTextEl && currentWordIndex < currentGameWords.length && timeRemaining > 0 && !flashcardIsProcessingMatch) {
-            recognizedTextEl.style.color = '';
-            recognizedTextEl.textContent = '';
-          }
-          // Resume timer after wrong answer feedback
-          if (isFlashcardGameActive && isListening && currentWordIndex < currentGameWords.length && !flashcardIsProcessingMatch) {
-            resumeFlashcardTimer();
-          }
-        }, 500);
-        
-        console.log('Wrong answer detected:', transcript, 'similarity:', similarity);
-      }
+        // Resume timer after wrong answer feedback
+        if (isFlashcardGameActive && isListening && currentWordIndex < currentGameWords.length && !flashcardIsProcessingMatch) {
+          resumeFlashcardTimer();
+        }
+      }, 500);
+      
+      console.log('Wrong answer detected:', transcript, 'similarity:', similarity);
     }
   };
 
   recognition.onerror = (event) => {
+    console.log('Recognition error:', event.error);
+    
+    // Show no speech detected message
+    if (event.error === 'no-speech' && timeRemaining > 0 && !flashcardIsProcessingMatch && !window.flashcardWrongFeedbackActive) {
+      const recognizedTextEl = document.getElementById('recognizedText');
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#a0aec0';
+        recognizedTextEl.textContent = '🎤 No speech detected - try again';
+        setTimeout(() => {
+          if (recognizedTextEl && !window.flashcardWrongFeedbackActive && !flashcardIsProcessingMatch) {
+            recognizedTextEl.style.color = '';
+            recognizedTextEl.textContent = '';
+          }
+        }, 1500);
+      }
+    }
+    
     if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
       if (isFlashcardGameActive) {
         showGameInterruptedScreen();
@@ -27672,6 +27729,7 @@ let masteryRecognition = null;
 let isMasteryListening = false;
 let masteryCorrectCount = 0;
 let masteryTotalCount = 0;
+let masteryIsProcessingMatch = false;
 
 /**
  * Add a word to the student's mastery deck
@@ -28183,7 +28241,13 @@ function _startMasteryPracticeInternal() {
 }
 
 function initializeMasterySpeechRecognition() {
-  if (masteryRecognition) return;
+  // Always recreate recognition to avoid stale state
+  if (masteryRecognition) {
+    try {
+      masteryRecognition.stop();
+    } catch (e) {}
+    masteryRecognition = null;
+  }
 
   if ('webkitSpeechRecognition' in window) {
     masteryRecognition = new webkitSpeechRecognition();
@@ -28198,7 +28262,12 @@ function initializeMasterySpeechRecognition() {
   masteryRecognition.continuous = true;
   masteryRecognition.interimResults = true;
 
-  let masteryIsProcessingMatch = false;
+  masteryIsProcessingMatch = false;
+  
+  // Track interim results for timeout forcing
+  window.masteryLastInterimTime = null;
+  window.masteryLastInterimTranscript = '';
+  window.masteryInterimTimeout = null;
 
   masteryRecognition.onresult = (event) => {
     if (masteryIsProcessingMatch) return;
@@ -28207,43 +28276,125 @@ function initializeMasterySpeechRecognition() {
     const latestResult = event.results[latestResultIndex];
     const transcript = latestResult[0].transcript.trim();
 
-    document.getElementById('masteryRecognizedText').textContent = transcript;
-
+    const recognizedTextEl = document.getElementById('masteryRecognizedText');
+    
+    // Clear any existing interim timeout
+    if (window.masteryInterimTimeout) {
+      clearTimeout(window.masteryInterimTimeout);
+      window.masteryInterimTimeout = null;
+    }
+    
+    // Show interim results in red, final in default color
     if (!latestResult.isFinal) {
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#f56565';
+        recognizedTextEl.textContent = transcript;
+      }
+      
+      // Track interim result and set timeout to force final after 3 seconds
+      window.masteryLastInterimTime = Date.now();
+      window.masteryLastInterimTranscript = transcript;
+      
+      window.masteryInterimTimeout = setTimeout(() => {
+        // If we still have the same interim result after 3 seconds, treat it as final
+        if (window.masteryLastInterimTranscript && 
+            window.masteryLastInterimTranscript === transcript && 
+            !masteryIsProcessingMatch &&
+            isMasteryListening) {
+          console.log('Mastery: Forcing final result after 3s timeout:', transcript);
+          processMasteryFinalResult(transcript, recognizedTextEl);
+        }
+      }, 3000);
+      
       return;
     }
+    
+    // Final result - process it
+    window.masteryLastInterimTime = null;
+    window.masteryLastInterimTranscript = '';
+    processMasteryFinalResult(transcript, recognizedTextEl);
+  };
+  
+  // Helper function to process final results (either real or forced)
+  window.processMasteryFinalResult = function(transcript, recognizedTextEl) {
+    if (masteryIsProcessingMatch) return;
+    if (masteryWordIndex >= currentMasteryWords.length) return;
+    
+    // Show in default color
+    if (recognizedTextEl) {
+      recognizedTextEl.style.color = '#2d3748';
+      recognizedTextEl.textContent = transcript;
+    }
 
+    const currentWord = currentMasteryWords[masteryWordIndex];
 
-    if (masteryWordIndex < currentMasteryWords.length) {
-      const currentWord = currentMasteryWords[masteryWordIndex];
+    const normalizedTranscript = normalizeKoreanForVoice(transcript);
+    const koreanWord = normalizeKoreanForVoice(currentWord.korean);
 
-      const normalizedTranscript = normalizeKoreanForVoice(transcript);
-      const koreanWord = normalizeKoreanForVoice(currentWord.korean);
+    const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
 
+    if (similarity >= 0.90) {
+      masteryIsProcessingMatch = true;
+      masteryWordCorrect(masteryWordIndex);
 
-      const similarity = calculateSimilarity(normalizedTranscript, koreanWord);
-
-      if (similarity >= 0.90) {
-        masteryIsProcessingMatch = true;
-        masteryWordCorrect(masteryWordIndex);
-
+      setTimeout(() => {
+        masteryIsProcessingMatch = false;
+      }, 500);
+    } else if (normalizedTranscript.length > 0 && similarity < 0.70) {
+      // Wrong answer - show feedback
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#f56565';
+        recognizedTextEl.textContent = `"${transcript}" - Try again!`;
         setTimeout(() => {
-          masteryIsProcessingMatch = false;
-        }, 500);
+          if (recognizedTextEl && !masteryIsProcessingMatch && isMasteryListening) {
+            recognizedTextEl.style.color = '';
+            recognizedTextEl.textContent = '';
+          }
+        }, 1000);
       }
     }
   };
 
   masteryRecognition.onerror = (event) => {
+    console.log('Mastery recognition error:', event.error);
+    
+    // Show no speech detected message
+    if (event.error === 'no-speech' && isMasteryListening && !masteryIsProcessingMatch) {
+      const recognizedTextEl = document.getElementById('masteryRecognizedText');
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#a0aec0';
+        recognizedTextEl.textContent = '🎤 No speech detected';
+        setTimeout(() => {
+          if (recognizedTextEl && !masteryIsProcessingMatch && isMasteryListening) {
+            recognizedTextEl.style.color = '';
+            recognizedTextEl.textContent = '';
+          }
+        }, 1500);
+      }
+    }
+    
+    // Try to restart on recoverable errors
+    if (event.error === 'no-speech' || event.error === 'aborted') {
+      if (isMasteryListening && masteryWordIndex < currentMasteryWords.length) {
+        setTimeout(() => {
+          if (isMasteryListening && masteryRecognition) {
+            try {
+              masteryRecognition.start();
+            } catch (e) {}
+          }
+        }, 300);
+      }
+    }
   };
 
   masteryRecognition.onend = () => {
     if (isMasteryListening && masteryWordIndex < currentMasteryWords.length) {
       setTimeout(() => {
-        if (isMasteryListening) {
+        if (isMasteryListening && masteryRecognition) {
           try {
             masteryRecognition.start();
           } catch (e) {
+            console.log('Mastery recognition restart failed:', e);
           }
         }
       }, 300);
@@ -28292,12 +28443,32 @@ function startMasteryRound() {
   }
 
   if (masteryRecognition) {
-    masteryRecognition.start();
-    isMasteryListening = true;
-    document.getElementById('masteryListeningIndicator').style.display = 'block';
-    document.getElementById('masteryStartBtn').textContent = '⏸ Pause';
-    document.getElementById('masteryStartBtn').onclick = pauseMasteryRound;
-    startMasteryTimer();
+    try {
+      masteryRecognition.start();
+      isMasteryListening = true;
+      document.getElementById('masteryListeningIndicator').style.display = 'block';
+      document.getElementById('masteryStartBtn').textContent = '⏸ Pause';
+      document.getElementById('masteryStartBtn').onclick = pauseMasteryRound;
+      startMasteryTimer();
+    } catch (e) {
+      console.log('Mastery recognition start error:', e);
+      // Try reinitializing
+      setTimeout(() => {
+        initializeMasterySpeechRecognition();
+        if (masteryRecognition) {
+          try {
+            masteryRecognition.start();
+            isMasteryListening = true;
+            document.getElementById('masteryListeningIndicator').style.display = 'block';
+            document.getElementById('masteryStartBtn').textContent = '⏸ Pause';
+            document.getElementById('masteryStartBtn').onclick = pauseMasteryRound;
+            startMasteryTimer();
+          } catch (e2) {
+            console.log('Mastery recognition retry failed:', e2);
+          }
+        }
+      }, 500);
+    }
   }
 }
 
@@ -29872,15 +30043,18 @@ function renderLeitnerDailyReview() {
             }
           }
 
+          const canPractice = isDay1 ? count > 0 : (dueCount > 0 && !isMastery);
+          
           return `
             <div class="leitner-box-card ${LEITNER_BOX_CLASSES[boxNum]}"
-                 onclick="startBoxPractice(${boxNum})"
-                 style="cursor: pointer;">
+                 ${canPractice ? `onclick="startBoxPractice(${boxNum})"` : ''}
+                 style="cursor: ${canPractice ? 'pointer' : 'default'}; ${!canPractice && !isMastery && count > 0 ? 'opacity: 0.8;' : ''}">
               ${dueCount > 0 && !isMastery ? `<div class="leitner-due-indicator ${boxNum === 7 ? 'shake' : ''}">!</div>` : ''}
               <div class="box-label">${LEITNER_BOX_NAMES[boxNum]}</div>
               <div class="box-count">${count}</div>
               ${isDay1 && count > 0 ? `<div style="font-size: 11px; color: #667eea; margin-top: 5px;">Practice anytime</div>` : ''}
               ${!isDay1 && !isMastery && dueCount > 0 ? `<div class="box-due">${dueCount} due</div>` : ''}
+              ${!isDay1 && !isMastery && count > 0 && dueCount === 0 ? `<div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">Not due yet</div>` : ''}
               ${dueDateText}
               ${isMastery ? `<div style="font-size: 11px; color: #9f7aea; margin-top: 5px;">Completed!</div>` : ''}
             </div>
@@ -30549,6 +30723,10 @@ function startLeitnerRecognition(targetKorean) {
     leitnerRecognition.lang = 'ko-KR';
     leitnerRecognition.continuous = true;
     leitnerRecognition.interimResults = true;
+    
+    // Track interim results for timeout forcing
+    window.leitnerLastInterimTranscript = '';
+    window.leitnerInterimTimeout = null;
 
     leitnerRecognition.onresult = (event) => {
       if (leitnerIsProcessingMatch) return;
@@ -30560,18 +30738,54 @@ function startLeitnerRecognition(targetKorean) {
       leitnerRecognizedText = transcript;
 
       const recognizedEl = document.getElementById('leitnerRecognizedText');
-      if (recognizedEl) {
-        recognizedEl.textContent = leitnerRecognizedText;
+      
+      // Clear any existing interim timeout
+      if (window.leitnerInterimTimeout) {
+        clearTimeout(window.leitnerInterimTimeout);
+        window.leitnerInterimTimeout = null;
       }
 
       if (!latestResult.isFinal) {
+        // Show interim in red
+        if (recognizedEl) {
+          recognizedEl.style.color = '#f56565';
+          recognizedEl.textContent = transcript;
+        }
+        
+        // Track interim result and set timeout to force final after 3 seconds
+        window.leitnerLastInterimTranscript = transcript;
+        
+        window.leitnerInterimTimeout = setTimeout(() => {
+          if (window.leitnerLastInterimTranscript && 
+              window.leitnerLastInterimTranscript === transcript && 
+              !leitnerIsProcessingMatch &&
+              leitnerIsListening &&
+              leitnerTimeRemaining > 0) {
+            console.log('Leitner: Forcing final result after 3s timeout:', transcript);
+            processLeitnerFinalResult(transcript);
+          }
+        }, 3000);
+        
         return;
       }
 
+      // Final result
+      window.leitnerLastInterimTranscript = '';
+      processLeitnerFinalResult(transcript);
+    };
+    
+    // Helper function to process final results
+    window.processLeitnerFinalResult = function(transcript) {
+      if (leitnerIsProcessingMatch) return;
+      
+      const recognizedEl = document.getElementById('leitnerRecognizedText');
+      if (recognizedEl) {
+        recognizedEl.style.color = '#2d3748';
+        recognizedEl.textContent = transcript;
+      }
 
       const targetClean = normalizeKoreanForVoice(leitnerTargetKorean);
       const transcriptClean = normalizeKoreanForVoice(transcript);
-
 
       const similarity = calculateSimilarity(transcriptClean, targetClean);
 
@@ -30579,20 +30793,36 @@ function startLeitnerRecognition(targetKorean) {
         leitnerIsProcessingMatch = true;
         stopLeitnerTimer();
         leitnerVoiceCorrect();
-      } else if (transcriptClean.length > 0) {
-        playWalkAwaySound('wrong');
+      } else if (transcriptClean.length > 0 && similarity < 0.70) {
+        playDrillSound('incorrect');
 
         const statusEl = document.getElementById('leitnerRecognitionStatus');
-        if (statusEl && walkAwayMode.enabled) {
+        if (statusEl) {
           statusEl.innerHTML = `
-            <p style="color: #f56565; font-size: 14px;">❌ Try again!</p>
-            <p id="leitnerRecognizedText" style="font-size: 20px; color: #2d3748; font-weight: 600; margin-top: 10px;">${transcript}</p>
+            <p style="color: #f56565; font-size: 14px;">❌ "${transcript}" - Try again!</p>
+            <p id="leitnerRecognizedText" style="font-size: 20px; color: #2d3748; font-weight: 600; margin-top: 10px;"></p>
           `;
         }
       }
     };
 
     leitnerRecognition.onerror = (event) => {
+      console.log('Leitner recognition error:', event.error);
+      
+      // Show no speech detected message
+      if (event.error === 'no-speech' && leitnerIsListening && !leitnerIsProcessingMatch && leitnerTimeRemaining > 0) {
+        const recognizedEl = document.getElementById('leitnerRecognizedText');
+        if (recognizedEl) {
+          recognizedEl.style.color = '#a0aec0';
+          recognizedEl.textContent = '🎤 No speech detected';
+          setTimeout(() => {
+            if (recognizedEl && !leitnerIsProcessingMatch && leitnerIsListening) {
+              recognizedEl.style.color = '';
+              recognizedEl.textContent = '';
+            }
+          }, 1500);
+        }
+      }
     };
 
     leitnerRecognition.onend = () => {
@@ -31056,12 +31286,22 @@ function renderLeitnerBoxGrid() {
     `;
 
     let practiceButton = '';
-    if (count > 0 && !isMastery) {
+    if (isDay1 && count > 0) {
+      // Day 1 can always be practiced
       practiceButton = `
         <button onclick="event.stopPropagation(); startBoxPractice(${boxNum})"
                 class="btn btn-secondary"
                 style="margin-top: 10px; padding: 6px 12px; font-size: 12px;">
           Practice (${count})
+        </button>
+      `;
+    } else if (!isMastery && due > 0) {
+      // Other boxes only show practice button when cards are due
+      practiceButton = `
+        <button onclick="event.stopPropagation(); startBoxPractice(${boxNum})"
+                class="btn btn-secondary"
+                style="margin-top: 10px; padding: 6px 12px; font-size: 12px;">
+          Practice (${due} due)
         </button>
       `;
     }
@@ -31091,13 +31331,16 @@ function renderLeitnerBoxGrid() {
       statusText = `<div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">📅 Due: ${dateStr}</div>`;
     }
 
+    const canPractice = isDay1 ? count > 0 : (due > 0 && !isMastery);
+
     return `
-      <div class="leitner-box-card ${cssClass}" onclick="startBoxPractice(${boxNum})">
+      <div class="leitner-box-card ${cssClass}" ${canPractice ? `onclick="startBoxPractice(${boxNum})"` : ''} style="${!canPractice ? 'cursor: default;' : ''}">
         ${brainIcon}
         ${dueIndicator}
         <div class="box-label">${name}</div>
         <div class="box-count">${count}</div>
         ${due > 0 && !isMastery ? `<div class="box-due">${due} due</div>` : ''}
+        ${!isDay1 && !isMastery && count > 0 && due === 0 ? `<div style="font-size: 11px; color: #a0aec0; margin-top: 3px;">Not due yet</div>` : ''}
         ${statusText}
         ${practiceButton}
       </div>
@@ -58060,6 +58303,7 @@ async function importWordFromHover() {
     } catch (aiError) {
     }
 
+    // Save to My Flashcards (studentFlashcards collection)
     await db.collection('studentFlashcards').add({
       studentId: currentUser.uid,
       folderId: vocabFolderId,
@@ -58078,10 +58322,60 @@ async function importWordFromHover() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
+    // Also add to Calendar Day 1 (leitnerProgress collection)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const setId = wordData.sourceSetId || 'vocabulary_import';
+    const leitnerCardId = `${currentUser.uid}_${setId}_${wordData.definition.replace(/\s+/g, '_').toLowerCase()}`;
+    
+    // Check if already exists in Leitner
+    const existingLeitnerCard = leitnerCards.find(c => c.id === leitnerCardId);
+    
+    if (!existingLeitnerCard) {
+      const newLeitnerCard = {
+        studentId: currentUser.uid,
+        setId: setId,
+        box: 1,
+        nextReviewDate: today,
+        firstSeenDate: today,
+        lastReviewDate: null,
+        masteredDate: null,
+        lapseCount: 0,
+        correctStreak: 0,
+        totalReviews: 0,
+        correctReviews: 0,
+        english: wordData.definition,
+        korean: wordData.word,
+        aiData: {
+          wordData: [{
+            word: wordData.word,
+            definition: wordData.definition,
+            partOfSpeech: wordData.partOfSpeech || 'word',
+            exampleSentence: wordData.exampleSentence || '',
+            grammarForms: wordData.grammarForms || {}
+          }]
+        }
+      };
+
+      await db.collection('leitnerProgress').doc(leitnerCardId).set(newLeitnerCard);
+      leitnerCards.push({ id: leitnerCardId, ...newLeitnerCard });
+
+      // Update Leitner stats
+      if (studentLeitnerStats) {
+        studentLeitnerStats.totalCardsLearning++;
+        await db.collection('leitnerStats').doc(currentUser.uid).update({
+          totalCardsLearning: studentLeitnerStats.totalCardsLearning
+        });
+      }
+
+      calculateLeitnerDueCards();
+      updateLeitnerDueBadge();
+    }
+
     window.currentHoverWord = null;
 
     // Pass the same id to dismiss the loading toast and show success
-    showToast(`✅ "${wordData.word}" added to ${folderName}!`, { id: wordId });
+    showToast(`✅ "${wordData.word}" added to ${folderName} & Calendar Day 1!`, { id: wordId });
 
     if (myFlashcardsData) {
       loadMyFlashcards();
