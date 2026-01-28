@@ -21585,7 +21585,22 @@ function initializeSpeechRecognition() {
     const latestResult = event.results[latestResultIndex];
     const transcript = latestResult[0].transcript.trim();
 
-    document.getElementById('recognizedText').textContent = transcript;
+    const recognizedTextEl = document.getElementById('recognizedText');
+    
+    // Show interim results in red, final results in default color
+    if (!latestResult.isFinal && !window.flashcardWrongFeedbackActive) {
+      // Interim result - show in red
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#f56565';
+        recognizedTextEl.textContent = transcript;
+      }
+    } else if (!window.flashcardWrongFeedbackActive) {
+      // Final result - show in default color (will be updated below if wrong/correct)
+      if (recognizedTextEl) {
+        recognizedTextEl.style.color = '#2d3748';
+        recognizedTextEl.textContent = transcript;
+      }
+    }
 
     if (currentWordIndex < currentGameWords.length) {
       const currentWord = currentGameWords[currentWordIndex];
@@ -21653,8 +21668,7 @@ function initializeSpeechRecognition() {
         // Play incorrect buzzer sound
         playDrillSound('incorrect');
         
-        // Show red text with what they said
-        const recognizedTextEl = document.getElementById('recognizedText');
+        // Show red text with what they said + Try again
         if (recognizedTextEl) {
           recognizedTextEl.style.color = '#f56565';
           recognizedTextEl.textContent = `"${transcript}" - Try again!`;
