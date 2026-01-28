@@ -5757,6 +5757,8 @@ div[style*="background: #f7fafc"] h4 {
   padding: 15px;
   transition: all 0.2s;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .my-card-item:hover {
@@ -5833,6 +5835,14 @@ div[style*="background: #f7fafc"] h4 {
 .my-card-item .card-actions .delete-btn:hover {
   background: #c53030;
   color: white;
+}
+
+/* My Cards Grid - ensure full width on desktop */
+#myCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  width: 100%;
 }
 
 /* Marketplace Tabs */
@@ -30427,12 +30437,14 @@ function _startDay1PracticeInternal() {
         </p>
       </div>
 
-      <button class="btn btn-secondary" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px;">
-        🎯 Start Practice
-      </button>
-      <button class="btn" onclick="exitLeitnerReview()" style="margin-left: 10px; padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
-        Cancel
-      </button>
+      <div class="leitner-review-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="btn btn-secondary" onclick="beginLeitnerSession()" style="padding: 15px 40px; font-size: 18px;">
+          🎯 Start Practice
+        </button>
+        <button class="btn" onclick="exitLeitnerReview()" style="padding: 15px 30px; background: transparent; color: #718096; border: 2px solid #e2e8f0;">
+          Cancel
+        </button>
+      </div>
     </div>
 
     <div id="leitnerReviewInterface" style="display: none;"></div>
