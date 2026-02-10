@@ -13846,6 +13846,172 @@ body.light-mode .mobile-badge-name {
   margin-top: 10px;
 }
 
+/* Day 1 Review & Delete Modal */
+.day1-review-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: day1ReviewFadeIn 0.25s ease;
+}
+@keyframes day1ReviewFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.day1-review-modal {
+  background: #1a202c;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 550px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 2px solid #f56565;
+  animation: day1ReviewSlideUp 0.3s ease;
+}
+@keyframes day1ReviewSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.day1-review-header {
+  padding: 20px 20px 15px;
+  border-bottom: 1px solid #2d3748;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.day1-review-header h3 {
+  color: #f56565;
+  font-size: 16px;
+  margin: 0;
+}
+.day1-review-header .card-count-badge {
+  background: rgba(245,101,101,0.2);
+  color: #fc8181;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.day1-review-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+.day1-review-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #2d3748;
+  transition: background 0.15s;
+}
+.day1-review-row:hover {
+  background: rgba(255,255,255,0.03);
+}
+.day1-review-row:last-child {
+  border-bottom: none;
+}
+.day1-review-korean {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: #90cdf4;
+}
+.day1-review-english {
+  flex: 1;
+  font-size: 14px;
+  color: #a0aec0;
+  text-align: right;
+  padding-right: 15px;
+}
+.day1-review-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.day1-review-delete-btn:hover {
+  opacity: 1;
+  background: rgba(245,101,101,0.2);
+}
+.day1-review-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #2d3748;
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.day1-review-footer button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.day1-review-proceed-btn {
+  background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+  color: white;
+}
+.day1-review-proceed-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,101,101,0.4);
+}
+.day1-review-proceed-btn:disabled {
+  background: #4a5568;
+  color: #718096;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.day1-review-cancel-btn {
+  background: transparent;
+  color: #a0aec0;
+  border: 2px solid #4a5568 !important;
+}
+.day1-review-cancel-btn:hover {
+  background: rgba(255,255,255,0.05);
+}
+.day1-review-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+}
+.day1-review-empty .icon { font-size: 40px; margin-bottom: 10px; }
+.day1-review-row.deleting {
+  animation: day1RowDelete 0.3s ease forwards;
+}
+@keyframes day1RowDelete {
+  to { opacity: 0; transform: translateX(40px); height: 0; padding: 0 20px; overflow: hidden; }
+}
+@media screen and (max-width: 768px) {
+  .day1-review-modal {
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    max-width: 100%;
+  }
+  .day1-review-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .day1-review-korean { font-size: 15px; }
+  .day1-review-english { font-size: 13px; }
+}
+
 </style>
 </head>
 <body>
@@ -31590,13 +31756,20 @@ function renderLeitnerBoxGrid() {
 
     let practiceButton = '';
     if (isDay1 && count > 0) {
-      // Day 1 can always be practiced
+      // Day 1 can always be practiced - show review & practice buttons
       practiceButton = `
-        <button onclick="event.stopPropagation(); startBoxPractice(${boxNum})"
-                class="btn btn-secondary"
-                style="margin-top: 10px; padding: 6px 12px; font-size: 12px;">
-          Practice (${count})
-        </button>
+        <div style="display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+          <button onclick="event.stopPropagation(); openDay1ReviewModal()"
+                  class="btn"
+                  style="padding: 6px 10px; font-size: 11px; background: transparent; color: #a0aec0; border: 1.5px solid #4a5568;">
+            📋 Review
+          </button>
+          <button onclick="event.stopPropagation(); startBoxPractice(${boxNum})"
+                  class="btn btn-secondary"
+                  style="padding: 6px 10px; font-size: 11px;">
+            ▶ Practice (${count})
+          </button>
+        </div>
       `;
     } else if (!isMastery && due > 0) {
       // Other boxes only show practice button when cards are due
@@ -31774,6 +31947,108 @@ function practiceDay1Interval(intervalId) {
   window.currentDay1Interval = intervalId;
 
   startDay1Practice();
+}
+
+/**
+ * Open Day 1 Review & Delete Modal
+ * Shows all Day 1 cards in a list with Korean | English | Delete
+ */
+function openDay1ReviewModal() {
+  const day1Cards = leitnerCards.filter(c => c.box === 1);
+  const modal = document.getElementById('day1ReviewModal');
+  const list = document.getElementById('day1ReviewList');
+  const countBadge = document.getElementById('day1ReviewCount');
+  const proceedBtn = document.getElementById('day1ReviewProceedBtn');
+
+  if (day1Cards.length === 0) {
+    alert('No Day 1 cards to review!');
+    return;
+  }
+
+  countBadge.textContent = `${day1Cards.length} card${day1Cards.length !== 1 ? 's' : ''}`;
+  proceedBtn.disabled = false;
+
+  // Sort alphabetically by Korean
+  const sorted = [...day1Cards].sort((a, b) => (a.korean || '').localeCompare(b.korean || '', 'ko'));
+
+  list.innerHTML = sorted.map(card => `
+    <div class="day1-review-row" id="day1Row_${card.id}">
+      <div class="day1-review-korean">${card.korean || '—'}</div>
+      <div class="day1-review-english">${card.english || '—'}</div>
+      <button class="day1-review-delete-btn" onclick="deleteDay1Card('${card.id}')" title="Remove card">🗑️</button>
+    </div>
+  `).join('');
+
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Close Day 1 Review Modal
+ */
+function closeDay1ReviewModal() {
+  const modal = document.getElementById('day1ReviewModal');
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  // Refresh the calendar grid in case cards were deleted
+  renderLeitnerBoxGrid();
+}
+
+/**
+ * Delete a single card from Day 1 (removes from Firestore and local array)
+ */
+async function deleteDay1Card(cardId) {
+  const row = document.getElementById(`day1Row_${cardId}`);
+  if (!row) return;
+
+  // Confirm deletion
+  const card = leitnerCards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const confirmDelete = confirm(`Delete "${card.korean} — ${card.english}" from Day 1?`);
+  if (!confirmDelete) return;
+
+  // Animate row out
+  row.classList.add('deleting');
+
+  try {
+    // Delete from Firestore
+    await db.collection('leitnerProgress').doc(cardId).delete();
+
+    // Remove from local arrays
+    leitnerCards = leitnerCards.filter(c => c.id !== cardId);
+    leitnerDueCards = leitnerDueCards.filter(c => c.id !== cardId);
+
+    // Wait for animation, then remove DOM element
+    setTimeout(() => {
+      row.remove();
+
+      // Update count badge
+      const remaining = leitnerCards.filter(c => c.box === 1);
+      const countBadge = document.getElementById('day1ReviewCount');
+      const proceedBtn = document.getElementById('day1ReviewProceedBtn');
+      countBadge.textContent = `${remaining.length} card${remaining.length !== 1 ? 's' : ''}`;
+
+      // If no cards left, show empty state and disable proceed
+      if (remaining.length === 0) {
+        document.getElementById('day1ReviewList').innerHTML = `
+          <div class="day1-review-empty">
+            <div class="icon">✨</div>
+            <p>All Day 1 cards have been removed.</p>
+          </div>
+        `;
+        proceedBtn.disabled = true;
+      }
+
+      // Update badge counts
+      updateLeitnerDueBadge();
+    }, 300);
+
+  } catch (error) {
+    console.error('Error deleting Day 1 card:', error);
+    row.classList.remove('deleting');
+    alert('Failed to delete card. Please try again.');
+  }
 }
 
 /**
@@ -63688,6 +63963,21 @@ window.syncMobileThemeToggle = syncMobileThemeToggle;
 
 
 </script>
+
+<!-- Day 1 Review & Delete Modal -->
+<div id="day1ReviewModal" class="day1-review-overlay" style="display: none;" onclick="if(event.target===this) closeDay1ReviewModal()">
+  <div class="day1-review-modal">
+    <div class="day1-review-header">
+      <h3>📋 Day 1 Cards</h3>
+      <span class="card-count-badge" id="day1ReviewCount">0 cards</span>
+    </div>
+    <div class="day1-review-list" id="day1ReviewList"></div>
+    <div class="day1-review-footer">
+      <button class="day1-review-cancel-btn" onclick="closeDay1ReviewModal()">Cancel</button>
+      <button class="day1-review-proceed-btn" id="day1ReviewProceedBtn" onclick="closeDay1ReviewModal(); startDay1Practice();">🎯 Practice</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
