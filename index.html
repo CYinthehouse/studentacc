@@ -14000,17 +14000,14 @@ body.light-mode .mobile-badge-name {
 }
 @media screen and (max-width: 768px) {
   .day1-review-modal {
-    max-height: 90vh;
-    border-radius: 16px 16px 0 0;
-    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 16px;
+    max-width: calc(100% - 20px);
+    margin-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
   .day1-review-overlay {
     align-items: flex-end;
-    padding: 0;
-    z-index: 100000;
-  }
-  .day1-review-footer {
-    padding-bottom: calc(15px + 70px + env(safe-area-inset-bottom, 0px));
+    padding: 10px;
   }
   .day1-review-korean { font-size: 15px; }
   .day1-review-english { font-size: 13px; }
