@@ -47037,18 +47037,28 @@ async function loadStudentDailyActivity() {
     let activity = null;
     const nowDate = new Date();
 
+    // Pick the activity with the most recent publishDate that has already passed
+    // (so a scheduled activity whose publish time has arrived beats an older 'published' one)
+    let bestPublishDate = null;
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      const publishDate = data.publishDate?.toDate() || new Date();
-
-      // Show published activities OR scheduled activities whose publishDate has passed
-      if (data.type === 'pronunciation' && 
-          ((data.status === 'published') || 
-           (data.status === 'scheduled' && publishDate <= nowDate))) {
+      if (data.type !== 'pronunciation') continue;
+      const publishDate = data.publishDate?.toDate() || new Date(0);
+      const qualifies =
+        (data.status === 'published' && publishDate <= nowDate) ||
+        (data.status === 'scheduled' && publishDate <= nowDate);
+      if (!qualifies) continue;
+      if (!bestPublishDate || publishDate > bestPublishDate) {
+        bestPublishDate = publishDate;
         activity = { id: doc.id, ...data };
-        break;
       }
     }
+
+    // === DIAGNOSTIC START ===
+    if (activity) {
+      console.log('[DAILY DIAG] Picker chose latest-publishDate match:', activity.id, '@', bestPublishDate?.toISOString());
+    }
+    // === DIAGNOSTIC END ===
 
     if (!activity) {
       console.log('[DAILY DIAG] No matching activity found.');
