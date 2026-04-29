@@ -47022,6 +47022,18 @@ async function loadStudentDailyActivity() {
       .limit(10)
       .get();
 
+    // === DIAGNOSTIC START ===
+    console.log('%c[DAILY DIAG] === STUDENT LOADER ===', 'background:#0f2d5e;color:#29c4ff;padding:4px 8px;font-weight:bold');
+    console.log('[DAILY DIAG] Top 10 dailyActivities by createdAt desc:');
+    snapshot.docs.forEach((d, i) => {
+      const x = d.data();
+      const cAt = x.createdAt?.toDate?.()?.toISOString?.() || String(x.createdAt);
+      const pAt = x.publishDate?.toDate?.()?.toISOString?.() || String(x.publishDate);
+      const dAt = x.deadline?.toDate?.()?.toISOString?.() || String(x.deadline);
+      console.log(`  [${i}] id=${d.id} | type=${x.type} | status=${x.status} | createdAt=${cAt} | publishDate=${pAt} | deadline=${dAt}`);
+    });
+    // === DIAGNOSTIC END ===
+
     let activity = null;
     const nowDate = new Date();
 
@@ -47039,6 +47051,7 @@ async function loadStudentDailyActivity() {
     }
 
     if (!activity) {
+      console.log('[DAILY DIAG] No matching activity found.');
       teacherCard.innerHTML = `
         <div class="da-empty-state">
           <div class="empty-icon">📝</div>
@@ -47060,16 +47073,35 @@ async function loadStudentDailyActivity() {
 
     pronCarouselState.activity = activity;
     let deadline;
+    let deadlineSource;
     if (activity.deadline?.toDate) {
       deadline = activity.deadline.toDate();
+      deadlineSource = 'Timestamp.toDate()';
     } else if (activity.deadline) {
       deadline = new Date(activity.deadline);
+      deadlineSource = 'new Date(activity.deadline) — NOT a Timestamp';
     } else {
       deadline = new Date();
       deadline.setDate(deadline.getDate() + 1);
       deadline.setHours(4, 0, 0, 0);
+      deadlineSource = 'FALLBACK — activity.deadline was missing';
     }
     const isPast = now > deadline;
+
+    // === DIAGNOSTIC START ===
+    console.log('%c[DAILY DIAG] === PICKED ACTIVITY ===', 'background:#0f2d5e;color:#29c4ff;padding:4px 8px;font-weight:bold');
+    console.log('[DAILY DIAG] Picked activity id:', activity.id);
+    console.log('[DAILY DIAG] Picked activity status:', activity.status);
+    console.log('[DAILY DIAG] activity.deadline raw:', activity.deadline);
+    console.log('[DAILY DIAG] deadlineSource:', deadlineSource);
+    console.log('[DAILY DIAG] resolved deadline (Date):', deadline.toString());
+    console.log('[DAILY DIAG] resolved deadline (ISO):', deadline.toISOString());
+    console.log('[DAILY DIAG] now (number, ms):', now, '— typeof:', typeof now);
+    console.log('[DAILY DIAG] now as Date:', new Date(now).toString());
+    console.log('[DAILY DIAG] deadline.valueOf() ms:', deadline.valueOf());
+    console.log('[DAILY DIAG] isPast (now > deadline):', isPast);
+    console.log('[DAILY DIAG] ms diff (deadline - now):', deadline.valueOf() - now, '(positive = future, negative = past)');
+    // === DIAGNOSTIC END ===
 
     const subSnap = await db.collection('dailySubmissions')
       .where('activityId', '==', activity.id)
