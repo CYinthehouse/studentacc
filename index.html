@@ -64205,7 +64205,7 @@ function caComputeEffort() {
         }
       }
       if (dur === null && !start) inferred = true;
-      perSub[item.sub.id] = { sec, isSessionStart: start, inferred, teacher };
+      perSub[item.sub.id] = { sec, isSessionStart: start, inferred, teacher, gapBefore: gap };
       prev = item;
     });
   });
@@ -64215,13 +64215,19 @@ function caComputeEffort() {
     const key = caDateKey(s);
     const e = byDate[key] = byDate[key] || {
       totalSec: 0, videoSec: 0, videoCount: 0, measured: 0,
-      inferred: 0, teachers: {}, count: 0
+      inferred: 0, teachers: {}, count: 0, sessions: 0, gaps: []
     };
     e.count++;
     const p = perSub[s.id];
     if (p) {
       e.totalSec += p.sec;
       if (p.inferred) e.inferred++;
+      if (p.isSessionStart) {
+        e.sessions++;
+        // The gap that caused the break — null means it's this teacher's
+        // very first grading ever, not a measurable pause.
+        if (p.gapBefore !== null && p.gapBefore > gapMax) e.gaps.push(p.gapBefore);
+      }
       const t = e.teachers[p.teacher] = e.teachers[p.teacher] || { sec: 0, count: 0, first: null, last: null };
       t.sec += p.sec;
       t.count++;
@@ -64252,10 +64258,12 @@ function caComputeEffort() {
 
 // Roll several day summaries into one period summary.
 function caRollup(dayKeys) {
-  const out = { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length };
+  const out = { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length, sessions: 0, gaps: [] };
   dayKeys.forEach(k => {
     const e = caEffort[k];
     if (!e) return;
+    out.sessions += e.sessions || 0;
+    out.gaps = out.gaps.concat(e.gaps || []);
     out.totalSec += e.totalSec;
     out.videoSec += e.videoSec;
     out.videoCount += e.videoCount;
@@ -64336,6 +64344,20 @@ function caTeacherBits(teachers) {
     .join(' · ');
 }
 
+// "3 sessions" + the breaks that produced them, on hover. A session is a
+// contiguous run of gradings by one teacher with no gap over
+// CA_SESSION_GAP_MIN; gaps longer than that are excluded from the estimate.
+function caSessionBits(e) {
+  const n = e.sessions || 0;
+  if (!n) return '';
+  const gaps = (e.gaps || []).slice().sort((a, b) => b - a);
+  const tip = gaps.length
+    ? `Breaks excluded from the estimate: ${gaps.map(g => caFmtMin(g)).join(', ')}`
+    : 'Single unbroken run — no gap over ' + CA_SESSION_GAP_MIN + ' min';
+  const warn = n > 1 && n === e.count;
+  return ` · <span title="${tip}" style="border-bottom:1px dotted #a0aec0;cursor:help;color:${warn ? '#dd6b20' : 'inherit'};">${n} session${n === 1 ? '' : 's'}${warn ? ' ⚠' : ''}</span>`;
+}
+
 function caEffortBadge(e, extra) {
   const partial = e.measured < e.videoCount;
   return `
@@ -64400,7 +64422,7 @@ function caWeekRowHtml(weekKey, dayKeys, groups) {
           <span style="color:#667eea;display:inline-block;transform:rotate(${open ? 90 : 0}deg);">▶</span>
           <div>
             <div style="font-weight:700;color:#2d3748;">${caWeekLabel(weekKey)}</div>
-            <div style="font-size:12px;color:#718096;">${e.days} active day${e.days === 1 ? '' : 's'} · ${e.count} submission${e.count === 1 ? '' : 's'} · ${e.videoCount} video${e.videoCount === 1 ? '' : 's'}${Object.keys(e.teachers).length ? ' · ' + caTeacherBits(e.teachers) : ''}</div>
+            <div style="font-size:12px;color:#718096;">${e.days} active day${e.days === 1 ? '' : 's'} · ${e.count} submission${e.count === 1 ? '' : 's'} · ${e.videoCount} video${e.videoCount === 1 ? '' : 's'}${caSessionBits(e)}${Object.keys(e.teachers).length ? ' · ' + caTeacherBits(e.teachers) : ''}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;" onclick="event.stopPropagation();">
@@ -64416,7 +64438,7 @@ function caWeekRowHtml(weekKey, dayKeys, groups) {
 
 function caDayRowHtml(dateStr, subs, nested) {
   const open = caExpanded.has(dateStr);
-  const e = caEffort[dateStr] || { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, teachers: {} };
+  const e = caEffort[dateStr] || { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, teachers: {}, sessions: 0, gaps: [], count: 0 };
   const label = dateStr === 'unknown'
     ? 'Unknown date'
     : new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',
@@ -64430,7 +64452,7 @@ function caDayRowHtml(dateStr, subs, nested) {
           <span style="color:#667eea;display:inline-block;transform:rotate(${open ? 90 : 0}deg);font-size:${nested ? 11 : 13}px;">▶</span>
           <div>
             <div style="font-weight:600;color:#2d3748;font-size:${nested ? 13 : 15}px;">${label}</div>
-            <div style="font-size:12px;color:#718096;">${subs.length} submission${subs.length === 1 ? '' : 's'} · ${e.videoCount} video${e.videoCount === 1 ? '' : 's'}${Object.keys(e.teachers || {}).length ? ' · ' + caTeacherBits(e.teachers) : ''}</div>
+            <div style="font-size:12px;color:#718096;">${subs.length} submission${subs.length === 1 ? '' : 's'} · ${e.videoCount} video${e.videoCount === 1 ? '' : 's'}${caSessionBits(e)}${Object.keys(e.teachers || {}).length ? ' · ' + caTeacherBits(e.teachers) : ''}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;" onclick="event.stopPropagation();">
@@ -64627,7 +64649,7 @@ async function caDownloadWeek(weekKey) {
 
 function caExportCsv() {
   caPerSub = caComputeEffort();
-  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'sessionStart', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
+  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'sessionStart', 'gapBeforeMin', 'daySessions', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
   const groups = caGroupByDate();
   const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
@@ -64656,6 +64678,8 @@ function caExportCsv() {
         d, d === '' ? '' : (d / 60).toFixed(2),
         p ? Math.round(p.sec) : '', p ? (p.sec / 60).toFixed(2) : '',
         p ? (p.isSessionStart ? 'yes' : 'no') : '',
+        p && p.gapBefore !== null && p.gapBefore !== undefined ? (p.gapBefore / 60).toFixed(2) : '',
+        caEffort[dateStr]?.sessions ?? '',
         p ? (p.inferred ? 'yes' : 'no') : '',
         dayMin, weekMin,
         s.videoFeedbackUrl || '', s.audioUrl || '',
