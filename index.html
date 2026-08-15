@@ -45461,7 +45461,7 @@ async function loadPanelStats() {
 
       submissionsSnap.docs.forEach(doc => {
         const data = doc.data();
-        if (data.recordingDuration) {
+        if (isFinite(data.recordingDuration) && data.recordingDuration > 0) {
           totalRecordingSeconds += data.recordingDuration;
         }
       });
@@ -45746,7 +45746,8 @@ async function getRecordingTimeDetails() {
 
     submissions = snap.size;
     snap.docs.forEach(doc => {
-      totalSeconds += doc.data().recordingDuration || 0;
+      const _rd = doc.data().recordingDuration;
+      totalSeconds += (isFinite(_rd) && _rd > 0) ? _rd : 0;
     });
   } catch(e) {}
 
@@ -49451,11 +49452,22 @@ async function submitStudentRec(activityId) {
       const tempAudio = new Audio(tempAudioUrl);
       await new Promise((resolve) => {
         tempAudio.onloadedmetadata = () => {
+          // MediaRecorder WebM carries no duration in its header, so this
+          // reads Infinity. Seeking far past the end forces a real value.
+          if (!isFinite(tempAudio.duration)) {
+            tempAudio.ontimeupdate = () => {
+              tempAudio.ontimeupdate = null;
+              recordingDuration = isFinite(tempAudio.duration) ? Math.round(tempAudio.duration) : 0;
+              resolve();
+            };
+            tempAudio.currentTime = 1e101;
+            return;
+          }
           recordingDuration = Math.round(tempAudio.duration);
           resolve();
         };
         tempAudio.onerror = () => resolve();
-        setTimeout(resolve, 2000); // Timeout fallback
+        setTimeout(resolve, 6000); // Timeout fallback (seek needs longer than 2s)
       });
       URL.revokeObjectURL(tempAudioUrl);
     } catch(e) {
@@ -63612,8 +63624,9 @@ async function loadMobileProfileData() {
         .where('studentId', '==', uid)
         .get();
       submissionsSnap.docs.forEach(function(doc) {
-        if (doc.data().recordingDuration) {
-          totalRecordingSeconds += doc.data().recordingDuration;
+        var _rd = doc.data().recordingDuration;
+        if (isFinite(_rd) && _rd > 0) {
+          totalRecordingSeconds += _rd;
         }
       });
     } catch(e) {}
@@ -64068,12 +64081,30 @@ let caPerSub = {};
 let caSessions = {};   // sessionId -> { teacher, items, sec, start, end, gaps }
 let caOverheadSec = 90; // observed median residual, recomputed each pass
 
+// Durations must be finite and plausible. MediaRecorder WebM has no duration
+// in its header, so an unguarded read yields Infinity — and Firestore stores
+// that happily as a double, poisoning every sum downstream. Reject anything
+// non-finite or beyond an hour.
+const CA_MAX_SANE_SEC = 3600;
+function caSaneSec(v) {
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= CA_MAX_SANE_SEC ? v : null;
+}
+
 // Student's own recording length, written at submit time as recordingDuration.
 function caAudioSec(sub) {
-  return typeof sub.recordingDuration === 'number' && sub.recordingDuration > 0 ? sub.recordingDuration : null;
+  return caSaneSec(sub.recordingDuration);
 }
 function caVideoSec(sub) {
-  return typeof sub.videoDurationSec === 'number' ? sub.videoDurationSec : null;
+  return caSaneSec(sub.videoDurationSec);
+}
+// How many docs carry an unusable duration — surfaced so the damage is visible.
+function caBadDurationCount() {
+  let bad = 0;
+  caSubmissions.forEach(s2 => {
+    const r = s2.recordingDuration;
+    if (typeof r === 'number' && caSaneSec(r) === null) bad++;
+  });
+  return bad;
 }
 // How much of the student's audio she actually spends time on. 1.0 = listens
 // straight through; 0.67 = effectively 1.5x playback (or skipping). The app
@@ -64342,8 +64373,8 @@ function caComputeEffort() {
     }
     if (s.videoFeedbackUrl) {
       e.videoCount++;
-      if (typeof s.videoDurationSec === 'number') {
-        e.videoSec += s.videoDurationSec;
+      if (caVideoSec(s) !== null) {
+        e.videoSec += caVideoSec(s);
         e.measured++;
       }
     }
@@ -64549,7 +64580,7 @@ function caGapSummaryText() {
   // Decomposition: how much of an in-session gap is accounted for.
   const inSess = recs.filter(r => r.gapSec <= caGapMin * 60);
   const withAudio = inSess.filter(r => r.nextAudioSec !== null);
-  lines.push(`recordingDuration coverage: ${caSubmissions.filter(s2 => caAudioSec(s2) !== null).length}/${caSubmissions.length} submissions`);
+  lines.push(`recordingDuration usable: ${caSubmissions.filter(s2 => caAudioSec(s2) !== null).length}/${caSubmissions.length} · non-finite (Infinity): ${caBadDurationCount()}`);
   if (withAudio.length > 5) {
     const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
     const resid = withAudio.map(r => r.gapSec - (r.nextFloorSec || 0)).sort((a, b) => a - b);
@@ -64671,6 +64702,7 @@ function caRenderGapPanel() {
         <div>
           <div style="font-weight:700;color:#2d3748;">Gap analysis</div>
           <div style="font-size:12px;color:#718096;">${gaps.length} intervals between consecutive gradings · median ${caFmtDur(median)} · typical in-session ${caFmtDur(medianIn)}</div>
+          ${(() => { const bad = caBadDurationCount(); const have = caSubmissions.filter(s2 => caAudioSec(s2) !== null).length; return `<div style="font-size:11px;color:${bad ? '#c05621' : '#a0aec0'};">student audio: ${have}/${caSubmissions.length} usable${bad ? ` · ${bad} stored as Infinity — run Repair audio` : ''}</div>`; })()}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <label style="font-size:12px;color:#4a5568;">Session gap</label>
@@ -64688,6 +64720,7 @@ function caRenderGapPanel() {
           <label style="font-size:12px;color:#4a5568;margin-left:6px;">Listen ×</label>
           <input type="number" min="0.3" max="1.5" step="0.05" value="${caListenFactor.toFixed(2)}" onchange="caSetListen(this.value)" style="width:64px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
           ${fit ? `<button onclick="caSetListen(${Math.max(0.3, Math.min(1, fit.p10)).toFixed(2)})" style="padding:6px 10px;font-size:12px;border:1px solid #667eea;color:#4c51bf;background:#fff;border-radius:8px;cursor:pointer;">Fit ${Math.max(0.3, Math.min(1, fit.p10)).toFixed(2)}×</button>` : ''}
+          <button onclick="caRepairAudioDurations()" style="padding:6px 10px;font-size:12px;border:1px solid #dd6b20;color:#c05621;background:#fff;border-radius:8px;cursor:pointer;">🔧 Repair audio</button>
           <button onclick="caExportGaps()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⬇ Gap CSV</button>
           <button onclick="caCopyGapSummary()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">📋 Copy profile</button>
         </div>
@@ -64940,7 +64973,7 @@ function caCardHtml(sub) {
         </div>
         <div style="text-align:right;">
           <div style="font-size:15px;font-weight:700;color:#4c51bf;">${sub.totalScore || 0}/50</div>
-          <div id="caDur-${sub.id}" style="font-size:12px;color:#718096;">⏱ ${typeof sub.videoDurationSec === 'number' ? caFmtDur(sub.videoDurationSec) : (sub.videoFeedbackUrl ? 'measuring…' : '—')}</div>
+          <div id="caDur-${sub.id}" style="font-size:12px;color:#718096;">⏱ ${caVideoSec(sub) !== null ? caFmtDur(caVideoSec(sub)) : (sub.videoFeedbackUrl ? 'measuring…' : '—')}</div>
           ${p ? `<div style="font-size:11px;color:${p.inferred ? '#a0aec0' : '#805ad5'};" title="${p.isSessionStart ? 'Opens a grading session — no preceding interval, so estimated bottom-up' : 'Elapsed ' + caFmtDur(p.intervalSec) + ' · task ' + caFmtDur(p.taskSec)}">🧑‍🏫 ~${caFmtMin(p.sec)}${p.isSessionStart ? '*' : ''}</div>
           <div style="font-size:10px;color:#a0aec0;">${caModel === 'task' ? 'elapsed ' + caFmtDur(p.intervalSec) : 'task ' + caFmtDur(p.taskSec)}</div>
           <div style="font-size:10px;color:#a0aec0;">${p.isSessionStart ? (p.gapBefore !== null && p.gapBefore !== undefined ? 'after ' + caFmtMin(p.gapBefore) + ' break' : 'first ever') : '+' + caFmtDur(p.gapBefore) + ' step'}</div>
@@ -64986,7 +65019,7 @@ async function caToggleDate(dateStr) {
 // Probe durations for one date group, 3 at a time.
 async function caMeasureGroup(dateStr) {
   const groups = caGroupByDate();
-  const subs = (groups[dateStr] || []).filter(s => s.videoFeedbackUrl && typeof s.videoDurationSec !== 'number');
+  const subs = (groups[dateStr] || []).filter(s => s.videoFeedbackUrl && caVideoSec(s) === null);
   if (!subs.length) return;
 
   const queue = subs.slice();
@@ -65030,8 +65063,43 @@ function caExpandAll(open) {
 
 // Measure every video without expanding anything, so the estimates
 // stop reading "partial". Slow the first time, cached after.
+// Repair recordingDuration where it was written as Infinity (or never
+// written) by measuring the stored student audio the same way we measure her
+// feedback videos.
+async function caRepairAudioDurations() {
+  const pending = caSubmissions.filter(s => s.audioUrl && caAudioSec(s) === null);
+  if (!pending.length) { showToast('✅ All student recordings have a usable duration'); return; }
+  const bad = caBadDurationCount();
+  if (!confirm(`Measure ${pending.length} student recording${pending.length === 1 ? '' : 's'} and write the real duration back?\n\n${bad} doc${bad === 1 ? '' : 's'} currently hold a non-finite recordingDuration.`)) return;
+
+  showToast(`⏱ Repairing ${pending.length} recordings…`);
+  const queue = pending.slice();
+  let fixed = 0, failed = 0;
+  const worker = async () => {
+    while (queue.length) {
+      const sub = queue.shift();
+      const sec = await caProbeDuration(sub.audioUrl);
+      if (sec !== null && Number.isFinite(sec) && sec > 0) {
+        sub.recordingDuration = Math.round(sec);
+        fixed++;
+        if (CA_CACHE_DURATIONS) {
+          db.collection('dailySubmissions').doc(sub.id)
+            .update({ recordingDuration: sub.recordingDuration })
+            .catch(() => {});
+        }
+      } else {
+        failed++;
+      }
+      if ((fixed + failed) % 10 === 0) renderCorrectionsArchive();
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  renderCorrectionsArchive();
+  showToast(`✅ Repaired ${fixed}${failed ? `, ${failed} unreadable` : ''}`);
+}
+
 async function caMeasureAll() {
-  const pending = caSubmissions.filter(s => s.videoFeedbackUrl && typeof s.videoDurationSec !== 'number');
+  const pending = caSubmissions.filter(s => s.videoFeedbackUrl && caVideoSec(s) === null);
   if (!pending.length) { showToast('✅ All videos already measured'); return; }
   if (!confirm(`Measure ${pending.length} video${pending.length === 1 ? '' : 's'}? This fetches metadata for each and caches the result.`)) return;
 
@@ -65124,7 +65192,7 @@ function caExportCsv() {
     const weekMin = ((weekTotals[wk] || 0) / 60).toFixed(1);
     const iso = dateStr === 'unknown' ? { week: '', year: '' } : caIsoWeekNum(dateStr);
     groups[dateStr].forEach(s => {
-      const d = typeof s.videoDurationSec === 'number' ? s.videoDurationSec : '';
+      const d = caVideoSec(s) !== null ? caVideoSec(s) : '';
       const p = caPerSub[s.id];
       rows.push([
         dateStr, wk, iso.week ? `${iso.year}-W${String(iso.week).padStart(2, '0')}` : '',
