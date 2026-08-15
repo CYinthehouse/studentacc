@@ -64358,6 +64358,126 @@ function caTeacherBits(teachers) {
     .join(' · ');
 }
 
+// Full record for every interval, with the covariates needed to judge
+// whether a gap was work or a break — chiefly the length of the video that
+// followed it.
+function caGapRecords() {
+  const byTeacher = {};
+  caSubmissions.forEach(s => {
+    const g = s.gradedAt?.toDate?.();
+    if (!g) return;
+    const t = s.gradedBy || 'unknown';
+    (byTeacher[t] = byTeacher[t] || []).push({ sub: s, at: g });
+  });
+  const recs = [];
+  Object.entries(byTeacher).forEach(([teacher, arr]) => {
+    arr.sort((a, b) => a.at - b.at);
+    for (let i = 1; i < arr.length; i++) {
+      const gapSec = (arr[i].at - arr[i - 1].at) / 1000;
+      if (gapSec <= 0) continue;
+      const cur = arr[i].sub, prev = arr[i - 1].sub;
+      recs.push({
+        teacher: caStudentName(teacher),
+        prevAt: arr[i - 1].at,
+        at: arr[i].at,
+        gapSec,
+        nextVideoSec: typeof cur.videoDurationSec === 'number' ? cur.videoDurationSec : null,
+        prevVideoSec: typeof prev.videoDurationSec === 'number' ? prev.videoDurationSec : null,
+        nextScore: cur.totalScore || 0,
+        nextId: cur.id,
+        sameDay: caLocalDateStr(arr[i - 1].at) === caLocalDateStr(arr[i].at),
+        day: caLocalDateStr(arr[i].at),
+        hour: arr[i].at.getHours()
+      });
+    }
+  });
+  return recs;
+}
+
+function caExportGaps() {
+  const recs = caGapRecords();
+  if (!recs.length) { showToast('No intervals to export'); return; }
+  const rows = [['teacher', 'prevGradedAt', 'gradedAt', 'gapSec', 'gapMin', 'nextVideoSec', 'prevVideoSec', 'gapMinusNextVideoSec', 'nextScore', 'sameDay', 'hourOfDay', 'day', 'nextSubmissionId']];
+  recs.forEach(r => rows.push([
+    r.teacher, r.prevAt.toISOString(), r.at.toISOString(),
+    Math.round(r.gapSec), (r.gapSec / 60).toFixed(2),
+    r.nextVideoSec ?? '', r.prevVideoSec ?? '',
+    r.nextVideoSec !== null ? Math.round(r.gapSec - r.nextVideoSec) : '',
+    r.nextScore, r.sameDay ? 'yes' : 'no', r.hour, r.day, r.nextId
+  ]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `grading-gaps-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  showToast('📄 Gap data exported');
+}
+
+// A compact paste-able profile: small enough to drop into a chat, complete
+// enough to choose a threshold from.
+function caGapSummaryText() {
+  const recs = caGapRecords();
+  const gaps = recs.map(r => r.gapSec).sort((a, b) => a - b);
+  if (!gaps.length) return 'No intervals.';
+
+  const buckets = [
+    ['<1m', 0, 60], ['1-2m', 60, 120], ['2-3m', 120, 180], ['3-4m', 180, 240],
+    ['4-5m', 240, 300], ['5-6m', 300, 360], ['6-8m', 360, 480], ['8-10m', 480, 600],
+    ['10-15m', 600, 900], ['15-20m', 900, 1200], ['20-30m', 1200, 1800],
+    ['30-45m', 1800, 2700], ['45-60m', 2700, 3600], ['1-3h', 3600, 10800], ['3h+', 10800, Infinity]
+  ];
+
+  const lines = [];
+  lines.push(`GRADING GAP PROFILE — ${recs.length} intervals, ${caSubmissions.length} graded submissions`);
+  lines.push(`percentiles: p10 ${caFmtDur(caPct(gaps, 10))} p25 ${caFmtDur(caPct(gaps, 25))} p50 ${caFmtDur(caPct(gaps, 50))} p75 ${caFmtDur(caPct(gaps, 75))} p90 ${caFmtDur(caPct(gaps, 90))} p95 ${caFmtDur(caPct(gaps, 95))} p99 ${caFmtDur(caPct(gaps, 99))}`);
+  lines.push('histogram:');
+  buckets.forEach(([label, lo, hi]) => {
+    const n = gaps.filter(g => g >= lo && g < hi).length;
+    if (n) lines.push(`  ${label.padEnd(7)} ${String(n).padStart(4)}  ${'#'.repeat(Math.min(40, n))}`);
+  });
+
+  // Does the gap track the next video's length? If yes it's work, not idling.
+  const withVid = recs.filter(r => r.nextVideoSec !== null && r.gapSec <= 3600);
+  if (withVid.length > 5) {
+    const g = withVid.map(r => r.gapSec), v = withVid.map(r => r.nextVideoSec);
+    const mg = g.reduce((a, b) => a + b, 0) / g.length, mv = v.reduce((a, b) => a + b, 0) / v.length;
+    let num = 0, dg = 0, dv = 0;
+    for (let i = 0; i < g.length; i++) { num += (g[i] - mg) * (v[i] - mv); dg += (g[i] - mg) ** 2; dv += (v[i] - mv) ** 2; }
+    const r = dg && dv ? num / Math.sqrt(dg * dv) : 0;
+    lines.push(`gap vs next-video-length (gaps <=60m, n=${withVid.length}): r=${r.toFixed(2)}, mean gap ${caFmtDur(mg)}, mean video ${caFmtDur(mv)}, ratio ${(mg / mv).toFixed(2)}x`);
+    const excess = withVid.map(r2 => r2.gapSec - r2.nextVideoSec).sort((a, b) => a - b);
+    lines.push(`gap minus next video: p25 ${caFmtDur(caPct(excess, 25))} p50 ${caFmtDur(caPct(excess, 50))} p75 ${caFmtDur(caPct(excess, 75))} p90 ${caFmtDur(caPct(excess, 90))}`);
+  }
+
+  const cross = recs.filter(r => !r.sameDay).length;
+  lines.push(`cross-day intervals: ${cross} (excluded from any same-day reading)`);
+  lines.push(`current threshold: ${caGapMin}m`);
+  const sug = caSuggestThreshold(gaps);
+  if (sug) lines.push(`largest jump: ${caFmtDur(sug.below)} -> ${caFmtDur(sug.above)} (${sug.ratio.toFixed(1)}x), suggests ${sug.min}m`);
+
+  // Threshold sensitivity — what the choice actually costs.
+  lines.push('threshold sensitivity (total interval-time counted as work):');
+  [3, 5, 8, 10, 15, 20, 30].forEach(T => {
+    const lim = T * 60;
+    const work = gaps.filter(x => x <= lim).reduce((a, b) => a + b, 0);
+    const breaks = gaps.filter(x => x > lim).length;
+    lines.push(`  ${String(T).padStart(2)}m -> ${caFmtMin(work).padStart(7)} counted, ${breaks} breaks`);
+  });
+  return lines.join('\n');
+}
+
+function caCopyGapSummary() {
+  const text = caGapSummaryText();
+  const box = document.getElementById('caGapSummaryBox');
+  box.style.display = 'block';
+  box.value = text;
+  box.select();
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('📋 Gap profile copied — paste it into chat'))
+    .catch(() => showToast('Select the text below and copy'));
+}
+
 // ---------- gap distribution ----------
 //
 // Every raw interval between consecutive gradings by the same teacher,
@@ -64435,6 +64555,8 @@ function caRenderGapPanel() {
           <input type="number" min="1" max="180" value="${caGapMin}" onchange="caSetGap(this.value)" style="width:64px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
           <span style="font-size:12px;color:#718096;">min</span>
           ${sug ? `<button onclick="caSetGap(${sug.min})" style="padding:6px 10px;font-size:12px;border:1px solid #667eea;color:#4c51bf;background:#fff;border-radius:8px;cursor:pointer;">Use suggested ${sug.min}m</button>` : ''}
+          <button onclick="caExportGaps()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⬇ Gap CSV</button>
+          <button onclick="caCopyGapSummary()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">📋 Copy profile</button>
         </div>
       </div>
 
@@ -64458,6 +64580,7 @@ function caRenderGapPanel() {
         · p50 ${caFmtDur(median)} · p75 ${caFmtDur(caPct(gaps, 75))} · p90 ${caFmtDur(caPct(gaps, 90))} · p95 ${caFmtDur(caPct(gaps, 95))}
         ${sug ? `<div style="margin-top:6px;color:#805ad5;">Biggest jump in the distribution: ${caFmtDur(sug.below)} → ${caFmtDur(sug.above)} (${sug.ratio.toFixed(1)}×). Suggested threshold ${sug.min}m.</div>` : ''}
       </div>
+      <textarea id="caGapSummaryBox" readonly style="display:none;width:100%;height:150px;margin-top:10px;padding:10px;font-family:monospace;font-size:11px;border:1px solid #cbd5e0;border-radius:8px;background:#f7fafc;color:#2d3748;"></textarea>
     </div>`;
 }
 
