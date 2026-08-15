@@ -18344,12 +18344,36 @@ body.light-mode .mobile-badge-name {
         <button class="tab active" onclick="switchTab('overview')">Overview</button>
         <button class="tab" onclick="switchTab('universalGameAssets')">🎮 Game Assets</button>
         <button class="tab" onclick="switchTab('walkAwaySettings')">🎧 Walk Away Mode</button>
+        <button class="tab" onclick="switchTab('correctionsArchive')">📼 Corrections Archive</button>
       </div>
 
       <div id="overview" class="tab-content active">
         <h2>System Overview</h2>
         <p>Admin controls for managing the system.</p>
       </div>
+
+      <div id="correctionsArchive" class="tab-content">
+        <h2>📼 Corrections Archive</h2>
+        <p style="color:#718096;margin-bottom:18px;">Every graded daily submission by date, with estimated teacher grading time per day. Expand a day to load its videos and measure their lengths.</p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <input id="caSearchInput" oninput="caSearch(this.value)" placeholder="Filter by student or teacher..." style="flex:1;min-width:180px;padding:9px 12px;border:1px solid #cbd5e0;border-radius:8px;">
+          <div style="display:flex;border:1px solid #cbd5e0;border-radius:8px;overflow:hidden;">
+            <button data-ca-mode="graded" onclick="caSetGroupMode('graded')" style="padding:9px 12px;border:none;cursor:pointer;font-size:13px;">Graded date</button>
+            <button data-ca-mode="submitted" onclick="caSetGroupMode('submitted')" style="padding:9px 12px;border:none;border-left:1px solid #cbd5e0;cursor:pointer;font-size:13px;">Submitted date</button>
+          </div>
+          <button onclick="caMeasureAll()" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⏱ Measure all</button>
+          <button onclick="caExpandAll(true)" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">Expand all</button>
+          <button onclick="caExpandAll(false)" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">Collapse all</button>
+          <button onclick="caExportCsv()" style="padding:9px 14px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:8px;cursor:pointer;">📄 Export CSV</button>
+          <button onclick="loadCorrectionsArchive(true)" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">🔄 Refresh</button>
+        </div>
+
+        <div id="caStats" style="font-size:13px;color:#4a5568;margin-bottom:6px;"></div>
+        <div style="font-size:11px;color:#a0aec0;margin-bottom:14px;">Grading time is estimated from the interval between consecutive gradings by the same teacher, floored at the feedback video length. * marks a session-opening item, estimated from video length + setup.</div>
+        <div id="caGrid"></div>
+      </div>
+
 
       <div id="universalGameAssets" class="tab-content">
         <h2>🎮 Universal Flashcard Game Assets</h2>
@@ -19409,6 +19433,7 @@ function switchTab(tabName) {
   if (tabName === 'analytics2') loadAnalytics2();
   if (tabName === 'pronunciationDrills' && currentUserRole === 'student') renderPronunciationDrills();
   if (tabName === 'allInOne' && currentUserRole === 'student') renderAllInOneDashboard();
+  if (tabName === 'correctionsArchive' && currentUserRole === 'admin') loadCorrectionsArchive();
 }
 
 function addTopicToCurrentMaterial() {
@@ -64004,6 +64029,492 @@ window.syncMobileThemeToggle = syncMobileThemeToggle;
   }
 })();
 
+
+
+// ============================================================
+// CORRECTIONS ARCHIVE (Admin) — graded dailySubmissions by date
+// with estimated teacher grading minutes per day
+// ============================================================
+
+// Write probed video durations back onto the submission doc so we
+// only pay the metadata fetch once per video. Set false to disable.
+const CA_CACHE_DURATIONS = true;
+
+// Grading-effort model knobs.
+const CA_SESSION_GAP_MIN = 20;      // gap (min) that ends a grading session
+const CA_FIRST_ITEM_OVERHEAD_S = 90; // setup cost for the first item in a session
+const CA_DEFAULT_ITEM_S = 180;       // fallback per-item cost when no video/duration
+
+let caSubmissions = [];        // all graded submissions
+let caUsers = {};              // uid -> user doc
+let caExpanded = new Set();    // expanded date keys
+let caLoaded = false;
+let caFilter = '';
+let caGroupMode = 'graded';    // 'graded' | 'submitted'
+let caEffort = {};             // dateKey -> effort summary
+
+function caFmtDur(sec) {
+  if (sec === null || sec === undefined || isNaN(sec) || !isFinite(sec)) return '—';
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function caFmtMin(sec) {
+  if (!sec || !isFinite(sec)) return '0m';
+  const m = Math.round(sec / 60);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+function caLocalDateStr(d) {
+  // Local calendar date, not UTC — a 9pm KST grading session should not
+  // land on the next day.
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function caDateKey(sub) {
+  const d = caGroupMode === 'graded'
+    ? (sub.gradedAt?.toDate?.() || sub.submittedAt?.toDate?.())
+    : (sub.submittedAt?.toDate?.() || sub.gradedAt?.toDate?.());
+  return d ? caLocalDateStr(d) : 'unknown';
+}
+
+function caStudentName(uid) {
+  const u = caUsers[uid];
+  if (!u) return uid ? uid.slice(0, 8) + '…' : 'Unknown';
+  return u.displayName || u.username || (u.email ? u.email.split('@')[0] : uid.slice(0, 8) + '…');
+}
+
+// Probe a .webm for its duration. MediaRecorder files ship without a
+// duration in the header, so duration comes back Infinity — seeking far
+// past the end forces the browser to compute the real value.
+function caProbeDuration(url) {
+  return new Promise(resolve => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    let done = false;
+    const finish = (d) => {
+      if (done) return;
+      done = true;
+      v.removeAttribute('src');
+      v.load();
+      resolve(d);
+    };
+    v.onloadedmetadata = () => {
+      if (v.duration === Infinity || isNaN(v.duration)) {
+        v.ontimeupdate = () => {
+          v.ontimeupdate = null;
+          finish(isFinite(v.duration) ? v.duration : null);
+        };
+        v.currentTime = 1e101;
+      } else {
+        finish(v.duration);
+      }
+    };
+    v.onerror = () => finish(null);
+    setTimeout(() => finish(null), 20000);
+    v.src = url;
+  });
+}
+
+// ---------- grading effort model ----------
+//
+// Each submission carries exactly one grading timestamp (gradedAt, written
+// when the teacher hits submit) and one gradedBy uid. So per-submission
+// grading time is inferred from the interval between consecutive gradings
+// BY THE SAME TEACHER, not from any stored start time.
+//
+//   cost(i) = max(gap since that teacher's previous grading, video length)
+//             ...when the gap is under CA_SESSION_GAP_MIN
+//   cost(i) = video length + CA_FIRST_ITEM_OVERHEAD_S
+//             ...when it opens a session (no usable previous interval)
+//
+// Sessions are computed across the whole timeline per teacher, then each
+// submission's cost is attributed to its own graded date, so daily totals
+// always match the rows shown.
+function caComputeEffort() {
+  const byTeacher = {};
+  caSubmissions.forEach(s => {
+    const g = s.gradedAt?.toDate?.();
+    if (!g) return;
+    const t = s.gradedBy || 'unknown';
+    (byTeacher[t] = byTeacher[t] || []).push({ sub: s, at: g });
+  });
+
+  const gapMax = CA_SESSION_GAP_MIN * 60;
+  const perSub = {};   // submissionId -> { sec, isSessionStart, inferred }
+
+  Object.entries(byTeacher).forEach(([teacher, items]) => {
+    items.sort((a, b) => a.at - b.at);
+    let prev = null;
+    items.forEach(item => {
+      const dur = typeof item.sub.videoDurationSec === 'number' ? item.sub.videoDurationSec : null;
+      let sec, start = false, inferred = false;
+      const gap = prev ? (item.at - prev.at) / 1000 : null;
+
+      if (gap !== null && gap > 0 && gap <= gapMax) {
+        sec = Math.max(gap, dur || 0);
+      } else {
+        start = true;
+        if (dur !== null) {
+          sec = dur + CA_FIRST_ITEM_OVERHEAD_S;
+        } else {
+          sec = CA_DEFAULT_ITEM_S;
+          inferred = true;
+        }
+      }
+      if (dur === null && !start) inferred = true;
+      perSub[item.sub.id] = { sec, isSessionStart: start, inferred, teacher };
+      prev = item;
+    });
+  });
+
+  // Roll up by date key.
+  const byDate = {};
+  caSubmissions.forEach(s => {
+    const key = caDateKey(s);
+    const e = byDate[key] = byDate[key] || {
+      totalSec: 0, videoSec: 0, videoCount: 0, measured: 0,
+      inferred: 0, teachers: {}, times: {}
+    };
+    const p = perSub[s.id];
+    if (p) {
+      e.totalSec += p.sec;
+      if (p.inferred) e.inferred++;
+      const t = e.teachers[p.teacher] = e.teachers[p.teacher] || { sec: 0, count: 0, first: null, last: null };
+      t.sec += p.sec;
+      t.count++;
+      const g = s.gradedAt?.toDate?.();
+      if (g) {
+        if (!t.first || g < t.first) t.first = g;
+        if (!t.last || g > t.last) t.last = g;
+      }
+    }
+    if (s.videoFeedbackUrl) {
+      e.videoCount++;
+      if (typeof s.videoDurationSec === 'number') {
+        e.videoSec += s.videoDurationSec;
+        e.measured++;
+      }
+    }
+  });
+
+  // Wall-clock span per teacher, summed (teachers work in parallel).
+  Object.values(byDate).forEach(e => {
+    e.spanSec = Object.values(e.teachers)
+      .reduce((n, t) => n + (t.first && t.last ? (t.last - t.first) / 1000 : 0), 0);
+  });
+
+  caEffort = byDate;
+  return perSub;
+}
+
+let caPerSub = {};
+
+async function loadCorrectionsArchive(force) {
+  if (caLoaded && !force) { renderCorrectionsArchive(); return; }
+
+  const container = document.getElementById('caGrid');
+  container.innerHTML = '<div style="padding:40px;text-align:center;color:#718096;">Loading archive…</div>';
+
+  try {
+    const [subSnap, userSnap] = await Promise.all([
+      db.collection('dailySubmissions').where('isGraded', '==', true).get(),
+      db.collection('users').get()
+    ]);
+
+    caUsers = {};
+    userSnap.forEach(doc => { caUsers[doc.id] = doc.data(); });
+
+    caSubmissions = [];
+    subSnap.forEach(doc => caSubmissions.push({ id: doc.id, ...doc.data() }));
+
+    caSubmissions.sort((a, b) => {
+      const ta = a.gradedAt?.toDate?.() || a.submittedAt?.toDate?.() || new Date(0);
+      const tb = b.gradedAt?.toDate?.() || b.submittedAt?.toDate?.() || new Date(0);
+      return tb - ta;
+    });
+
+    caLoaded = true;
+    renderCorrectionsArchive();
+  } catch (e) {
+    console.error('Corrections archive load failed', e);
+    container.innerHTML = `<div style="padding:40px;text-align:center;color:#e53e3e;">Failed to load: ${e.message}</div>`;
+  }
+}
+
+function caGroupByDate() {
+  const q = caFilter.trim().toLowerCase();
+  const groups = {};
+  caSubmissions.forEach(sub => {
+    if (q) {
+      const hay = (caStudentName(sub.studentId) + ' ' + caStudentName(sub.gradedBy) + ' ' + (sub.studentId || '')).toLowerCase();
+      if (!hay.includes(q)) return;
+    }
+    const key = caDateKey(sub);
+    (groups[key] = groups[key] || []).push(sub);
+  });
+  return groups;
+}
+
+function caSetGroupMode(mode) {
+  caGroupMode = mode;
+  caExpanded = new Set();
+  renderCorrectionsArchive();
+}
+
+function renderCorrectionsArchive() {
+  const container = document.getElementById('caGrid');
+  caPerSub = caComputeEffort();
+  const groups = caGroupByDate();
+  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  const totalSubs = Object.values(groups).reduce((n, g) => n + g.length, 0);
+  const totalEffort = dates.reduce((n, d) => n + (caEffort[d]?.totalSec || 0), 0);
+  const avg = dates.length ? totalEffort / dates.length : 0;
+  document.getElementById('caStats').innerHTML =
+    `<strong>${totalSubs}</strong> graded submissions across <strong>${dates.length}</strong> days · ` +
+    `est. total grading <strong>${caFmtMin(totalEffort)}</strong> · avg <strong>${caFmtMin(avg)}</strong>/active day`;
+
+  document.querySelectorAll('[data-ca-mode]').forEach(b => {
+    const on = b.getAttribute('data-ca-mode') === caGroupMode;
+    b.style.background = on ? '#667eea' : '#fff';
+    b.style.color = on ? '#fff' : '#4a5568';
+  });
+
+  if (!dates.length) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:#718096;">No graded submissions match.</div>';
+    return;
+  }
+
+  container.innerHTML = dates.map(dateStr => {
+    const subs = groups[dateStr];
+    const open = caExpanded.has(dateStr);
+    const e = caEffort[dateStr] || { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, teachers: {}, inferred: 0 };
+    const label = dateStr === 'unknown'
+      ? 'Unknown date'
+      : new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const teacherBits = Object.entries(e.teachers)
+      .sort((a, b) => b[1].sec - a[1].sec)
+      .map(([uid, t]) => `${caStudentName(uid)} ${caFmtMin(t.sec)} (${t.count})`)
+      .join(' · ');
+
+    const partial = e.measured < e.videoCount;
+
+    return `
+      <div style="border:1px solid #e2e8f0;border-radius:12px;margin-bottom:14px;background:#fff;overflow:hidden;">
+        <div onclick="caToggleDate('${dateStr}')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:${open ? '#f7fafc' : '#fff'};">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="color:#667eea;display:inline-block;transform:rotate(${open ? 90 : 0}deg);">▶</span>
+            <div>
+              <div style="font-weight:600;color:#2d3748;">${label}</div>
+              <div style="font-size:12px;color:#718096;">${subs.length} submission${subs.length === 1 ? '' : 's'} · ${e.videoCount} video${e.videoCount === 1 ? '' : 's'}${teacherBits ? ' · ' + teacherBits : ''}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;" onclick="event.stopPropagation();">
+            <div style="text-align:right;">
+              <div style="font-size:17px;font-weight:700;color:${partial ? '#a0aec0' : '#4c51bf'};">~${caFmtMin(e.totalSec)}</div>
+              <div style="font-size:10px;color:#a0aec0;">video ${caFmtMin(e.videoSec)}${partial ? ` (${e.measured}/${e.videoCount})` : ''} · span ${caFmtMin(e.spanSec)}</div>
+            </div>
+            <button onclick="caDownloadDate('${dateStr}')" style="padding:6px 12px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⬇ Videos</button>
+          </div>
+        </div>
+        <div id="caBody-${dateStr}" style="display:${open ? 'grid' : 'none'};grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:16px;border-top:1px solid #edf2f7;background:#fafbfc;">
+          ${open ? subs.map(sub => caCardHtml(sub)).join('') : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function caCardHtml(sub) {
+  const graded = sub.gradedAt?.toDate?.();
+  const grades = sub.grades || {};
+  const p = caPerSub[sub.id];
+  const chips = Object.entries(grades).map(([k, v]) => {
+    const c = v >= 8 ? '#48bb78' : v >= 5 ? '#ecc94b' : '#f56565';
+    return `<span style="background:${c};color:#fff;padding:3px 8px;border-radius:10px;font-size:11px;">${k.split('-').slice(1).join('-') || k}: ${v}</span>`;
+  }).join(' ');
+
+  return `
+    <div style="border:1px solid #e2e8f0;border-radius:10px;background:#fff;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-weight:600;color:#2d3748;">${caStudentName(sub.studentId)}</div>
+          <div style="font-size:11px;color:#a0aec0;">${graded ? graded.toLocaleString() : 'Grade date unknown'}${sub.gradedBy ? ' · by ' + caStudentName(sub.gradedBy) : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:700;color:#4c51bf;">${sub.totalScore || 0}/50</div>
+          <div id="caDur-${sub.id}" style="font-size:12px;color:#718096;">⏱ ${typeof sub.videoDurationSec === 'number' ? caFmtDur(sub.videoDurationSec) : (sub.videoFeedbackUrl ? 'measuring…' : '—')}</div>
+          ${p ? `<div style="font-size:11px;color:${p.inferred ? '#a0aec0' : '#805ad5'};" title="${p.isSessionStart ? 'Opens a grading session — estimated from video length + setup' : 'Interval since previous grading by this teacher'}">🧑‍🏫 ~${caFmtMin(p.sec)}${p.isSessionStart ? '*' : ''}</div>` : ''}
+        </div>
+      </div>
+
+      ${sub.videoFeedbackUrl ? `
+        <video src="${sub.videoFeedbackUrl}" controls preload="metadata" style="width:100%;border-radius:8px;background:#000;"></video>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <button onclick="caDownloadOne('${sub.videoFeedbackUrl}','${caStudentName(sub.studentId).replace(/[^a-zA-Z0-9]/g, '_')}_${caDateKey(sub)}.webm')" style="padding:5px 10px;font-size:11px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⬇ Download</button>
+          <button onclick="navigator.clipboard.writeText('${sub.videoFeedbackUrl}');showToast('🔗 URL copied')" style="padding:5px 10px;font-size:11px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">🔗 Copy URL</button>
+        </div>
+      ` : `<div style="padding:18px;text-align:center;color:#a0aec0;background:#f7fafc;border-radius:8px;font-size:12px;">Graded, no feedback video</div>`}
+
+      ${chips ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;">${chips}</div>` : ''}
+
+      ${sub.audioUrl ? `<div style="margin-top:10px;"><div style="font-size:11px;color:#718096;margin-bottom:3px;">Student recording</div><audio src="${sub.audioUrl}" controls style="width:100%;height:32px;"></audio></div>` : ''}
+
+      ${(sub.transcript || sub.feedbackTranscript) ? `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-size:12px;color:#667eea;">Transcripts</summary>
+          ${sub.transcript ? `<div style="margin-top:6px;font-size:12px;color:#4a5568;"><strong>Student:</strong> ${sub.transcript}</div>` : ''}
+          ${sub.feedbackTranscript ? `<div style="margin-top:6px;font-size:12px;color:#4a5568;"><strong>Teacher:</strong> ${sub.feedbackTranscript}</div>` : ''}
+        </details>` : ''}
+    </div>`;
+}
+
+async function caToggleDate(dateStr) {
+  if (caExpanded.has(dateStr)) caExpanded.delete(dateStr);
+  else caExpanded.add(dateStr);
+  renderCorrectionsArchive();
+  if (caExpanded.has(dateStr)) caMeasureGroup(dateStr);
+}
+
+// Probe durations for one date group, 3 at a time.
+async function caMeasureGroup(dateStr) {
+  const groups = caGroupByDate();
+  const subs = (groups[dateStr] || []).filter(s => s.videoFeedbackUrl && typeof s.videoDurationSec !== 'number');
+  if (!subs.length) return;
+
+  const queue = subs.slice();
+  const worker = async () => {
+    while (queue.length) {
+      const sub = queue.shift();
+      const sec = await caProbeDuration(sub.videoFeedbackUrl);
+      const el = document.getElementById('caDur-' + sub.id);
+      if (sec === null) {
+        if (el) el.textContent = '⏱ n/a';
+        continue;
+      }
+      sub.videoDurationSec = Math.round(sec);
+      if (el) el.textContent = '⏱ ' + caFmtDur(sub.videoDurationSec);
+      if (CA_CACHE_DURATIONS) {
+        db.collection('dailySubmissions').doc(sub.id)
+          .update({ videoDurationSec: sub.videoDurationSec })
+          .catch(() => {});
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  renderCorrectionsArchive();
+}
+
+function caExpandAll(open) {
+  const groups = caGroupByDate();
+  caExpanded = open ? new Set(Object.keys(groups)) : new Set();
+  renderCorrectionsArchive();
+  if (open) Object.keys(groups).forEach(d => caMeasureGroup(d));
+}
+
+// Measure every video without expanding anything, so the daily estimates
+// stop reading "partial". Slow the first time, cached after.
+async function caMeasureAll() {
+  const pending = caSubmissions.filter(s => s.videoFeedbackUrl && typeof s.videoDurationSec !== 'number');
+  if (!pending.length) { showToast('✅ All videos already measured'); return; }
+  if (!confirm(`Measure ${pending.length} video${pending.length === 1 ? '' : 's'}? This fetches metadata for each and caches the result.`)) return;
+
+  showToast(`⏱ Measuring ${pending.length} videos…`);
+  const queue = pending.slice();
+  let done = 0;
+  const worker = async () => {
+    while (queue.length) {
+      const sub = queue.shift();
+      const sec = await caProbeDuration(sub.videoFeedbackUrl);
+      if (sec !== null) {
+        sub.videoDurationSec = Math.round(sec);
+        if (CA_CACHE_DURATIONS) {
+          db.collection('dailySubmissions').doc(sub.id)
+            .update({ videoDurationSec: sub.videoDurationSec })
+            .catch(() => {});
+        }
+      }
+      done++;
+      if (done % 10 === 0) renderCorrectionsArchive();
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  renderCorrectionsArchive();
+  showToast('✅ Measurement complete');
+}
+
+function caSearch(val) {
+  caFilter = val;
+  renderCorrectionsArchive();
+}
+
+// Cross-origin fetch of a Storage file needs a CORS rule on the bucket.
+// If it fails we fall back to opening the URL in a new tab.
+async function caDownloadOne(url, filename) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) {
+    showToast('⚠️ Direct download blocked (bucket CORS) — opening in new tab');
+    window.open(url, '_blank');
+  }
+}
+
+async function caDownloadDate(dateStr) {
+  const groups = caGroupByDate();
+  const subs = (groups[dateStr] || []).filter(s => s.videoFeedbackUrl);
+  if (!subs.length) { showToast('No videos for this date'); return; }
+  if (!confirm(`Download ${subs.length} video${subs.length === 1 ? '' : 's'} from ${dateStr}?`)) return;
+  for (const sub of subs) {
+    await caDownloadOne(sub.videoFeedbackUrl, `${caStudentName(sub.studentId).replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}.webm`);
+    await new Promise(r => setTimeout(r, 800));
+  }
+}
+
+function caExportCsv() {
+  caPerSub = caComputeEffort();
+  const rows = [['date', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'sessionStart', 'estimateInferred', 'dayEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
+  const groups = caGroupByDate();
+  Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(dateStr => {
+    const dayMin = ((caEffort[dateStr]?.totalSec || 0) / 60).toFixed(1);
+    groups[dateStr].forEach(s => {
+      const d = typeof s.videoDurationSec === 'number' ? s.videoDurationSec : '';
+      const p = caPerSub[s.id];
+      rows.push([
+        dateStr, caGroupMode,
+        caStudentName(s.studentId), s.studentId || '', s.id,
+        s.gradedBy ? caStudentName(s.gradedBy) : '',
+        s.totalScore || 0,
+        JSON.stringify(s.grades || {}),
+        s.gradedAt?.toDate?.()?.toISOString() || '',
+        d, d === '' ? '' : (d / 60).toFixed(2),
+        p ? Math.round(p.sec) : '', p ? (p.sec / 60).toFixed(2) : '',
+        p ? (p.isSessionStart ? 'yes' : 'no') : '',
+        p ? (p.inferred ? 'yes' : 'no') : '',
+        dayMin,
+        s.videoFeedbackUrl || '', s.audioUrl || '',
+        s.transcript || '', s.feedbackTranscript || ''
+      ]);
+    });
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `corrections-archive-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  showToast('📄 CSV exported');
+}
 
 </script>
 
