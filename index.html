@@ -64066,6 +64066,62 @@ let caPeriod = 'day';          // 'day' | 'week'
 let caEffort = {};             // dayKey -> effort summary
 let caPerSub = {};
 let caSessions = {};   // sessionId -> { teacher, items, sec, start, end, gaps }
+let caOverheadSec = 90; // observed median residual, recomputed each pass
+
+// Student's own recording length, written at submit time as recordingDuration.
+function caAudioSec(sub) {
+  return typeof sub.recordingDuration === 'number' && sub.recordingDuration > 0 ? sub.recordingDuration : null;
+}
+function caVideoSec(sub) {
+  return typeof sub.videoDurationSec === 'number' ? sub.videoDurationSec : null;
+}
+// How much of the student's audio she actually spends time on. 1.0 = listens
+// straight through; 0.67 = effectively 1.5x playback (or skipping). The app
+// has no speed control, but Chrome's native audio player does, so this is
+// fitted from the data rather than assumed.
+let caListenFactor = 1.0;
+
+// Two ways of costing a submission:
+//   interval — elapsed wall-clock between submits (includes slack)
+//   task     — bottom-up: listening + recording + scoring
+// Neither is "the" answer; the difference between them is the slack.
+let caModel = 'interval';        // 'interval' | 'task'
+let caScoringSec = 45;           // pick 5 worst sounds + assign 1-10, per item
+
+// Time she plausibly had to sit through: listening (scaled) plus recording
+// her reply. Null when neither length is known.
+function caWorkFloor(sub) {
+  const a = caAudioSec(sub), v = caVideoSec(sub);
+  if (a === null && v === null) return null;
+  return (a || 0) * caListenFactor + (v || 0);
+}
+
+// Largest listening multiplier consistent with the observed intervals: for
+// each in-session item, f can be at most (gap - video) / audio. Taking a low
+// percentile keeps a few odd rows from dragging the estimate down.
+function caFitListenFactor() {
+  const gapMax = caGapMin * 60;
+  const ratios = [];
+  const byTeacher = {};
+  caSubmissions.forEach(s2 => {
+    const g = s2.gradedAt?.toDate?.();
+    if (!g) return;
+    (byTeacher[s2.gradedBy || 'unknown'] = byTeacher[s2.gradedBy || 'unknown'] || []).push({ sub: s2, at: g });
+  });
+  Object.values(byTeacher).forEach(arr => {
+    arr.sort((a, b) => a.at - b.at);
+    for (let i = 1; i < arr.length; i++) {
+      const gap = (arr[i].at - arr[i - 1].at) / 1000;
+      if (gap <= 0 || gap > gapMax) continue;
+      const a = caAudioSec(arr[i].sub), v = caVideoSec(arr[i].sub);
+      if (a === null || a < 5 || v === null) continue;
+      ratios.push((gap - v) / a);
+    }
+  });
+  if (ratios.length < 10) return null;
+  ratios.sort((x, y) => x - y);
+  return { n: ratios.length, p05: caPct(ratios, 5), p10: caPct(ratios, 10), p25: caPct(ratios, 25), p50: caPct(ratios, 50) };
+}
 
 function caFmtDur(sec) {
   if (sec === null || sec === undefined || isNaN(sec) || !isFinite(sec)) return '—';
@@ -64192,49 +64248,82 @@ function caComputeEffort() {
   caSessions = {};
   let sessionSeq = 0;
 
+  // Pass 1 — session membership and the residual (gap minus known work).
+  const walk = [];
   Object.entries(byTeacher).forEach(([teacher, items]) => {
     items.sort((a, b) => a.at - b.at);
     let prev = null;
     items.forEach(item => {
-      const dur = typeof item.sub.videoDurationSec === 'number' ? item.sub.videoDurationSec : null;
-      let sec, start = false, inferred = false;
       const gap = prev ? (item.at - prev.at) / 1000 : null;
-
-      if (gap !== null && gap > 0 && gap <= gapMax) {
-        sec = Math.max(gap, dur || 0);
-      } else {
-        start = true;
-        if (dur !== null) {
-          sec = dur + CA_FIRST_ITEM_OVERHEAD_S;
-        } else {
-          sec = CA_DEFAULT_ITEM_S;
-          inferred = true;
-        }
-      }
-      if (dur === null && !start) inferred = true;
-      if (start) sessionSeq++;
-      const sid = teacher + '#' + sessionSeq;
-      perSub[item.sub.id] = { sec, isSessionStart: start, inferred, teacher, gapBefore: gap, sessionId: sid };
-      const sess = caSessions[sid] = caSessions[sid] || { id: sid, teacher, items: [], sec: 0, start: item.at, end: item.at, gaps: [] };
-      sess.items.push(item.sub.id);
-      sess.sec += sec;
-      sess.end = item.at;
-      if (!start && gap !== null) sess.gaps.push(gap);
+      const start = !(gap !== null && gap > 0 && gap <= gapMax);
+      walk.push({ teacher, item, gap, start });
       prev = item;
     });
+  });
+
+  const residuals = walk
+    .filter(w => !w.start && caWorkFloor(w.item.sub) !== null)
+    .map(w => w.gap - caWorkFloor(w.item.sub))
+    .filter(r => r > 0)
+    .sort((a, b) => a - b);
+  // Self-calibrating setup cost: what she typically spends beyond listening
+  // and recording. Falls back to the constant when there's no evidence yet.
+  caOverheadSec = residuals.length >= 5 ? Math.round(caPct(residuals, 50)) : CA_FIRST_ITEM_OVERHEAD_S;
+
+  // Pass 2 — cost each item under both models.
+  walk.forEach(w => {
+    const { teacher, item, gap, start } = w;
+    const floor = caWorkFloor(item.sub);
+    let intervalSec, inferred = false;
+
+    if (!start) {
+      intervalSec = Math.max(gap, floor || 0);
+      if (floor === null) inferred = true;
+    } else if (floor !== null) {
+      intervalSec = floor + caOverheadSec;
+    } else {
+      intervalSec = CA_DEFAULT_ITEM_S;
+      inferred = true;
+    }
+
+    // Bottom-up: only work we can name. Never exceeds the elapsed interval
+    // for an in-session item — she can't have worked longer than she took.
+    let taskSec = floor !== null ? floor + caScoringSec : CA_DEFAULT_ITEM_S;
+    if (!start && gap !== null) taskSec = Math.min(taskSec, Math.max(gap, floor || 0));
+
+    const sec = caModel === 'task' ? taskSec : intervalSec;
+
+    if (start) sessionSeq++;
+    const sid = teacher + '#' + sessionSeq;
+    perSub[item.sub.id] = {
+      sec, intervalSec, taskSec, isSessionStart: start, inferred, teacher, gapBefore: gap, sessionId: sid,
+      floor, audioSec: caAudioSec(item.sub), videoSec: caVideoSec(item.sub),
+      idleSec: !start && floor !== null ? Math.max(0, gap - floor) : null,
+      slackSec: Math.max(0, intervalSec - taskSec)
+    };
+    const sess = caSessions[sid] = caSessions[sid] || { id: sid, teacher, items: [], sec: 0, start: item.at, end: item.at, gaps: [] };
+    sess.items.push(item.sub.id);
+    sess.sec += sec;
+    sess.end = item.at;
+    if (!start && gap !== null) sess.gaps.push(gap);
   });
 
   const byDate = {};
   caSubmissions.forEach(s => {
     const key = caDateKey(s);
     const e = byDate[key] = byDate[key] || {
-      totalSec: 0, videoSec: 0, videoCount: 0, measured: 0,
+      totalSec: 0, intervalSec: 0, taskSec: 0, slackSec: 0,
+      videoSec: 0, audioSec: 0, videoCount: 0, measured: 0,
       inferred: 0, teachers: {}, count: 0, sessions: 0, gaps: []
     };
     e.count++;
     const p = perSub[s.id];
     if (p) {
       e.totalSec += p.sec;
+      e.intervalSec += p.intervalSec;
+      e.taskSec += p.taskSec;
+      e.slackSec += p.slackSec;
+      if (p.audioSec) e.audioSec += p.audioSec;
       if (p.inferred) e.inferred++;
       if (p.isSessionStart) {
         e.sessions++;
@@ -64272,13 +64361,17 @@ function caComputeEffort() {
 
 // Roll several day summaries into one period summary.
 function caRollup(dayKeys) {
-  const out = { totalSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length, sessions: 0, gaps: [] };
+  const out = { totalSec: 0, intervalSec: 0, taskSec: 0, slackSec: 0, audioSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length, sessions: 0, gaps: [] };
   dayKeys.forEach(k => {
     const e = caEffort[k];
     if (!e) return;
     out.sessions += e.sessions || 0;
     out.gaps = out.gaps.concat(e.gaps || []);
     out.totalSec += e.totalSec;
+    out.intervalSec += e.intervalSec || 0;
+    out.taskSec += e.taskSec || 0;
+    out.slackSec += e.slackSec || 0;
+    out.audioSec += e.audioSec || 0;
     out.videoSec += e.videoSec;
     out.videoCount += e.videoCount;
     out.measured += e.measured;
@@ -64381,8 +64474,10 @@ function caGapRecords() {
         prevAt: arr[i - 1].at,
         at: arr[i].at,
         gapSec,
-        nextVideoSec: typeof cur.videoDurationSec === 'number' ? cur.videoDurationSec : null,
-        prevVideoSec: typeof prev.videoDurationSec === 'number' ? prev.videoDurationSec : null,
+        nextVideoSec: caVideoSec(cur),
+        prevVideoSec: caVideoSec(prev),
+        nextAudioSec: caAudioSec(cur),
+        nextFloorSec: caWorkFloor(cur),
         nextScore: cur.totalScore || 0,
         nextId: cur.id,
         sameDay: caLocalDateStr(arr[i - 1].at) === caLocalDateStr(arr[i].at),
@@ -64397,12 +64492,13 @@ function caGapRecords() {
 function caExportGaps() {
   const recs = caGapRecords();
   if (!recs.length) { showToast('No intervals to export'); return; }
-  const rows = [['teacher', 'prevGradedAt', 'gradedAt', 'gapSec', 'gapMin', 'nextVideoSec', 'prevVideoSec', 'gapMinusNextVideoSec', 'nextScore', 'sameDay', 'hourOfDay', 'day', 'nextSubmissionId']];
+  const rows = [['teacher', 'prevGradedAt', 'gradedAt', 'gapSec', 'gapMin', 'nextStudentAudioSec', 'nextVideoSec', 'prevVideoSec', 'nextWorkFloorSec', 'residualSec', 'nextScore', 'sameDay', 'hourOfDay', 'day', 'nextSubmissionId']];
   recs.forEach(r => rows.push([
     r.teacher, r.prevAt.toISOString(), r.at.toISOString(),
     Math.round(r.gapSec), (r.gapSec / 60).toFixed(2),
-    r.nextVideoSec ?? '', r.prevVideoSec ?? '',
-    r.nextVideoSec !== null ? Math.round(r.gapSec - r.nextVideoSec) : '',
+    r.nextAudioSec ?? '', r.nextVideoSec ?? '', r.prevVideoSec ?? '',
+    r.nextFloorSec ?? '',
+    r.nextFloorSec !== null ? Math.round(r.gapSec - r.nextFloorSec) : '',
     r.nextScore, r.sameDay ? 'yes' : 'no', r.hour, r.day, r.nextId
   ]));
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -64448,6 +64544,32 @@ function caGapSummaryText() {
     lines.push(`gap vs next-video-length (gaps <=60m, n=${withVid.length}): r=${r.toFixed(2)}, mean gap ${caFmtDur(mg)}, mean video ${caFmtDur(mv)}, ratio ${(mg / mv).toFixed(2)}x`);
     const excess = withVid.map(r2 => r2.gapSec - r2.nextVideoSec).sort((a, b) => a - b);
     lines.push(`gap minus next video: p25 ${caFmtDur(caPct(excess, 25))} p50 ${caFmtDur(caPct(excess, 50))} p75 ${caFmtDur(caPct(excess, 75))} p90 ${caFmtDur(caPct(excess, 90))}`);
+  }
+
+  // Decomposition: how much of an in-session gap is accounted for.
+  const inSess = recs.filter(r => r.gapSec <= caGapMin * 60);
+  const withAudio = inSess.filter(r => r.nextAudioSec !== null);
+  lines.push(`recordingDuration coverage: ${caSubmissions.filter(s2 => caAudioSec(s2) !== null).length}/${caSubmissions.length} submissions`);
+  if (withAudio.length > 5) {
+    const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const resid = withAudio.map(r => r.gapSec - (r.nextFloorSec || 0)).sort((a, b) => a - b);
+    lines.push(`in-session decomposition (n=${withAudio.length}): mean gap ${caFmtDur(mean(withAudio.map(r => r.gapSec)))} = student audio ${caFmtDur(mean(withAudio.map(r => r.nextAudioSec)))} + her video ${caFmtDur(mean(withAudio.map(r => r.nextVideoSec || 0)))} + other ${caFmtDur(mean(resid))}`);
+    lines.push(`residual (gap - audio - video): p25 ${caFmtDur(caPct(resid, 25))} p50 ${caFmtDur(caPct(resid, 50))} p75 ${caFmtDur(caPct(resid, 75))} p90 ${caFmtDur(caPct(resid, 90))} · negatives ${resid.filter(x => x < 0).length}`);
+    lines.push(`session-start overhead now imputed at ${caFmtDur(caOverheadSec)} (median residual)`);
+  }
+
+  const fit2 = caFitListenFactor();
+  if (fit2) {
+    lines.push(`listening headroom (gap-video)/audio, n=${fit2.n}: p05 ${fit2.p05.toFixed(2)}x p10 ${fit2.p10.toFixed(2)}x p25 ${fit2.p25.toFixed(2)}x p50 ${fit2.p50.toFixed(2)}x`);
+    lines.push(`listen factor in use: ${caListenFactor.toFixed(2)}x`);
+  }
+
+  // Model comparison across the whole archive.
+  let ti = 0, tt = 0, n = 0;
+  Object.values(caPerSub).forEach(p2 => { ti += p2.intervalSec; tt += p2.taskSec; n++; });
+  if (n) {
+    lines.push(`model comparison (n=${n}): elapsed ${caFmtMin(ti)} vs task ${caFmtMin(tt)} -> slack ${caFmtMin(ti - tt)} (${Math.round((1 - tt / ti) * 100)}%)`);
+    lines.push(`per submission: ${caFmtDur(ti / n)} elapsed, ${caFmtDur(tt / n)} task (scoring overhead ${caScoringSec}s, listen ${caListenFactor.toFixed(2)}x)`);
   }
 
   const cross = recs.filter(r => !r.sameDay).length;
@@ -64538,6 +64660,7 @@ function caRenderGapPanel() {
   const max = Math.max(...buckets.map(b => b.n), 1);
 
   const sug = caSuggestThreshold(gaps);
+  const fit = caFitListenFactor();
   const median = caPct(gaps, 50);
   const inSession = gaps.filter(g => g <= caGapMin * 60);
   const medianIn = caPct(inSession, 50);
@@ -64555,6 +64678,16 @@ function caRenderGapPanel() {
           <input type="number" min="1" max="180" value="${caGapMin}" onchange="caSetGap(this.value)" style="width:64px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
           <span style="font-size:12px;color:#718096;">min</span>
           ${sug ? `<button onclick="caSetGap(${sug.min})" style="padding:6px 10px;font-size:12px;border:1px solid #667eea;color:#4c51bf;background:#fff;border-radius:8px;cursor:pointer;">Use suggested ${sug.min}m</button>` : ''}
+          <div style="display:flex;border:1px solid #cbd5e0;border-radius:8px;overflow:hidden;">
+            <button data-ca-model="interval" onclick="caSetModel('interval')" style="padding:6px 10px;border:none;cursor:pointer;font-size:12px;">Interval</button>
+            <button data-ca-model="task" onclick="caSetModel('task')" style="padding:6px 10px;border:none;border-left:1px solid #cbd5e0;cursor:pointer;font-size:12px;">Task</button>
+          </div>
+          <label style="font-size:12px;color:#4a5568;">Scoring</label>
+          <input type="number" min="0" max="600" step="5" value="${caScoringSec}" onchange="caSetScoring(this.value)" style="width:60px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
+          <span style="font-size:12px;color:#718096;">s</span>
+          <label style="font-size:12px;color:#4a5568;margin-left:6px;">Listen ×</label>
+          <input type="number" min="0.3" max="1.5" step="0.05" value="${caListenFactor.toFixed(2)}" onchange="caSetListen(this.value)" style="width:64px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
+          ${fit ? `<button onclick="caSetListen(${Math.max(0.3, Math.min(1, fit.p10)).toFixed(2)})" style="padding:6px 10px;font-size:12px;border:1px solid #667eea;color:#4c51bf;background:#fff;border-radius:8px;cursor:pointer;">Fit ${Math.max(0.3, Math.min(1, fit.p10)).toFixed(2)}×</button>` : ''}
           <button onclick="caExportGaps()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">⬇ Gap CSV</button>
           <button onclick="caCopyGapSummary()" style="padding:6px 10px;font-size:12px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">📋 Copy profile</button>
         </div>
@@ -64579,9 +64712,26 @@ function caRenderGapPanel() {
         <span style="display:inline-block;width:10px;height:10px;background:#e2e8f0;border-radius:2px;margin-left:12px;"></span> treated as a break
         · p50 ${caFmtDur(median)} · p75 ${caFmtDur(caPct(gaps, 75))} · p90 ${caFmtDur(caPct(gaps, 90))} · p95 ${caFmtDur(caPct(gaps, 95))}
         ${sug ? `<div style="margin-top:6px;color:#805ad5;">Biggest jump in the distribution: ${caFmtDur(sug.below)} → ${caFmtDur(sug.above)} (${sug.ratio.toFixed(1)}×). Suggested threshold ${sug.min}m.</div>` : ''}
+        ${fit ? `<div style="margin-top:4px;color:#805ad5;">Listening headroom (gap − video) ÷ student audio, n=${fit.n}: p05 ${fit.p05.toFixed(2)}× · p10 ${fit.p10.toFixed(2)}× · p50 ${fit.p50.toFixed(2)}×. ${fit.p10 < 0.9 ? 'Values under 1 mean she cannot have listened straight through — sped up, skipped, or partially listened.' : 'Consistent with listening straight through.'}</div>` : ''}
       </div>
       <textarea id="caGapSummaryBox" readonly style="display:none;width:100%;height:150px;margin-top:10px;padding:10px;font-family:monospace;font-size:11px;border:1px solid #cbd5e0;border-radius:8px;background:#f7fafc;color:#2d3748;"></textarea>
     </div>`;
+}
+
+function caSetModel(m) {
+  caModel = m;
+  renderCorrectionsArchive();
+}
+
+function caSetScoring(v) {
+  caScoringSec = Math.max(0, Math.min(600, parseInt(v, 10) || 0));
+  renderCorrectionsArchive();
+}
+
+function caSetListen(v) {
+  const f = Math.max(0.1, Math.min(2, parseFloat(v) || 1));
+  caListenFactor = f;
+  renderCorrectionsArchive();
 }
 
 function caSetGap(v) {
@@ -64606,10 +64756,14 @@ function caSessionBits(e) {
 
 function caEffortBadge(e, extra) {
   const partial = e.measured < e.videoCount;
+  const alt = caModel === 'task'
+    ? `elapsed ${caFmtMin(e.intervalSec)}`
+    : `task ${caFmtMin(e.taskSec)}`;
   return `
     <div style="text-align:right;">
       <div style="font-size:17px;font-weight:700;color:${partial ? '#a0aec0' : '#4c51bf'};">~${caFmtMin(e.totalSec)}</div>
-      <div style="font-size:10px;color:#a0aec0;">video ${caFmtMin(e.videoSec)}${partial ? ` (${e.measured}/${e.videoCount})` : ''} · span ${caFmtMin(e.spanSec)}${extra || ''}</div>
+      <div style="font-size:10px;color:#a0aec0;" title="Elapsed = wall-clock between submits. Task = listening + recording + scoring. The difference is slack.">${alt} · slack ${caFmtMin(e.slackSec)}${partial ? ` · ${e.measured}/${e.videoCount} measured` : ''}</div>
+      <div style="font-size:10px;color:#cbd5e0;">audio ${caFmtMin(e.audioSec)} · video ${caFmtMin(e.videoSec)} · span ${caFmtMin(e.spanSec)}${extra || ''}</div>
     </div>`;
 }
 
@@ -64632,12 +64786,21 @@ function renderCorrectionsArchive() {
 
   const unit = caPeriod === 'week' ? weekKeys.length : dates.length;
   const unitLabel = caPeriod === 'week' ? 'active week' : 'active day';
+  const totInterval = dates.reduce((n, d) => n + (caEffort[d]?.intervalSec || 0), 0);
+  const totTask = dates.reduce((n, d) => n + (caEffort[d]?.taskSec || 0), 0);
   document.getElementById('caStats').innerHTML =
     `<strong>${totalSubs}</strong> graded submissions · <strong>${dates.length}</strong> active days across <strong>${weekKeys.length}</strong> weeks · ` +
-    `est. total grading <strong>${caFmtMin(totalEffort)}</strong> · avg <strong>${caFmtMin(unit ? totalEffort / unit : 0)}</strong>/${unitLabel}`;
+    `<strong>${caFmtMin(totalEffort)}</strong> (${caModel}) · avg <strong>${caFmtMin(unit ? totalEffort / unit : 0)}</strong>/${unitLabel} · ` +
+    `<span style="color:#718096;">elapsed ${caFmtMin(totInterval)} vs task ${caFmtMin(totTask)} → slack ${caFmtMin(totInterval - totTask)} (${totInterval ? Math.round((1 - totTask / totInterval) * 100) : 0}%)</span> · ` +
+    `<span style="color:#718096;">per submission: ${caFmtDur(totalSubs ? totInterval / totalSubs : 0)} elapsed, ${caFmtDur(totalSubs ? totTask / totalSubs : 0)} task</span>`;
 
   document.querySelectorAll('[data-ca-mode]').forEach(b => {
     const on = b.getAttribute('data-ca-mode') === caGroupMode;
+    b.style.background = on ? '#667eea' : '#fff';
+    b.style.color = on ? '#fff' : '#4a5568';
+  });
+  document.querySelectorAll('[data-ca-model]').forEach(b => {
+    const on = b.getAttribute('data-ca-model') === caModel;
     b.style.background = on ? '#667eea' : '#fff';
     b.style.color = on ? '#fff' : '#4a5568';
   });
@@ -64778,8 +64941,10 @@ function caCardHtml(sub) {
         <div style="text-align:right;">
           <div style="font-size:15px;font-weight:700;color:#4c51bf;">${sub.totalScore || 0}/50</div>
           <div id="caDur-${sub.id}" style="font-size:12px;color:#718096;">⏱ ${typeof sub.videoDurationSec === 'number' ? caFmtDur(sub.videoDurationSec) : (sub.videoFeedbackUrl ? 'measuring…' : '—')}</div>
-          ${p ? `<div style="font-size:11px;color:${p.inferred ? '#a0aec0' : '#805ad5'};" title="${p.isSessionStart ? 'Opens a grading session — estimated from video length + setup' : 'Interval since previous grading by this teacher'}">🧑‍🏫 ~${caFmtMin(p.sec)}${p.isSessionStart ? '*' : ''}</div>
-          <div style="font-size:10px;color:#a0aec0;">${p.isSessionStart ? (p.gapBefore !== null && p.gapBefore !== undefined ? 'after ' + caFmtMin(p.gapBefore) + ' break' : 'first ever') : '+' + caFmtDur(p.gapBefore) + ' step'}</div>` : ''}
+          ${p ? `<div style="font-size:11px;color:${p.inferred ? '#a0aec0' : '#805ad5'};" title="${p.isSessionStart ? 'Opens a grading session — no preceding interval, so estimated bottom-up' : 'Elapsed ' + caFmtDur(p.intervalSec) + ' · task ' + caFmtDur(p.taskSec)}">🧑‍🏫 ~${caFmtMin(p.sec)}${p.isSessionStart ? '*' : ''}</div>
+          <div style="font-size:10px;color:#a0aec0;">${caModel === 'task' ? 'elapsed ' + caFmtDur(p.intervalSec) : 'task ' + caFmtDur(p.taskSec)}</div>
+          <div style="font-size:10px;color:#a0aec0;">${p.isSessionStart ? (p.gapBefore !== null && p.gapBefore !== undefined ? 'after ' + caFmtMin(p.gapBefore) + ' break' : 'first ever') : '+' + caFmtDur(p.gapBefore) + ' step'}</div>
+          <div style="font-size:10px;color:#a0aec0;" title="Student audio + her video = work we can account for. The rest is scoring, navigation, replays or idle.">${p.audioSec !== null ? 'audio ' + caFmtDur(p.audioSec) : 'audio —'} · vid ${p.videoSec !== null ? caFmtDur(p.videoSec) : '—'}${p.idleSec !== null ? ' · other ' + caFmtDur(p.idleSec) : ''}</div>` : ''}
         </div>
       </div>
 
@@ -64943,7 +65108,7 @@ async function caDownloadWeek(weekKey) {
 
 function caExportCsv() {
   caPerSub = caComputeEffort();
-  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'sessionStart', 'gapBeforeMin', 'daySessions', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
+  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'model', 'estIntervalSec', 'estTaskSec', 'slackSec', 'studentAudioSec', 'sessionStart', 'gapBeforeMin', 'daySessions', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
   const groups = caGroupByDate();
   const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
@@ -64971,6 +65136,9 @@ function caExportCsv() {
         s.gradedAt?.toDate?.()?.toISOString() || '',
         d, d === '' ? '' : (d / 60).toFixed(2),
         p ? Math.round(p.sec) : '', p ? (p.sec / 60).toFixed(2) : '',
+        caModel,
+        p ? Math.round(p.intervalSec) : '', p ? Math.round(p.taskSec) : '', p ? Math.round(p.slackSec) : '',
+        p && p.audioSec !== null ? p.audioSec : '',
         p ? (p.isSessionStart ? 'yes' : 'no') : '',
         p && p.gapBefore !== null && p.gapBefore !== undefined ? (p.gapBefore / 60).toFixed(2) : '',
         caEffort[dateStr]?.sessions ?? '',
