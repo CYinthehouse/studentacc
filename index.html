@@ -18371,6 +18371,7 @@ body.light-mode .mobile-badge-name {
           <button onclick="caExpandAll(false)" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">Collapse all</button>
           <button onclick="caExportCsv()" style="padding:9px 14px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:8px;cursor:pointer;">📄 Export CSV</button>
           <button onclick="loadCorrectionsArchive(true)" style="padding:9px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;">🔄 Refresh</button>
+          <button onclick="caOpenProductView()" style="padding:9px 14px;border:none;background:#2d3748;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;">📋 Product View</button>
         </div>
 
         <div id="caStats" style="font-size:13px;color:#4a5568;margin-bottom:6px;"></div>
@@ -18378,6 +18379,44 @@ body.light-mode .mobile-badge-name {
         <div style="font-size:11px;color:#a0aec0;margin-bottom:14px;">Grading time is estimated from the interval between consecutive gradings by the same teacher, floored at the feedback video length. * marks a session-opening item, estimated from video length + setup.</div>
         <div id="caGrid"></div>
       </div>
+
+      <div id="caProductOverlay" style="display:none;position:fixed;inset:0;background:#f1f5f9;z-index:9999;overflow:auto;">
+        <div class="ca-pv-bar">
+          <button onclick="caCloseProductView()" class="ca-pv-btn">← Back</button>
+          <label class="ca-pv-lbl">Teacher</label>
+          <select id="caPvTeacherSelect" onchange="caSetPvTeacher(this.value)" class="ca-pv-sel"></select>
+          <div style="flex:1"></div>
+          <button onclick="window.print()" class="ca-pv-btn">🖨 Print / Save PDF</button>
+        </div>
+        <div id="caPvBody" class="ca-pv-page"></div>
+      </div>
+
+      <style>
+        .ca-pv-bar{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:12px 20px;background:#fff;border-bottom:1px solid #e2e8f0;z-index:2;}
+        .ca-pv-btn{padding:8px 14px;border:1px solid #cbd5e0;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;}
+        .ca-pv-lbl{font-size:13px;color:#4a5568;}
+        .ca-pv-sel{padding:7px 10px;border:1px solid #cbd5e0;border-radius:8px;font-size:13px;background:#fff;}
+        .ca-pv-page{max-width:920px;margin:0 auto;padding:32px 24px 80px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a202c;}
+        .ca-pv-head h1{margin:0 0 6px 0;font-size:26px;letter-spacing:-0.02em;}
+        .ca-pv-sub{color:#64748b;font-size:14px;margin-bottom:28px;}
+        .ca-pv-week{background:#fff;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:20px;overflow:hidden;page-break-inside:avoid;}
+        .ca-pv-week-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;}
+        .ca-pv-week-title{font-weight:700;font-size:15px;}
+        .ca-pv-week-tot{text-align:right;}
+        .ca-pv-week-tot strong{display:block;font-size:19px;color:#4c51bf;}
+        .ca-pv-week-tot span{font-size:12px;color:#64748b;}
+        .ca-pv-table{width:100%;border-collapse:collapse;font-size:13px;}
+        .ca-pv-table th{text-align:left;padding:10px 20px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#94a3b8;border-bottom:1px solid #edf2f7;font-weight:600;}
+        .ca-pv-table td{padding:12px 20px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+        .ca-pv-table tfoot td{border-bottom:none;background:#f8fafc;font-size:13px;}
+        .ca-pv-table .r{text-align:right;white-space:nowrap;}
+        .ca-pv-day{white-space:nowrap;font-weight:600;}
+        .ca-pv-sess{width:52%;}
+        .ca-pv-chip{display:inline-block;background:#eef2ff;color:#3730a3;border-radius:8px;padding:4px 9px;margin:0 6px 5px 0;font-size:12px;white-space:nowrap;}
+        .ca-pv-chip b{font-weight:700;margin-right:3px;}
+        .ca-pv-note{margin-top:26px;padding:18px 20px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;line-height:1.7;color:#475569;page-break-inside:avoid;}
+        @media print{.ca-pv-bar{display:none;}#caProductOverlay{position:static;background:#fff;}.ca-pv-page{max-width:none;padding:0;}.ca-pv-week{break-inside:avoid;}}
+      </style>
 
 
       <div id="universalGameAssets" class="tab-content">
@@ -64112,12 +64151,14 @@ function caBadDurationCount() {
 // fitted from the data rather than assumed.
 let caListenFactor = 1.0;
 
-// Two ways of costing a submission:
-//   interval — elapsed wall-clock between submits (includes slack)
-//   task     — bottom-up: listening + recording + scoring
-// Neither is "the" answer; the difference between them is the slack.
-let caModel = 'interval';        // 'interval' | 'task'
-let caScoringSec = 45;           // pick 5 worst sounds + assign 1-10, per item
+// Three ways of costing a submission:
+//   interval — elapsed wall-clock between submits (ceiling; includes slack)
+//   task     — bottom-up: listening + recording + scoring (floor)
+//   mid      — the average of the two, which is where the truth sits
+// Task treats every unexplained second as idle; interval treats every second
+// as work. Both are wrong in a known direction, so mid is the default.
+let caModel = 'mid';             // 'interval' | 'task' | 'mid'
+let caScoringSec = 59;           // observed median residual: pick 5 sounds + score
 
 // Time she plausibly had to sit through: listening (scaled) plus recording
 // her reply. Null when neither length is known.
@@ -64322,12 +64363,13 @@ function caComputeEffort() {
     let taskSec = floor !== null ? floor + caScoringSec : CA_DEFAULT_ITEM_S;
     if (!start && gap !== null) taskSec = Math.min(taskSec, Math.max(gap, floor || 0));
 
-    const sec = caModel === 'task' ? taskSec : intervalSec;
+    const midSec = (intervalSec + taskSec) / 2;
+    const sec = caModel === 'task' ? taskSec : caModel === 'interval' ? intervalSec : midSec;
 
     if (start) sessionSeq++;
     const sid = teacher + '#' + sessionSeq;
     perSub[item.sub.id] = {
-      sec, intervalSec, taskSec, isSessionStart: start, inferred, teacher, gapBefore: gap, sessionId: sid,
+      sec, intervalSec, taskSec, midSec, isSessionStart: start, inferred, teacher, gapBefore: gap, sessionId: sid,
       floor, audioSec: caAudioSec(item.sub), videoSec: caVideoSec(item.sub),
       idleSec: !start && floor !== null ? Math.max(0, gap - floor) : null,
       slackSec: Math.max(0, intervalSec - taskSec)
@@ -64343,7 +64385,7 @@ function caComputeEffort() {
   caSubmissions.forEach(s => {
     const key = caDateKey(s);
     const e = byDate[key] = byDate[key] || {
-      totalSec: 0, intervalSec: 0, taskSec: 0, slackSec: 0,
+      totalSec: 0, intervalSec: 0, taskSec: 0, midSec: 0, slackSec: 0,
       videoSec: 0, audioSec: 0, videoCount: 0, measured: 0,
       inferred: 0, teachers: {}, count: 0, sessions: 0, gaps: []
     };
@@ -64353,6 +64395,7 @@ function caComputeEffort() {
       e.totalSec += p.sec;
       e.intervalSec += p.intervalSec;
       e.taskSec += p.taskSec;
+      e.midSec += p.midSec;
       e.slackSec += p.slackSec;
       if (p.audioSec) e.audioSec += p.audioSec;
       if (p.inferred) e.inferred++;
@@ -64392,7 +64435,7 @@ function caComputeEffort() {
 
 // Roll several day summaries into one period summary.
 function caRollup(dayKeys) {
-  const out = { totalSec: 0, intervalSec: 0, taskSec: 0, slackSec: 0, audioSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length, sessions: 0, gaps: [] };
+  const out = { totalSec: 0, intervalSec: 0, taskSec: 0, midSec: 0, slackSec: 0, audioSec: 0, videoSec: 0, videoCount: 0, measured: 0, spanSec: 0, count: 0, teachers: {}, days: dayKeys.length, sessions: 0, gaps: [] };
   dayKeys.forEach(k => {
     const e = caEffort[k];
     if (!e) return;
@@ -64401,6 +64444,7 @@ function caRollup(dayKeys) {
     out.totalSec += e.totalSec;
     out.intervalSec += e.intervalSec || 0;
     out.taskSec += e.taskSec || 0;
+    out.midSec += e.midSec || 0;
     out.slackSec += e.slackSec || 0;
     out.audioSec += e.audioSec || 0;
     out.videoSec += e.videoSec;
@@ -64599,8 +64643,9 @@ function caGapSummaryText() {
   let ti = 0, tt = 0, n = 0;
   Object.values(caPerSub).forEach(p2 => { ti += p2.intervalSec; tt += p2.taskSec; n++; });
   if (n) {
-    lines.push(`model comparison (n=${n}): elapsed ${caFmtMin(ti)} vs task ${caFmtMin(tt)} -> slack ${caFmtMin(ti - tt)} (${Math.round((1 - tt / ti) * 100)}%)`);
-    lines.push(`per submission: ${caFmtDur(ti / n)} elapsed, ${caFmtDur(tt / n)} task (scoring overhead ${caScoringSec}s, listen ${caListenFactor.toFixed(2)}x)`);
+    const tm = (ti + tt) / 2;
+    lines.push(`models (n=${n}): task ${caFmtMin(tt)} | midpoint ${caFmtMin(tm)} | elapsed ${caFmtMin(ti)} -> unexplained ${caFmtMin(ti - tt)} (${Math.round((1 - tt / ti) * 100)}%)`);
+    lines.push(`per submission: ${caFmtDur(tt / n)} task, ${caFmtDur(tm / n)} midpoint, ${caFmtDur(ti / n)} elapsed (in use: ${caModel}, scoring ${caScoringSec}s, listen ${caListenFactor.toFixed(2)}x)`);
   }
 
   const cross = recs.filter(r => !r.sameDay).length;
@@ -64711,8 +64756,9 @@ function caRenderGapPanel() {
           <span style="font-size:12px;color:#718096;">min</span>
           ${sug ? `<button onclick="caSetGap(${sug.min})" style="padding:6px 10px;font-size:12px;border:1px solid #667eea;color:#4c51bf;background:#fff;border-radius:8px;cursor:pointer;">Use suggested ${sug.min}m</button>` : ''}
           <div style="display:flex;border:1px solid #cbd5e0;border-radius:8px;overflow:hidden;">
-            <button data-ca-model="interval" onclick="caSetModel('interval')" style="padding:6px 10px;border:none;cursor:pointer;font-size:12px;">Interval</button>
-            <button data-ca-model="task" onclick="caSetModel('task')" style="padding:6px 10px;border:none;border-left:1px solid #cbd5e0;cursor:pointer;font-size:12px;">Task</button>
+            <button data-ca-model="task" onclick="caSetModel('task')" style="padding:6px 10px;border:none;cursor:pointer;font-size:12px;" title="Floor: listening + recording + scoring only">Task</button>
+            <button data-ca-model="mid" onclick="caSetModel('mid')" style="padding:6px 10px;border:none;border-left:1px solid #cbd5e0;cursor:pointer;font-size:12px;" title="Midpoint of task and elapsed — the default">Midpoint</button>
+            <button data-ca-model="interval" onclick="caSetModel('interval')" style="padding:6px 10px;border:none;border-left:1px solid #cbd5e0;cursor:pointer;font-size:12px;" title="Ceiling: all elapsed time between submits">Elapsed</button>
           </div>
           <label style="font-size:12px;color:#4a5568;">Scoring</label>
           <input type="number" min="0" max="600" step="5" value="${caScoringSec}" onchange="caSetScoring(this.value)" style="width:60px;padding:5px;border:1px solid #cbd5e0;border-radius:6px;">
@@ -64789,13 +64835,11 @@ function caSessionBits(e) {
 
 function caEffortBadge(e, extra) {
   const partial = e.measured < e.videoCount;
-  const alt = caModel === 'task'
-    ? `elapsed ${caFmtMin(e.intervalSec)}`
-    : `task ${caFmtMin(e.taskSec)}`;
+  const alt = `task ${caFmtMin(e.taskSec)} – elapsed ${caFmtMin(e.intervalSec)}`;
   return `
     <div style="text-align:right;">
       <div style="font-size:17px;font-weight:700;color:${partial ? '#a0aec0' : '#4c51bf'};">~${caFmtMin(e.totalSec)}</div>
-      <div style="font-size:10px;color:#a0aec0;" title="Elapsed = wall-clock between submits. Task = listening + recording + scoring. The difference is slack.">${alt} · slack ${caFmtMin(e.slackSec)}${partial ? ` · ${e.measured}/${e.videoCount} measured` : ''}</div>
+      <div style="font-size:10px;color:#a0aec0;" title="Task = listening + recording + scoring (floor). Elapsed = wall-clock between submits (ceiling). Midpoint is the default.">${alt}${partial ? ` · ${e.measured}/${e.videoCount} measured` : ''}</div>
       <div style="font-size:10px;color:#cbd5e0;">audio ${caFmtMin(e.audioSec)} · video ${caFmtMin(e.videoSec)} · span ${caFmtMin(e.spanSec)}${extra || ''}</div>
     </div>`;
 }
@@ -64821,11 +64865,12 @@ function renderCorrectionsArchive() {
   const unitLabel = caPeriod === 'week' ? 'active week' : 'active day';
   const totInterval = dates.reduce((n, d) => n + (caEffort[d]?.intervalSec || 0), 0);
   const totTask = dates.reduce((n, d) => n + (caEffort[d]?.taskSec || 0), 0);
+  const label = caModel === 'mid' ? 'midpoint' : caModel === 'task' ? 'task' : 'elapsed';
   document.getElementById('caStats').innerHTML =
     `<strong>${totalSubs}</strong> graded submissions · <strong>${dates.length}</strong> active days across <strong>${weekKeys.length}</strong> weeks · ` +
-    `<strong>${caFmtMin(totalEffort)}</strong> (${caModel}) · avg <strong>${caFmtMin(unit ? totalEffort / unit : 0)}</strong>/${unitLabel} · ` +
-    `<span style="color:#718096;">elapsed ${caFmtMin(totInterval)} vs task ${caFmtMin(totTask)} → slack ${caFmtMin(totInterval - totTask)} (${totInterval ? Math.round((1 - totTask / totInterval) * 100) : 0}%)</span> · ` +
-    `<span style="color:#718096;">per submission: ${caFmtDur(totalSubs ? totInterval / totalSubs : 0)} elapsed, ${caFmtDur(totalSubs ? totTask / totalSubs : 0)} task</span>`;
+    `<strong>${caFmtMin(totalEffort)}</strong> ${label} · avg <strong>${caFmtMin(unit ? totalEffort / unit : 0)}</strong>/${unitLabel} · ` +
+    `<span style="color:#718096;">range ${caFmtMin(totTask)} (task) – ${caFmtMin(totInterval)} (elapsed)</span> · ` +
+    `<span style="color:#718096;">per submission ${caFmtDur(totalSubs ? totalEffort / totalSubs : 0)}</span>`;
 
   document.querySelectorAll('[data-ca-mode]').forEach(b => {
     const on = b.getAttribute('data-ca-mode') === caGroupMode;
@@ -64975,7 +65020,7 @@ function caCardHtml(sub) {
           <div style="font-size:15px;font-weight:700;color:#4c51bf;">${sub.totalScore || 0}/50</div>
           <div id="caDur-${sub.id}" style="font-size:12px;color:#718096;">⏱ ${caVideoSec(sub) !== null ? caFmtDur(caVideoSec(sub)) : (sub.videoFeedbackUrl ? 'measuring…' : '—')}</div>
           ${p ? `<div style="font-size:11px;color:${p.inferred ? '#a0aec0' : '#805ad5'};" title="${p.isSessionStart ? 'Opens a grading session — no preceding interval, so estimated bottom-up' : 'Elapsed ' + caFmtDur(p.intervalSec) + ' · task ' + caFmtDur(p.taskSec)}">🧑‍🏫 ~${caFmtMin(p.sec)}${p.isSessionStart ? '*' : ''}</div>
-          <div style="font-size:10px;color:#a0aec0;">${caModel === 'task' ? 'elapsed ' + caFmtDur(p.intervalSec) : 'task ' + caFmtDur(p.taskSec)}</div>
+          <div style="font-size:10px;color:#a0aec0;">${caFmtDur(p.taskSec)} – ${caFmtDur(p.intervalSec)}</div>
           <div style="font-size:10px;color:#a0aec0;">${p.isSessionStart ? (p.gapBefore !== null && p.gapBefore !== undefined ? 'after ' + caFmtMin(p.gapBefore) + ' break' : 'first ever') : '+' + caFmtDur(p.gapBefore) + ' step'}</div>
           <div style="font-size:10px;color:#a0aec0;" title="Student audio + her video = work we can account for. The rest is scoring, navigation, replays or idle.">${p.audioSec !== null ? 'audio ' + caFmtDur(p.audioSec) : 'audio —'} · vid ${p.videoSec !== null ? caFmtDur(p.videoSec) : '—'}${p.idleSec !== null ? ' · other ' + caFmtDur(p.idleSec) : ''}</div>` : ''}
         </div>
@@ -65176,7 +65221,7 @@ async function caDownloadWeek(weekKey) {
 
 function caExportCsv() {
   caPerSub = caComputeEffort();
-  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'model', 'estIntervalSec', 'estTaskSec', 'slackSec', 'studentAudioSec', 'sessionStart', 'gapBeforeMin', 'daySessions', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
+  const rows = [['date', 'weekStart', 'isoWeek', 'groupedBy', 'student', 'studentId', 'submissionId', 'teacher', 'totalScore', 'grades', 'gradedAt', 'videoSec', 'videoMin', 'estGradingSec', 'estGradingMin', 'model', 'estSec', 'estIntervalSec', 'estTaskSec', 'estMidSec', 'slackSec', 'studentAudioSec', 'sessionStart', 'gapBeforeMin', 'daySessions', 'estimateInferred', 'dayEstGradingMin', 'weekEstGradingMin', 'videoUrl', 'audioUrl', 'studentTranscript', 'teacherTranscript']];
   const groups = caGroupByDate();
   const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
@@ -65205,7 +65250,9 @@ function caExportCsv() {
         d, d === '' ? '' : (d / 60).toFixed(2),
         p ? Math.round(p.sec) : '', p ? (p.sec / 60).toFixed(2) : '',
         caModel,
-        p ? Math.round(p.intervalSec) : '', p ? Math.round(p.taskSec) : '', p ? Math.round(p.slackSec) : '',
+        p ? Math.round(p.sec) : '',
+        p ? Math.round(p.intervalSec) : '', p ? Math.round(p.taskSec) : '', p ? Math.round(p.midSec) : '',
+        p ? Math.round(p.slackSec) : '',
         p && p.audioSec !== null ? p.audioSec : '',
         p ? (p.isSessionStart ? 'yes' : 'no') : '',
         p && p.gapBefore !== null && p.gapBefore !== undefined ? (p.gapBefore / 60).toFixed(2) : '',
@@ -65225,6 +65272,142 @@ function caExportCsv() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   showToast('📄 CSV exported');
+}
+
+// ============================================================
+// PRODUCT VIEW — clean weekly report to hand to a teacher
+// Uses midpoint values throughout, independent of the toggle above.
+// ============================================================
+
+let caPvTeacher = null;   // uid, or null for "pick the busiest"
+
+function caTeacherList() {
+  const counts = {};
+  caSubmissions.forEach(s => {
+    if (!s.gradedBy) return;
+    counts[s.gradedBy] = (counts[s.gradedBy] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([uid, n]) => ({ uid, n, name: caStudentName(uid) }));
+}
+
+function caOpenProductView() {
+  caPerSub = caComputeEffort();
+  const list = caTeacherList();
+  if (!caPvTeacher || !list.some(t => t.uid === caPvTeacher)) {
+    caPvTeacher = list.length ? list[0].uid : null;
+  }
+  document.getElementById('caProductOverlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  caRenderProductView();
+}
+
+function caCloseProductView() {
+  document.getElementById('caProductOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function caSetPvTeacher(uid) {
+  caPvTeacher = uid;
+  caRenderProductView();
+}
+
+// Build week -> day -> session structure for one teacher, midpoint seconds.
+function caProductData() {
+  const mine = caSubmissions.filter(s => s.gradedBy === caPvTeacher && s.gradedAt?.toDate?.());
+  const days = {};
+  mine.forEach(s => {
+    const at = s.gradedAt.toDate();
+    const key = caLocalDateStr(at);
+    const p = caPerSub[s.id];
+    if (!p) return;
+    const d = days[key] = days[key] || { key, sec: 0, count: 0, taskSec: 0, elapsedSec: 0, sessions: {} };
+    d.sec += p.midSec;
+    d.taskSec += p.taskSec;
+    d.elapsedSec += p.intervalSec;
+    d.count++;
+    const ss = d.sessions[p.sessionId] = d.sessions[p.sessionId] || { id: p.sessionId, sec: 0, count: 0, start: at, end: at };
+    ss.sec += p.midSec;
+    ss.count++;
+    if (at < ss.start) ss.start = at;
+    if (at > ss.end) ss.end = at;
+  });
+
+  const weeks = {};
+  Object.values(days).forEach(d => {
+    const wk = caWeekKey(d.key);
+    const w = weeks[wk] = weeks[wk] || { key: wk, sec: 0, count: 0, taskSec: 0, elapsedSec: 0, days: [] };
+    w.sec += d.sec;
+    w.taskSec += d.taskSec;
+    w.elapsedSec += d.elapsedSec;
+    w.count += d.count;
+    d.sessionList = Object.values(d.sessions).sort((a, b) => a.start - b.start);
+    w.days.push(d);
+  });
+  Object.values(weeks).forEach(w => w.days.sort((a, b) => b.key.localeCompare(a.key)));
+  return Object.values(weeks).sort((a, b) => b.key.localeCompare(a.key));
+}
+
+function caPvTime(sec) {
+  const m = Math.round(sec / 60);
+  if (m < 60) return `${m} min`;
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+}
+
+function caPvClock(d) {
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function caRenderProductView() {
+  const list = caTeacherList();
+  const weeks = caProductData();
+  const grand = weeks.reduce((n, w) => n + w.sec, 0);
+  const grandN = weeks.reduce((n, w) => n + w.count, 0);
+  const allDays = weeks.reduce((n, w) => n + w.days.length, 0);
+  const name = caPvTeacher ? caStudentName(caPvTeacher) : '—';
+
+  document.getElementById('caPvTeacherSelect').innerHTML = list.map(t =>
+    `<option value="${t.uid}"${t.uid === caPvTeacher ? ' selected' : ''}>${t.name} (${t.n})</option>`).join('');
+
+  document.getElementById('caPvBody').innerHTML = `
+    <div class="ca-pv-head">
+      <h1>Grading Record — ${name}</h1>
+      <div class="ca-pv-sub">${grandN} students graded · ${allDays} working days · ${weeks.length} weeks · <strong>${caPvTime(grand)}</strong> total</div>
+    </div>
+
+    ${weeks.map(w => `
+      <section class="ca-pv-week">
+        <div class="ca-pv-week-head">
+          <div class="ca-pv-week-title">${caWeekLabel(w.key)}</div>
+          <div class="ca-pv-week-tot"><strong>${caPvTime(w.sec)}</strong><span>${w.count} students · ${w.days.length} day${w.days.length === 1 ? '' : 's'}</span></div>
+        </div>
+        <table class="ca-pv-table">
+          <thead><tr><th>Day</th><th class="r">Time</th><th class="r">Students</th><th>Sessions</th></tr></thead>
+          <tbody>
+            ${w.days.map(d => `
+              <tr>
+                <td class="ca-pv-day">${new Date(d.key + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</td>
+                <td class="r"><strong>${caPvTime(d.sec)}</strong></td>
+                <td class="r">${d.count}</td>
+                <td class="ca-pv-sess">
+                  ${d.sessionList.map((ss, i) => `<span class="ca-pv-chip"><b>S${i + 1}</b> ${caPvClock(ss.start)}–${caPvClock(ss.end)} · ${caPvTime(ss.sec)} · ${ss.count} student${ss.count === 1 ? '' : 's'}</span>`).join('')}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr><td>Week total</td><td class="r"><strong>${caPvTime(w.sec)}</strong></td><td class="r"><strong>${w.count}</strong></td><td></td></tr></tfoot>
+        </table>
+      </section>`).join('')}
+
+    <div class="ca-pv-note">
+      <strong>How this is calculated.</strong> Time is measured from the record of each graded submission.
+      A session is an unbroken run of grading; a pause longer than ${caGapMin} minutes starts a new session and is
+      not counted as working time. Each submission is credited at the midpoint between two bounds: the
+      time it demonstrably took (listening to the student's recording, recording the feedback video, and
+      scoring) and the full elapsed time until the next submission. The midpoint is used so that neither
+      unrecorded effort nor incidental pauses distort the total.
+      ${grandN ? `<br><br>Across this record: ${caPvTime(grand)} total, averaging ${caPvTime(grand / grandN)} per student and ${caPvTime(grand / Math.max(1, allDays))} per working day.` : ''}
+    </div>`;
 }
 
 </script>
