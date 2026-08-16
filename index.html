@@ -18386,7 +18386,7 @@ body.light-mode .mobile-badge-name {
           <label class="ca-pv-lbl">Teacher</label>
           <select id="caPvTeacherSelect" onchange="caSetPvTeacher(this.value)" class="ca-pv-sel"></select>
           <div style="flex:1"></div>
-          <button onclick="window.print()" class="ca-pv-btn">🖨 Print / Save PDF</button>
+          <button onclick="caPrintProductView()" class="ca-pv-btn">🖨 Print / Save PDF</button>
         </div>
         <div id="caPvBody" class="ca-pv-page"></div>
       </div>
@@ -18415,7 +18415,19 @@ body.light-mode .mobile-badge-name {
         .ca-pv-chip{display:inline-block;background:#eef2ff;color:#3730a3;border-radius:8px;padding:4px 9px;margin:0 6px 5px 0;font-size:12px;white-space:nowrap;}
         .ca-pv-chip b{font-weight:700;margin-right:3px;}
         .ca-pv-note{margin-top:26px;padding:18px 20px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;line-height:1.7;color:#475569;page-break-inside:avoid;}
-        @media print{.ca-pv-bar{display:none;}#caProductOverlay{position:static;background:#fff;}.ca-pv-page{max-width:none;padding:0;}.ca-pv-week{break-inside:avoid;}}
+        @media print{
+          body.ca-pv-open > *:not(#caProductOverlay){display:none !important;}
+          body.ca-pv-open{overflow:visible !important;height:auto !important;background:#fff !important;}
+          #caProductOverlay{position:static !important;inset:auto !important;overflow:visible !important;height:auto !important;background:#fff !important;}
+          .ca-pv-bar{display:none !important;}
+          .ca-pv-page{max-width:none;padding:0;}
+          .ca-pv-week{break-inside:avoid;page-break-inside:avoid;}
+          .ca-pv-table thead{display:table-header-group;}
+          .ca-pv-table tr{break-inside:avoid;page-break-inside:avoid;}
+          .ca-pv-note{break-before:auto;}
+          *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+          @page{margin:14mm;}
+        }
       </style>
 
 
@@ -65298,13 +65310,29 @@ function caOpenProductView() {
   if (!caPvTeacher || !list.some(t => t.uid === caPvTeacher)) {
     caPvTeacher = list.length ? list[0].uid : null;
   }
-  document.getElementById('caProductOverlay').style.display = 'block';
+  const ov = document.getElementById('caProductOverlay');
+  // Hoist to a direct child of <body>. Printing lays out the whole document,
+  // so while the overlay sits nested inside the dashboard the report gets
+  // interleaved with everything else on the page. As a top-level sibling we
+  // can simply hide the rest.
+  if (ov.parentNode !== document.body) document.body.appendChild(ov);
+  ov.style.display = 'block';
+  document.body.classList.add('ca-pv-open');
   document.body.style.overflow = 'hidden';
   caRenderProductView();
 }
 
+// Render everything before the print dialog opens — lazy images or a
+// mid-render snapshot are the other way page order goes wrong.
+function caPrintProductView() {
+  const ov = document.getElementById('caProductOverlay');
+  ov.scrollTop = 0;
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+}
+
 function caCloseProductView() {
   document.getElementById('caProductOverlay').style.display = 'none';
+  document.body.classList.remove('ca-pv-open');
   document.body.style.overflow = '';
 }
 
@@ -65399,15 +65427,7 @@ function caRenderProductView() {
         </table>
       </section>`).join('')}
 
-    <div class="ca-pv-note">
-      <strong>How this is calculated.</strong> Time is measured from the record of each graded submission.
-      A session is an unbroken run of grading; a pause longer than ${caGapMin} minutes starts a new session and is
-      not counted as working time. Each submission is credited at the midpoint between two bounds: the
-      time it demonstrably took (listening to the student's recording, recording the feedback video, and
-      scoring) and the full elapsed time until the next submission. The midpoint is used so that neither
-      unrecorded effort nor incidental pauses distort the total.
-      ${grandN ? `<br><br>Across this record: ${caPvTime(grand)} total, averaging ${caPvTime(grand / grandN)} per student and ${caPvTime(grand / Math.max(1, allDays))} per working day.` : ''}
-    </div>`;
+    ${grandN ? `<div class="ca-pv-note">${caPvTime(grand)} total · ${caPvTime(grand / grandN)} per student · ${caPvTime(grand / Math.max(1, allDays))} per working day</div>` : ''}`;
 }
 
 </script>
